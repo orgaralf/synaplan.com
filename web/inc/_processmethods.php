@@ -81,12 +81,7 @@ class ProcessMethods {
                 db::Query($langSQL);
 
                 if(self::$stream) {
-                    $update = [
-                        'msgId' => self::$msgId,
-                        'status' => 'pre_processing',
-                        'message' => 'File description translated. '
-                    ];
-                    Frontend::printToStream($update);
+                    Frontend::statusToStream(self::$msgId, 'pre', 'File description translated. ');
                 }
                 
                 // Update sorting array with file information
@@ -128,12 +123,7 @@ class ProcessMethods {
                 db::Query($updateSQL);
                 // target prompt set previously
                 if(self::$stream) {
-                    $update = [
-                        'msgId' => self::$msgId,
-                        'status' => 'pre_processing',
-                        'message' => 'Target set: '.self::$msgArr['BTOPIC'].' '
-                    ];
-                    Frontend::printToStream($update);
+                    Frontend::statusToStream(self::$msgId, 'pre', 'Target set: '.self::$msgArr['BTOPIC'].' ');
                 }
 
             }
@@ -168,12 +158,7 @@ class ProcessMethods {
                 self::$msgArr['BTOPIC'] = $answerJsonArr['BTOPIC'];
                 self::$msgArr['BLANG'] = $answerJsonArr['BLANG'];
                 if(self::$stream) {
-                    $update = [
-                        'msgId' => self::$msgId,
-                        'status' => 'pre_processing',
-                        'message' => 'Topic and language determined: '.self::$msgArr['BTOPIC'].' ('.self::$msgArr['BLANG'].'). '
-                    ];
-                    Frontend::printToStream($update);
+                    Frontend::statusToStream(self::$msgId, 'pre', 'Topic and language determined: '.self::$msgArr['BTOPIC'].' ('.self::$msgArr['BLANG'].').');
                 }
                 // add the tools: prefix to the text
                 // error_log('BTOPIC: '.self::$msgArr['BTOPIC']);
@@ -192,12 +177,9 @@ class ProcessMethods {
             // -----------------------------------------------------
             // it is a tool request
             // -----------------------------------------------------
-            $update = [
-                'msgId' => self::$msgId,
-                'status' => 'pre_processing',
-                'message' => 'Tool requested. '
-            ];
-            Frontend::printToStream($update);
+            if(self::$stream) {
+                Frontend::statusToStream(self::$msgId, 'pre', 'Tool requested. ');
+            }       
             
             // ************************* CALL THE TOOL *************
             self::$toolAnswer = BasicAI::toolPrompt(self::$msgArr, self::$stream);
@@ -228,12 +210,7 @@ class ProcessMethods {
 
             // print to stream
             if(self::$stream) {
-                $update = [
-                    'msgId' => self::$msgId,
-                    'status' => 'ai_processing',
-                    'message' => $outText
-                ];
-                Frontend::printToStream($update);
+                Frontend::statusToStream(self::$msgId, 'ai', $outText);
             }
         }
         // -----------------------------------------------------
@@ -289,12 +266,7 @@ class ProcessMethods {
         // For tool-generated responses, skip prompt processing and just return the response
         if(self::$toolProcessed) {
             if(self::$stream) {
-                $update = [
-                    'msgId' => self::$msgId,
-                    'status' => 'ai_processing',
-                    'message' => Tools::addMediaToText(self::$msgArr['BTEXT'])
-                ];
-                Frontend::printToStream($update);
+                Frontend::statusToStream(self::$msgId, 'ai', Tools::addMediaToText(self::$msgArr['BTEXT']));
             }
             return;
         }
@@ -320,12 +292,7 @@ class ProcessMethods {
                         self::$msgArr['BTEXT'] .= "\n\n".'Add URLs to your answer from todays WEB SEARCH RESULTS, if you find it helpful:'."\n\n".$searchArr['BTEXT'];
                     }
                     if(self::$stream) {
-                        $update = [
-                            'msgId' => self::$msgId,
-                            'status' => 'pre_processing',
-                            'message' => 'Web search '.$answerJsonArr['SEARCH_TERM'].". "
-                        ];
-                        Frontend::printToStream($update);
+                        Frontend::statusToStream(self::$msgId, 'pre', 'Web search '.$answerJsonArr['SEARCH_TERM'].". ");
                     }
                 }
             }
@@ -339,12 +306,7 @@ class ProcessMethods {
                 $searchArr = self::$msgArr;
                 $ragArr = Tools::searchRAG($searchArr);
                 if(self::$stream) {
-                    $update = [
-                        'msgId' => self::$msgId,
-                        'status' => 'pre_processing',
-                        'message' => 'RAG Search: '.count($ragArr).' files... '
-                    ];
-                    Frontend::printToStream($update);
+                    Frontend::statusToStream(self::$msgId, 'pre', 'RAG Search: '.count($ragArr).' files... ');
                 }
                 self::$threadArr = array_merge(self::$threadArr, $ragArr);
             }
@@ -372,23 +334,13 @@ class ProcessMethods {
         // ----------------------------------------------------- default or extra?
         if(!in_array(self::$msgArr['BTOPIC'], $defaultPromptArr)) {
             if(self::$stream) {
-                $update = [
-                    'msgId' => self::$msgId,
-                    'status' => 'pre_processing',
-                    'message' => 'Calling '.$AIGENERAL.'. '
-                ];
-                Frontend::printToStream($update);
+                Frontend::statusToStream(self::$msgId, 'pre', 'Calling '.$AIGENERAL.'. ');
             }
             $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, self::$threadArr);
 
         } else {
             if(self::$stream) {
-                $update = [
-                    'msgId' => self::$msgId,
-                    'status' => 'pre_processing',
-                    'message' => 'Calling ' . self::$msgArr['BTOPIC'] . '. '
-                ];
-                Frontend::printToStream($update);
+                Frontend::statusToStream(self::$msgId, 'pre', 'Calling ' . self::$msgArr['BTOPIC'] . '. ');
             }
         }
 
@@ -445,13 +397,8 @@ class ProcessMethods {
                 }
 
                 if(self::$stream) {
-                    error_log('result: '.print_r($result, true));
-                    $update = [
-                        'msgId' => self::$msgId,
-                        'status' => 'pre_processing',
-                        'message' => $feNote
-                    ];
-                    Frontend::printToStream($update);
+                    //error_log('result: '.print_r($result, true));
+                    Frontend::statusToStream(self::$msgId, 'pre', $feNote);
                 }        
             }
             // $answerSorted['BTEXT'] = Tools::addMediaToText($answerSorted);
@@ -495,12 +442,7 @@ class ProcessMethods {
         $outText = Tools::addMediaToText($answerSorted);
         // print to stream
         if(self::$stream) {
-            $update = [
-                'msgId' => self::$msgId,
-                'status' => 'ai_processing',
-                'message' => $outText
-            ];
-            Frontend::printToStream($update);
+            Frontend::statusToStream(self::$msgId, 'ai', $outText);
         }
 
         // Handle audio file generation for WhatsApp

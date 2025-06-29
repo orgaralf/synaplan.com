@@ -579,7 +579,18 @@ Class Frontend {
         ob_flush();
         flush();
     }
-
+    // ****************************************************************************************************** 
+    // print to the stream, either AI or status...
+    // ****************************************************************************************************** 
+    public static function statusToStream($channelId = 0,$streamId = 'pre', $myText = ''): bool {
+        $update = [
+            'msgId' => $channelId,
+            'status' => "{$streamId}_processing",
+            'message' => "{$myText} "
+        ];
+        Frontend::printToStream($update);
+        return true;
+    }
     // ********************************************** PROFILE MANAGEMENT **********************************************
     
     /**
@@ -720,6 +731,7 @@ Class Frontend {
         
         return $retArr;
     }
+
 
     // ****************************************************************************************************** 
     // Get dashboard statistics for the user
