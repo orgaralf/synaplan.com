@@ -75,6 +75,10 @@ class ProcessMethods {
         if(self::$msgArr['BFILE']>0 AND strlen(self::$msgArr['BFILETEXT'])>5 AND self::$msgArr['BLANG'] != 'en' 
             AND strlen(self::$msgArr['BFILETYPE'])>2 AND strlen(self::$msgArr['BFILETYPE'])<5) {
                 $translatedText = AIGroq::translateTo(self::$msgArr, self::$msgArr['BLANG'], 'BFILETEXT');
+                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIGroq', self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'Translate', self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AIMODELID', '0', self::$stream);
+
                 self::$msgArr['BFILETEXT'] = $translatedText['BFILETEXT']."\n\n";
                 self::$msgArr['BFILETEXT'] .= "Translated from this:\n".self::$msgArr['BFILETEXT'];
                 $langSQL = "UPDATE BMESSAGES SET BFILETEXT = '".db::EscString(self::$msgArr['BFILETEXT'])."' WHERE BID = ".self::$msgArr['BID'];
@@ -131,6 +135,8 @@ class ProcessMethods {
             // -----------------------------------------------------
             if($promptId == 'tools:sort') {
                 $AIGENERAL = $GLOBALS["AI_SORT"]["SERVICE"];
+                $AIGENERALmodel = $GLOBALS["AI_SORT"]["MODEL"];
+                $AIGENERALmodelId = $GLOBALS["AI_SORT"]["MODELID"];
 
                 // -----------------------------------------------------
                 /*
@@ -168,6 +174,9 @@ class ProcessMethods {
                 }
                 // count bytes
                 XSControl::countBytes(self::$msgArr, 'SORT', self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $AIGENERAL, self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $AIGENERALmodel, self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AIMODELID', $AIGENERALmodelId, self::$stream);
             }
         }
 
@@ -399,7 +408,10 @@ class ProcessMethods {
                 if(self::$stream) {
                     //error_log('result: '.print_r($result, true));
                     Frontend::statusToStream(self::$msgId, 'pre', $feNote);
-                }        
+                }
+                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIOpenAI', self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'CreateOfficeFile', self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AIMODELID', '0', self::$stream);
             }
             // $answerSorted['BTEXT'] = Tools::addMediaToText($answerSorted);
         }
@@ -417,6 +429,9 @@ class ProcessMethods {
             $answerSorted['BFILETYPE'] = '';
             $answerSorted['BTEXT'] = Tools::processComplexHtml($answerSorted['BFILETEXT']);
             $answerSorted['BFILETEXT'] = '';
+            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIGoogle', self::$stream);
+            XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'AnalyzeFile', self::$stream);
+            XSControl::storeAIDetails(self::$msgArr, 'AIMODELID', '0', self::$stream);
         }
 
         // Handle web search if needed
@@ -460,6 +475,7 @@ class ProcessMethods {
             self::$msgArr['BFILEPATH'] = '';
             self::$msgArr['BFILETYPE'] = '';    
         }
+
     }
     
     /**
