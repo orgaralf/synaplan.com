@@ -115,9 +115,9 @@ class XSControl {
     // It could be that messages are worked twice and FILEBYTES or CHATBYTES are already set,
     // therefore: always check if the values are set and ADD to them. Start at 0, if there is no value.
     // 
-    public static function countBytes($msgArr, $FILEORTEXT='BOTH', $stream = false): void {
+    public static function countBytes($msgArr, $FILEORTEXT='ALL', $stream = false): void {
         // check if the message is a file
-        if($msgArr['BFILE'] == 1 AND ($FILEORTEXT == 'BOTH' OR $FILEORTEXT == 'FILE')) {
+        if($msgArr['BFILE'] == 1 AND ($FILEORTEXT == 'ALL' OR $FILEORTEXT == 'FILE')) {
             // get the file size
             $fileSize = filesize(__DIR__.'/../up/'.$msgArr['BFILEPATH']);
             // fetch the file bytes from the database
@@ -136,7 +136,7 @@ class XSControl {
             }
         }
         // check if the message is a chat message
-        if((strlen($msgArr['BTEXT']) > 0 OR $msgArr["BFILETEXT"] > 0) AND ($FILEORTEXT == 'BOTH' OR $FILEORTEXT == 'TEXT')) {
+        if((strlen($msgArr['BTEXT']) > 0 OR $msgArr["BFILETEXT"] > 0) AND ($FILEORTEXT == 'ALL' OR $FILEORTEXT == 'TEXT')) {
             // get the chat bytes from the database
             $chatBytesSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($msgArr['BID'])." AND BTOKEN = 'CHATBYTES'";
             $chatBytesRes = db::Query($chatBytesSQL);
@@ -154,5 +154,32 @@ class XSControl {
                 db::Query($chatBytesSQL);
             }
         }
+        // check if the message is a sort message
+        if((strlen($msgArr['BTEXT']) > 0 OR $msgArr["BFILETEXT"] > 0) AND ($FILEORTEXT == 'ALL' OR $FILEORTEXT == 'SORT')) {
+            // get the chat bytes from the database
+            $sortBytesSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($msgArr['BID'])." AND BTOKEN = 'SORTBYTES'";
+            $sortBytesRes = db::Query($sortBytesSQL);
+
+            if($sortBytesArr = db::FetchArr($sortBytesRes)) {
+                // add the chat bytes to the chat bytes
+                $sortBytes = intval($sortBytesArr['BVALUE']) + strlen($msgArr['BTEXT']) + strlen($msgArr["BFILETEXT"]);
+                // save the chat bytes to the database
+                $sortBytesSQL = "UPDATE BMESSAGEMETA SET BVALUE = '".intval($sortBytes)."' WHERE BMESSID = ".intval($msgArr['BID'])." AND BTOKEN = 'SORTBYTES'";
+                db::Query($chatBytesSQL);
+            } else {
+                // save the chat bytes to the database
+                $sortBytes = strlen($msgArr['BTEXT']) + strlen($msgArr["BFILETEXT"]);
+                $sortBytesSQL = "INSERT INTO BMESSAGEMETA (BID, BMESSID, BTOKEN, BVALUE) VALUES (DEFAULT, ".intval($msgArr['BID']).", 'SORTBYTES', '".intval($sortBytes)."')";
+                db::Query($sortBytesSQL);
+            }
+        }
+    }
+    // store the AI details per message
+    // AI models used and how fast they answer! Use the BMESSAGEMETA table
+    public static function storeAIDetails($msgArr, $modelKey, $modelValue, $stream = false): bool {
+        // save the AI details to the database
+        $aiDetailsSQL = "INSERT INTO BMESSAGEMETA (BID, BMESSID, BTOKEN, BVALUE) VALUES (DEFAULT, ".intval($msgArr['BID']).", '{$modelKey}', '{$modelValue}')";
+        db::Query($aiDetailsSQL);
+        return true;
     }
 }

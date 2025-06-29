@@ -9,19 +9,26 @@ Class BasicAI {
     public static function toolPrompt($msgArr, $stream = false): array|string|bool { 
         $textArr = explode(" ", $msgArr['BTEXT']);
         if($stream) {
-            $update = [
-                'msgId' => $msgArr['BID'],
-                'status' => 'pre_processing',
-                'message' => $textArr[0].' '
-            ];
-            Frontend::printToStream($update);
+            Frontend::statusToStream($msgArr['BID'], 'pre', $textArr[0].' ');
         }
         // -----------------------------------------------------
         // process the tool
         // -----------------------------------------------------
         $AIT2P = $GLOBALS["AI_TEXT2PIC"]["SERVICE"];
+        $AIT2Pmodel = $GLOBALS["AI_TEXT2PIC"]["MODEL"];
+        $AIT2PmodelId = $GLOBALS["AI_TEXT2PIC"]["MODELID"];
+
         $AIGENERAL = $GLOBALS["AI_CHAT"]["SERVICE"];
+        $AIGENERALmodel = $GLOBALS["AI_CHAT"]["MODEL"];
+        $AIGENERALmodelId = $GLOBALS["AI_CHAT"]["MODELID"];
+
         $AIT2V = $GLOBALS["AI_TEXT2VID"]["SERVICE"];
+        $AIT2Vmodel = $GLOBALS["AI_TEXT2VID"]["MODEL"];
+        $AIT2VmodelId = $GLOBALS["AI_TEXT2VID"]["MODELID"];
+
+        $AIT2S = $GLOBALS["AI_TEXT2SOUND"]["SERVICE"];
+        $AIT2Smodel = $GLOBALS["AI_TEXT2SOUND"]["MODEL"];
+        $AIT2SmodelId = $GLOBALS["AI_TEXT2SOUND"]["MODELID"];
 
         switch($textArr[0]) {
             case "/aboutai":
@@ -39,14 +46,6 @@ Class BasicAI {
                 $msgArr['BTOPIC'] = "general";
                 $msgArr['BFILETEXT'] = $msgArr['BFILETEXT']."\n\nExtra Info:\n".$promptAi['BPROMPT'];
                 $msgArr['BTEXT'] = str_replace("/aboutai ","",$msgArr['BTEXT']) . " <loading><br>\n";
-                if($stream && 1==2) {
-                    $update = [
-                        'msgId' => $msgArr['BID'],
-                        'status' => 'pre_processing',
-                        'message' => print_r($msgArr, true).' '
-                    ];
-                    Frontend::printToStream($update);
-                }
                 break;
             case "/web":
                 $msgArr = Tools::webScreenshot($msgArr);
@@ -56,30 +55,27 @@ Class BasicAI {
                 break;
             case "/pic":
                 if($stream) {
-                    $update = [
-                        'msgId' => $msgArr['BID'],
-                        'status' => 'pre_processing',
-                        'message' => ' - calling '.$AIT2P.' '
-                    ];
-                    Frontend::printToStream($update);
+                    Frontend::statusToStream($msgArr['BID'], 'pre', ' - calling '.$AIT2P.' ');
                 }
                 $msgArr = $AIT2P::picPrompt($msgArr, $stream);
+                XSControl::storeAIDetails($msgArr, 'AISERVICE', $AIT2P, $stream);
+                XSControl::storeAIDetails($msgArr, 'AIMODEL', $AIT2Pmodel, $stream);
+                XSControl::storeAIDetails($msgArr, 'AIMODELID', $AIT2PmodelId, $stream);
                 break;
             case "/vid":
                 if($stream) {
-                    $update = [
-                        'msgId' => $msgArr['BID'],
-                        'status' => 'pre_processing',
-                        'message' => ' - video! Patience please (around 40s): '
-                    ];
-                    Frontend::printToStream($update);
+                    Frontend::statusToStream($msgArr['BID'], 'pre', ' - video! Patience please (around 40s): ');
                 }
                 $msgArr = $AIT2V::createVideo($msgArr, $stream);
+                XSControl::storeAIDetails($msgArr, 'AISERVICE', $AIT2V, $stream);
+                XSControl::storeAIDetails($msgArr, 'AIMODEL', $AIT2Vmodel, $stream);
+                XSControl::storeAIDetails($msgArr, 'AIMODELID', $AIT2VmodelId, $stream);
                 break;
             case "/search":
                 $qTerm = "";
                 $qTerm = str_replace("/search ","",$msgArr['BTEXT']);
                 $msgArr = Tools::searchWeb($msgArr, $qTerm);
+                XSControl::storeAIDetails($msgArr, 'WEBSEARCH', 'YES', $stream);
                 break;
             case "/docs":
                 $msgArr = Tools::searchDocs($msgArr);
@@ -89,35 +85,34 @@ Class BasicAI {
                 break;
             case "/lang":
                 if($stream) {
-                    $update = [
-                        'msgId' => $msgArr['BID'],
-                        'status' => 'pre_processing',
-                        'message' => ' - calling '.$AIGENERAL.' '
-                    ];
-                    Frontend::printToStream($update);
+                    Frontend::statusToStream($msgArr['BID'], 'pre', ' - calling '.$AIGENERAL.' ');
                 }
                 $msgArr = $AIGENERAL::translateTo($msgArr, $textArr[1], 'BTEXT');
+                XSControl::storeAIDetails($msgArr, 'AISERVICE', $AIGENERAL, $stream);
+                XSControl::storeAIDetails($msgArr, 'AIMODEL', $AIGENERALmodel, $stream);
+                XSControl::storeAIDetails($msgArr, 'AIMODELID', $AIGENERALmodelId, $stream);
                 break;
             case "/audio":
                 if($stream) {
-                    $update = [
-                        'msgId' => $msgArr['BID'],
-                        'status' => 'pre_processing',
-                        'message' => ' - TTS generating... '
-                    ];
-                    Frontend::printToStream($update);
+                    Frontend::statusToStream($msgArr['BID'], 'pre', ' - TTS generating... ');
                 }
                 $msgArr['BTEXT'] = str_replace("/audio ","",$msgArr['BTEXT']);
-                $soundArr = AIOpenAI::textToSpeech($msgArr, $_SESSION['USERPROFILE']);
+                $soundArr = $AIT2S::textToSpeech($msgArr, $_SESSION['USERPROFILE']);
                 if(count($soundArr) > 0) {
                     $msgArr['BFILE'] = 1;
                     $msgArr['BFILEPATH'] = $soundArr['BFILEPATH'];
                     $msgArr['BFILETYPE'] = $soundArr['BFILETYPE'];
+                    XSControl::storeAIDetails($msgArr, 'AISERVICE', $AIT2S, $stream);
+                    XSControl::storeAIDetails($msgArr, 'AIMODEL', $AIT2Smodel, $stream);
+                    XSControl::storeAIDetails($msgArr, 'AIMODELID', $AIT2SmodelId, $stream);
                 }
                 break;
             default:
                 // Default to /list functionality when no other cases match
                 $msgArr['BTEXT'] = $AIGENERAL::welcomePrompt($msgArr);
+                XSControl::storeAIDetails($msgArr, 'AISERVICE', $AIGENERAL, $stream);
+                XSControl::storeAIDetails($msgArr, 'AIMODEL', $AIGENERALmodel, $stream);
+                XSControl::storeAIDetails($msgArr, 'AIMODELID', $AIGENERALmodelId, $stream);
                 break;
             }   
         return $msgArr;

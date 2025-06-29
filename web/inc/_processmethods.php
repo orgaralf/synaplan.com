@@ -167,7 +167,7 @@ class ProcessMethods {
                     self::$msgArr['BTEXT'] = str_replace('tools:', '/', self::$msgArr['BTOPIC'])." ".self::$msgArr['BTEXT'];
                 }
                 // count bytes
-                XSControl::countBytes(self::$msgArr, 'TEXT', self::$stream);
+                XSControl::countBytes(self::$msgArr, 'SORT', self::$stream);
             }
         }
 
