@@ -1,0 +1,15 @@
+// Flags
+// https://www.svgrepo.com/collection/variety-flat-bordered-icons/31
+
+// Composer timeouts
+// COMPOSER_PROCESS_TIMEOUT=1600 composer install
+// COMPOSER_PROCESS_TIMEOUT=1600 composer require google/cloud-ai-platform
+
+// HTML Example
+// Chatbox in Bootstrap 5: https://codepen.io/mehedihtml/pen/ZExjpeo
+
+// Example on "skip quick" when dumping big SQL files
+// mariadb-dump --add-drop-table --complete-insert --skip-quick --complete-insert --hex-blob bridgeai >20250206bridgeai.sql
+
+// RAG SQL
+// select BMESSAGES.*, VC_DISTANCE_EUCLIDEAN(BEMBED, VC_FromText(%s)) AS distance from BMESSAGES, BRAG order by distance asc limit 5

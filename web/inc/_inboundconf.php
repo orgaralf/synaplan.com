@@ -1,0 +1,18 @@
+<?php
+// -----------------------------------------------------
+// Inbound configuration
+// -----------------------------------------------------
+
+Class InboundConf {
+    public static function getWhatsAppNumbers() {
+        $numArr = [];
+        $userId = $_SESSION["USERPROFILE"]["BID"];
+        $waSQL = "select * from BWAPHONES where BOWNERID = ".$userId." OR BOWNERID = 0 ORDER BY BOWNERID DESC";
+        $waRes = DB::Query($waSQL);
+        while($row = DB::FetchArr($waRes)) {
+            $numArr[] = $row;
+        }
+        return $numArr;
+    }
+}
+?>

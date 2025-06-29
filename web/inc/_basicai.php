@@ -1,0 +1,600 @@
+<?php
+
+// Offer basic AI functionalities
+
+Class BasicAI {
+    // ****************************************************************************************************** 
+    // tool prompt
+    // ****************************************************************************************************** 
+    public static function toolPrompt($msgArr, $stream = false): array|string|bool { 
+        $textArr = explode(" ", $msgArr['BTEXT']);
+        if($stream) {
+            $update = [
+                'msgId' => $msgArr['BID'],
+                'status' => 'pre_processing',
+                'message' => $textArr[0].' '
+            ];
+            Frontend::printToStream($update);
+        }
+        // -----------------------------------------------------
+        // process the tool
+        // -----------------------------------------------------
+        $AIT2P = $GLOBALS["AI_TEXT2PIC"]["SERVICE"];
+        $AIGENERAL = $GLOBALS["AI_CHAT"]["SERVICE"];
+        $AIT2V = $GLOBALS["AI_TEXT2VID"]["SERVICE"];
+
+        switch($textArr[0]) {
+            case "/aboutai":
+                ProcessMethods::$toolProcessed = false;
+                if($msgArr['BFILE']<1) {
+                    $researchArr = $msgArr;
+                    $researchArr['BTEXT'] = "/web https://www.synaplan.com/";
+                    $researchArr = Tools::webScreenshot($researchArr, 1170, 1200);
+                    $msgArr['BFILE'] = $researchArr['BFILE']*2; // indicate that this shall be kept!
+                    $msgArr['BFILEPATH'] =  $researchArr['BFILEPATH'];
+                    $msgArr['BFILETYPE'] =  $researchArr['BFILETYPE'];
+                    $msgArr['BFILETEXT'] =  $researchArr['BFILETEXT'];
+                }
+                $promptAi = self::getAprompt("tools:aboutai", $msgArr['BLANG']);
+                $msgArr['BTOPIC'] = "general";
+                $msgArr['BFILETEXT'] = $msgArr['BFILETEXT']."\n\nExtra Info:\n".$promptAi['BPROMPT'];
+                $msgArr['BTEXT'] = str_replace("/aboutai ","",$msgArr['BTEXT']) . " <loading><br>\n";
+                if($stream && 1==2) {
+                    $update = [
+                        'msgId' => $msgArr['BID'],
+                        'status' => 'pre_processing',
+                        'message' => print_r($msgArr, true).' '
+                    ];
+                    Frontend::printToStream($update);
+                }
+                break;
+            case "/web":
+                $msgArr = Tools::webScreenshot($msgArr);
+                break;
+            case "/link":
+                $msgArr = Tools::memberLink($msgArr);
+                break;
+            case "/pic":
+                if($stream) {
+                    $update = [
+                        'msgId' => $msgArr['BID'],
+                        'status' => 'pre_processing',
+                        'message' => ' - calling '.$AIT2P.' '
+                    ];
+                    Frontend::printToStream($update);
+                }
+                $msgArr = $AIT2P::picPrompt($msgArr, $stream);
+                break;
+            case "/vid":
+                if($stream) {
+                    $update = [
+                        'msgId' => $msgArr['BID'],
+                        'status' => 'pre_processing',
+                        'message' => ' - video! Patience please (around 40s): '
+                    ];
+                    Frontend::printToStream($update);
+                }
+                $msgArr = $AIT2V::createVideo($msgArr, $stream);
+                break;
+            case "/search":
+                $qTerm = "";
+                $qTerm = str_replace("/search ","",$msgArr['BTEXT']);
+                $msgArr = Tools::searchWeb($msgArr, $qTerm);
+                break;
+            case "/docs":
+                $msgArr = Tools::searchDocs($msgArr);
+                break;
+            case "/filesort":
+                $msgArr['BTEXT'] = $msgArr['BTEXT']=str_replace("/filesort ","",$msgArr['BTEXT']);
+                break;
+            case "/lang":
+                if($stream) {
+                    $update = [
+                        'msgId' => $msgArr['BID'],
+                        'status' => 'pre_processing',
+                        'message' => ' - calling '.$AIGENERAL.' '
+                    ];
+                    Frontend::printToStream($update);
+                }
+                $msgArr = $AIGENERAL::translateTo($msgArr, $textArr[1], 'BTEXT');
+                break;
+            case "/audio":
+                if($stream) {
+                    $update = [
+                        'msgId' => $msgArr['BID'],
+                        'status' => 'pre_processing',
+                        'message' => ' - TTS generating... '
+                    ];
+                    Frontend::printToStream($update);
+                }
+                $msgArr['BTEXT'] = str_replace("/audio ","",$msgArr['BTEXT']);
+                $soundArr = AIOpenAI::textToSpeech($msgArr, $_SESSION['USERPROFILE']);
+                if(count($soundArr) > 0) {
+                    $msgArr['BFILE'] = 1;
+                    $msgArr['BFILEPATH'] = $soundArr['BFILEPATH'];
+                    $msgArr['BFILETYPE'] = $soundArr['BFILETYPE'];
+                }
+                break;
+            default:
+                // Default to /list functionality when no other cases match
+                $msgArr['BTEXT'] = $AIGENERAL::welcomePrompt($msgArr);
+                break;
+            }   
+        return $msgArr;
+    }
+    // ****************************************************************************************************** 
+    // create a file from a text
+    // ****************************************************************************************************** 
+    public static function errorAIcheck($msgArr, $errorText, $systemArr): array {   
+        
+
+        return $msgArr;
+    }
+
+
+    // ****************************************************************************************************** 
+    // create chunks of a big text to vectorize it
+    // ****************************************************************************************************** 
+    public static function chunkify($content, $minChars = 80, $maxChars = 4096) {
+        $lines = explode("\n", $content);
+        $chunks = [];
+        $chunk = [];
+        $length = 0;
+        $start = 0;
+    
+        // Loop through all lines plus one extra sentinel line
+        $totalLines = count($lines);
+        for($i = 0; $i <= $totalLines; $i++) {
+            // If we're past the last real line, use an empty string (sentinel)
+            $line = ($i < $totalLines) ? $lines[$i] : "";
+    
+            $trimmedLine = trim($line);
+            $leftTrimmedLine = ltrim($line);
+    
+            // Check if the current line starts with '#' (after ltrim)
+            $startsWithHash = (strlen($leftTrimmedLine) > 0 && $leftTrimmedLine[0] === '#');
+            // Check if the current line is blank
+            $isEmptyLine = (strlen($trimmedLine) === 0);
+    
+            // If we already have something in $chunk and we hit a boundary, 
+            // and the current chunk is at least $minChars
+            if (
+                (count($chunk) > 0) && 
+                ($startsWithHash || $isEmptyLine || ($length + strlen($line) > $maxChars)) &&
+                ($length >= $minChars)
+            ) {
+                $chunks[] = [
+                    'content'    => trim(implode("\n", $chunk)),
+                    'start_line' => $start,
+                    'end_line'   => $i - 1,
+                ];
+                $chunk = [];
+                $length = 0;
+                $start = $i;
+            }
+    
+            $chunk[] = $line;
+            $length += strlen($line) + 1;  // +1 accounts for the newline
+        }
+    
+        return $chunks;
+    }
+    // ****************************************************************************************************** 
+    // get a prompt form the table BPROMPTS by user id or default and keyword
+    // ****************************************************************************************************** 
+    public static function getApromptById($promptId) {
+        $promptKey = "general";
+        $promptSQL = "select * from BPROMPTS where BID=".intval($promptId);
+        $promptRes = DB::Query($promptSQL);
+        $promptArr = DB::FetchArr($promptRes);
+        if($promptArr) {
+            $promptKey = $promptArr['BTOPIC'];
+        }
+        return self::getAprompt($promptKey, "en", [], false);
+    }
+    // ****************************************************************************************************** 
+    // get a prompt form the table BPROMPTS by user id or default and keyword
+    // ****************************************************************************************************** 
+    public static function getAprompt($keyword, $lang="en", $msgArr = [], $addInfos = true) {
+        $arrPrompt = [];
+        $userId = $_SESSION['USERPROFILE']['BID'];
+
+        // Validate and sanitize the keyword to prevent SQL issues
+        if (empty($keyword) || !is_string($keyword)) {
+            $keyword = 'chat'; // Default fallback
+            error_log('Warning: getAprompt received empty or invalid keyword, defaulting to "general"');
+        }
+        $keyword = db::EscString($keyword);
+
+        // get prompt from BPROMPTS
+        $pSQL= "select * from BPROMPTS where BTOPIC='".$keyword."' and (BLANG like '".$lang."' OR BLANG='en') AND (BOWNERID='".$userId."' OR BOWNERID=0) ORDER BY BID DESC LIMIT 1";
+        $pRes = DB::Query($pSQL);
+        $pArr = DB::FetchArr($pRes);
+        
+        // ****************************************************************************************************** 
+        if($pArr) {
+            $arrPrompt = $pArr;
+        } else {
+            // No prompt found - create a default one to prevent errors
+            error_log('Warning: No prompt found for keyword: ' . $keyword . ', creating default');
+            $arrPrompt = [
+                'BID' => 0,
+                'BTOPIC' => $keyword,
+                'BPROMPT' => 'You are a helpful AI assistant. Please help the user with their request.',
+                'BLANG' => 'en',
+                'BSHORTDESC' => 'Default prompt for ' . $keyword
+            ];
+        }
+
+        // if prompt is sort
+        if(isset($arrPrompt['BTOPIC']) && $arrPrompt['BTOPIC'] == 'tools:sort') {
+            $DYNAMICLIST = "";
+            $KEYLIST = "";
+            $prompts = self::getAllPrompts();
+            foreach($prompts as $dynaLine) {
+                $DYNAMICLIST .= "   * **".$dynaLine['BTOPIC']."**:\n";
+                $DYNAMICLIST .= "    ".$dynaLine['BSHORTDESC']."\n";
+                $DYNAMICLIST .= "    "."\n";
+                $KEYLIST .= $dynaLine['BTOPIC']." | ";
+            }
+            $arrPrompt['BPROMPT'] = str_replace("[DYNAMICLIST]", $DYNAMICLIST, $arrPrompt['BPROMPT']);
+            $arrPrompt['BPROMPT'] = str_replace("[KEYLIST]", $KEYLIST, $arrPrompt['BPROMPT']);
+            if($addInfos) {
+                $arrPrompt['BPROMPT'] .= "\n\n"."(current date: ".date("Y-m-d").")";
+            }
+        } else {
+            // Only try to get file metadata if we have a valid BID
+            if(isset($msgArr['BID']) && intval($msgArr['BID']) > 0) {
+                $fileSQL = "select * from BMESSAGEMETA where BMESSID=".intval($msgArr['BID'])." AND BTOKEN='FILECOUNT' ORDER BY BID DESC LIMIT 1";  
+                $fileRes = DB::Query($fileSQL);
+                $fileArr = DB::FetchArr($fileRes);
+                if($fileArr && $addInfos) {
+                    $arrPrompt['BPROMPT'] .= "\n\n"."(Original message contained ".($fileArr["BVALUE"])." files)";
+                }
+            }
+            if($addInfos) {
+                $arrPrompt['BPROMPT'] .= "\n\n"."(current date: ".date("Y-m-d").")";
+            }
+
+            // ****************************************************************************************************** 
+            // enrichments?
+            // ****************************************************************************************************** 
+            if(isset($arrPrompt['BTOPIC']) && $arrPrompt['BTOPIC'] == 'tools:filesort') {
+                $fileTopicArr = self::getFileSortTopics();
+                if(count($fileTopicArr) == 0) {
+                    $fileTopicArr[] = "DEFAULT";
+                }
+                $arrPrompt['BPROMPT'] = str_replace("[RAGGROUPS]", implode(", ", $fileTopicArr), $arrPrompt['BPROMPT']);
+            }
+
+            // ****************************************************************************************************** 
+            // tools to use?
+            // ****************************************************************************************************** 
+            if(isset($arrPrompt['BID']) && intval($arrPrompt['BID']) > 0) {
+                $toolSQL = "select * from BPROMPTMETA where BPROMPTID=".$arrPrompt['BID'];
+                //error_log($toolSQL);
+                $toolRes = DB::Query($toolSQL);
+
+                while($toolArr = DB::FetchArr($toolRes)) {
+                    $arrPrompt['SETTINGS'][] = $toolArr;
+                }
+            }
+        }
+        return $arrPrompt;
+    }
+    // ****************************************************************************************************** 
+    // get all prompts
+    // ****************************************************************************************************** 
+    public static function getAllPrompts() {
+        $prompts = [];
+        $topicArr = [];
+        $userId = $_SESSION['USERPROFILE']['BID'];
+
+        // BTOPIC not like 'tools:%
+        $outerDynaSQL = "select DISTINCT BTOPIC from BPROMPTS where (BOWNERID=".$userId." OR BOWNERID=0) AND BTOPIC NOT LIKE 'tools:%' ORDER BY BOWNERID DESC";
+        $outerDynaRes = DB::Query($outerDynaSQL);
+        while($outerDynaLine = DB::FetchArr($outerDynaRes)) {
+            $dynaSQL = "select * from BPROMPTS where BTOPIC='".$outerDynaLine['BTOPIC']."' AND (BOWNERID=".$userId." OR BOWNERID=0) ORDER BY BOWNERID DESC";
+            $dynaRes = DB::Query($dynaSQL);
+            while($dynaLine = DB::FetchArr($dynaRes)) {
+                if(!in_array($dynaLine['BTOPIC'], $topicArr)) {
+                    $topicArr[] = $dynaLine['BTOPIC'];
+                    // ****************************************************************************************************** 
+                    // tools to use?
+                    // ****************************************************************************************************** 
+                    $toolSQL = "select * from BPROMPTMETA where BPROMPTID=".$dynaLine['BID'];
+                    //error_log($toolSQL);
+                    $toolRes = DB::Query($toolSQL);
+
+                    while($toolArr = DB::FetchArr($toolRes)) {
+                        $dynaLine['SETTINGS'][] = $toolArr;
+                    }
+                    // ****************************************************************************************************** 
+                    $prompts[] = $dynaLine;
+                }
+            }
+        }
+        return $prompts;
+    }
+    // ****************************************************************************************************** 
+    // get all models
+    // ****************************************************************************************************** 
+    public static function getAllModels() {
+        $models = [];
+        $userId = $_SESSION['USERPROFILE']['BID'];
+
+        $dynaSQL = "select * from BMODELS where (BSELECTABLE>0) ORDER BY BTAG ASC";
+        $dynaRes = DB::Query($dynaSQL);
+        while($dynaLine = DB::FetchArr($dynaRes)) {
+            $models[] = $dynaLine;
+        }
+        return $models;
+    }
+
+    // ****************************************************************************************************** 
+    // get the default model for a service (AIGroq, AIOllama, AIOpenAi, etc.) and the task you want to do,
+    // like "vision", "soundcreate", "text", "pic2video", "code", "musiccreate", "voice2text", ...
+    // ****************************************************************************************************** 
+    public static function getModel($service, $task): string {
+        $model = "";
+        switch($service) {
+            case "AIGroq":
+                $model = "llama-3.3-70b-versatile";
+                break;
+        }
+        return $model;
+    }
+
+    // ****************************************************************************************************** 
+    // get the model details
+    // ****************************************************************************************************** 
+    public static function getModelDetails($modelId): array {
+        $mArr = [];
+        $mSQL = "select * from BMODELS where BID=".intval($modelId);
+        $mRes = DB::Query($mSQL);
+        $mArr = DB::FetchArr($mRes);
+        return $mArr;
+    }
+    // ****************************************************************************************************** 
+    // update a prompt - save new or update existing, add tools config
+    // ****************************************************************************************************** 
+    public static function updatePrompt($promptKey): array {
+        $userId = $_SESSION['USERPROFILE']['BID'];
+
+        // Sanitize input data
+        $promptKey = db::EscString($promptKey);
+        $prompt = db::EscString($_REQUEST['promptContent']);
+        $lang = "en"; //db::EscString($lang);
+        // needs to define the language of the prompt via a local model
+        //--------------------------------
+        $saveFlag = db::EscString($_REQUEST['saveFlag'] ?? '');
+        $aiModel = db::EscString($_REQUEST['aiModel'] ?? '');
+        $description = db::EscString($_REQUEST['promptDescription'] ?? '');
+        
+        // Handle tools settings - updated to use new parameter format
+        $tools = [
+            'internet' => $_REQUEST['tool_internet'] ?? '0',
+            'files' => $_REQUEST['tool_files'] ?? '0',
+            'screenshot' => $_REQUEST['tool_screenshot'] ?? '0',
+            'transfer' => $_REQUEST['tool_transfer'] ?? '0'
+        ];
+
+        // If saving as new name, use that as the prompt key
+        if ($saveFlag === 'saveAs' && !empty($_REQUEST['newName'])) {
+            $newName = db::EscString($_REQUEST['newName']);
+            if (!empty($newName)) {
+                $promptKey = $newName;
+            }
+        }
+
+        // Get the ID of the deleted prompt to clean up metadata
+        $oldPromptId = "DEFAULT";
+        $sql = "SELECT BID FROM BPROMPTS WHERE BTOPIC = '{$promptKey}' AND BOWNERID = {$userId} AND BOWNERID > 0";
+        
+        $res = db::Query($sql);
+        if ($row = db::FetchArr($res)) {
+            $oldPromptId = $row['BID'];
+            // Delete associated metadata
+            $sql = "DELETE FROM BPROMPTMETA WHERE BPROMPTID = {$oldPromptId}";
+            db::Query($sql);
+
+            // Delete any existing user-specific prompt and its metadata
+            $sql = "DELETE FROM BPROMPTS WHERE BTOPIC = '{$promptKey}' AND BOWNERID = {$userId} AND BOWNERID > 0";
+            db::Query($sql);
+        }
+
+        // Create new prompt entry for the user
+        $sql = "INSERT INTO BPROMPTS (BID, BOWNERID, BLANG, BTOPIC, BPROMPT, BSHORTDESC) 
+                VALUES ({$oldPromptId}, {$userId}, '{$lang}', '{$promptKey}', '{$prompt}', '{$description}')";
+        db::Query($sql);
+        $promptId = db::LastId();
+
+        // Save AI model setting
+        $sql = "INSERT INTO BPROMPTMETA (BPROMPTID, BTOKEN, BVALUE) 
+                VALUES ({$promptId}, 'aiModel', '{$aiModel}')
+                ON DUPLICATE KEY UPDATE BVALUE = '{$aiModel}'";
+        db::Query($sql);
+
+        // Save tools settings
+        foreach ($tools as $tool => $value) {
+            $sql = "INSERT INTO BPROMPTMETA (BPROMPTID, BTOKEN, BVALUE) 
+                    VALUES ({$promptId}, 'tool_{$tool}', '{$value}')
+                    ON DUPLICATE KEY UPDATE BVALUE = '{$value}'";
+            db::Query($sql);
+        }
+
+        // After saving the standard tool settings
+        // Save tool_files_keyword if present
+        if (!empty($_REQUEST['tool_files_keyword'])) {
+            $cleanKey = db::EscString($_REQUEST['tool_files_keyword']);
+            $sql = "INSERT INTO BPROMPTMETA (BPROMPTID, BTOKEN, BVALUE) 
+                    VALUES ({$promptId}, 'tool_files_keyword', '".$cleanKey."')
+                    ON DUPLICATE KEY UPDATE BVALUE = '".$cleanKey."'";
+            db::Query($sql);
+        }
+        // Save screenshot dimensions if present
+        if (!empty($_REQUEST['tool_screenshot_x'])) {
+            $sql = "INSERT INTO BPROMPTMETA (BPROMPTID, BTOKEN, BVALUE) 
+                    VALUES ({$promptId}, 'tool_screenshot_x', '".db::EscString($_REQUEST['tool_screenshot_x'])."')
+                    ON DUPLICATE KEY UPDATE BVALUE = '".intval($_REQUEST['tool_screenshot_x'])."'";
+            db::Query($sql);
+        }
+        if (!empty($_REQUEST['tool_screenshot_y'])) {
+            $sql = "INSERT INTO BPROMPTMETA (BPROMPTID, BTOKEN, BVALUE) 
+                    VALUES ({$promptId}, 'tool_screenshot_y', '".db::EscString($_REQUEST['tool_screenshot_y'])."')
+                    ON DUPLICATE KEY UPDATE BVALUE = '".intval($_REQUEST['tool_screenshot_y'])."'";
+            db::Query($sql);
+        }
+        //--------------------------------
+        $resArr = ['success' => true, 'promptId' => $promptId];
+        return $resArr;
+    }
+    // ****************************************************************************************************** 
+    // delete a prompt
+    // ****************************************************************************************************** 
+    public static function deletePrompt($promptKey): bool {
+        $userId = $_SESSION['USERPROFILE']['BID'];
+
+        // First, check if the prompt exists and get its ID (sanity check)
+        $sql = "SELECT BID FROM BPROMPTS WHERE BTOPIC = '{$promptKey}' AND BOWNERID = {$userId} AND BOWNERID > 0";
+        $res = db::Query($sql);
+        
+        if ($row = db::FetchArr($res)) {
+            $promptId = $row['BID'];
+            // Delete associated metadata
+            $sql = "DELETE FROM BPROMPTMETA WHERE BPROMPTID = {$promptId}";
+            db::Query($sql);
+       
+            // Now delete the prompt itself
+            $sql = "DELETE FROM BPROMPTS WHERE BID = {$promptId} AND BOWNERID = {$userId} AND BOWNERID > 0";
+            db::Query($sql);
+            return true;
+        }
+        return false;
+    }
+    // ****************************************************************************************************** 
+    // get prompt details
+    // ****************************************************************************************************** 
+    public static function getPromptDetails($promptKey): array {
+        $arrPrompt = [];
+        $arrPrompt = self::getAprompt($promptKey, "%", [], false);
+        $arrPrompt['SETTINGS'] = [];
+        
+        // Ensure BID exists before using it in SQL query
+        if (isset($arrPrompt['BID']) && !empty($arrPrompt['BID'])) {
+            $toolSQL = "select * from BPROMPTMETA where BPROMPTID=".$arrPrompt['BID'];
+            $toolRes = DB::Query($toolSQL);
+            while($toolArr = DB::FetchArr($toolRes)) {
+                $arrPrompt['SETTINGS'][] = $toolArr;
+            }
+        } else {
+            error_log('Warning: getPromptDetails could not find prompt for key: ' . $promptKey);
+        }
+        
+        return $arrPrompt;
+    }
+    // ****************************************************************************************************** 
+    // get the file sorting topics
+    // ****************************************************************************************************** 
+    public static function getFileSortTopics(): array {
+        $groupKeys = [];
+        $sql = "SELECT DISTINCT BRAG.BGROUPKEY
+                FROM BMESSAGES
+                INNER JOIN BRAG ON BRAG.BMID = BMESSAGES.BID
+                WHERE BMESSAGES.BUSERID = " . $_SESSION["USERPROFILE"]["BID"] . "
+                  AND BMESSAGES.BDIRECT = 'IN'
+                  AND BMESSAGES.BFILE > 0
+                  AND BMESSAGES.BFILEPATH != ''";
+        $res = db::Query($sql);
+        while ($row = db::FetchArr($res)) {
+            if (!empty($row['BGROUPKEY'])) {
+                $groupKeys[] = $row['BGROUPKEY'];
+            }
+        }
+        return $groupKeys;
+    }
+    // ****************************************************************************************************** 
+    // get the prompt summarized in short, if too long:
+    // ****************************************************************************************************** 
+    public static function getShortPrompt($prompt): string {
+        $AISUMMARIZE = $GLOBALS["AI_SUMMARIZE"]["SERVICE"];
+        $prompt = $AISUMMARIZE::summarizePrompt($prompt);
+        return $prompt;
+    }
+    
+    // ****************************************************************************************************** 
+    // get all file groups for the current user
+    // ****************************************************************************************************** 
+    public static function getAllFileGroups(): array {
+        $groups = [];
+        $userId = $_SESSION["USERPROFILE"]["BID"];
+        
+        $sql = "SELECT DISTINCT BRAG.BGROUPKEY
+                FROM BMESSAGES
+                INNER JOIN BRAG ON BRAG.BMID = BMESSAGES.BID
+                WHERE BMESSAGES.BUSERID = " . intval($userId) . "
+                  AND BMESSAGES.BDIRECT = 'IN'
+                  AND BMESSAGES.BFILE > 0
+                  AND BMESSAGES.BFILEPATH != ''
+                  AND BRAG.BGROUPKEY != ''
+                  AND BRAG.BGROUPKEY IS NOT NULL
+                ORDER BY BRAG.BGROUPKEY";
+        
+        $res = db::Query($sql);
+        while ($row = db::FetchArr($res)) {
+            if (!empty($row['BGROUPKEY'])) {
+                $groups[] = $row['BGROUPKEY'];
+            }
+        }
+        
+        return $groups;
+    }
+    
+    // ****************************************************************************************************** 
+    // change the group of a specific file
+    // ****************************************************************************************************** 
+    public static function changeGroupOfFile($fileId, $newGroup): array {
+        $resArr = ['success' => false, 'error' => ''];
+        $userId = $_SESSION["USERPROFILE"]["BID"];
+        
+        error_log("BasicAI::changeGroupOfFile called with fileId: $fileId, newGroup: '$newGroup', userId: $userId");
+        
+        // Validate file ownership
+        $fileSQL = "SELECT * FROM BMESSAGES WHERE BID = " . intval($fileId) . " AND BUSERID = " . intval($userId) . " AND BFILE > 0";
+        $fileRes = db::Query($fileSQL);
+        $fileArr = db::FetchArr($fileRes);
+        
+        if (!$fileArr) {
+            $resArr['error'] = 'File not found or access denied';
+            error_log("BasicAI::changeGroupOfFile - File not found: $fileId for user: $userId");
+            return $resArr;
+        }
+        
+        error_log("BasicAI::changeGroupOfFile - File found: " . json_encode($fileArr));
+        
+        // Update existing BRAG records for this file
+        if (empty($newGroup)) {
+            // Remove group (set to empty string)
+            $updateSQL = "UPDATE BRAG SET BGROUPKEY = '' WHERE BMID = " . intval($fileId);
+        } else {
+            // Update group
+            $updateSQL = "UPDATE BRAG SET BGROUPKEY = '" . db::EscString($newGroup) . "' WHERE BMID = " . intval($fileId);
+        }
+        
+        error_log("BasicAI::changeGroupOfFile - SQL: $updateSQL");
+        
+        // Execute the update query
+        $result = db::Query($updateSQL);
+        
+        if ($result) {
+            $resArr['success'] = true;
+            $resArr['message'] = 'File group updated successfully';
+            error_log("BasicAI::changeGroupOfFile - Success");
+        } else {
+            $resArr['error'] = 'Database error occurred while updating file group';
+            error_log("BasicAI::changeGroupOfFile - Database error");
+        }
+        
+        return $resArr;
+    }
+}

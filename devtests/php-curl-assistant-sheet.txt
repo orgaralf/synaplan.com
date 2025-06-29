@@ -1,0 +1,57 @@
+$api = 'sk-...';                       // your key
+$filePath = __DIR__.'/MyProductSpecs.docx';
+
+/* 1. Upload */
+$ch = curl_init('https://api.openai.com/v1/files');
+curl_setopt_array($ch, [
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_POST           => true,
+  CURLOPT_HTTPHEADER     => ['Authorization: Bearer '.$api],
+  CURLOPT_POSTFIELDS     => [
+     'purpose' => 'assistants',
+     'file'    => new CURLFile($filePath)
+  ]
+]);
+$fileResp = json_decode(curl_exec($ch), true);
+curl_close($ch);
+$fileId = $fileResp['id'] ?? die('Upload failed');
+
+/* 2. Attach to Assistant you already created in dashboard */
+$assistant = 'asst_xyz789';           // or create programmatically
+curl_setopt_array($ch = curl_init(
+  "https://api.openai.com/v1/assistants/$assistant"
+), [
+  CURLOPT_CUSTOMREQUEST => 'POST',
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_HTTPHEADER => [
+     'Authorization: Bearer '.$api,
+     'Content-Type: application/json',
+     'OpenAI-Beta: assistants=v1'
+  ],
+  CURLOPT_POSTFIELDS => json_encode([
+     'file_ids' => [$fileId]          // adds it to the KB
+  ])
+]);
+curl_exec($ch); curl_close($ch);
+
+/* 3. Ask something */
+curl_setopt_array($ch = curl_init(
+  "https://api.openai.com/v1/threads?assistant_id=$assistant"
+), [
+  CURLOPT_POST => true,
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_HTTPHEADER => [
+     'Authorization: Bearer '.$api,
+     'Content-Type: application/json',
+     'OpenAI-Beta: assistants=v1'
+  ],
+  CURLOPT_POSTFIELDS => json_encode([
+     'messages' => [[
+        'role'    => 'user',
+        'content' => 'Give me a bullet-point warranty summary.'
+     ]]
+  ])
+]);
+$thread = json_decode(curl_exec($ch), true);
+curl_close($ch);
+echo "Thread: ".$thread['id']."\n";

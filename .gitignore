@@ -1,0 +1,13 @@
+web/composer.lock
+web/vendor/
+web/node_modules/
+web/package-lock.json
+web/.keys/
+web/.keys/*.json
+!web/.keys/*.json.example
+web/up/
+web/.env
+!web/.env.example
+.env
+!.env.example
+web/inc/models
