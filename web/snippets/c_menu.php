@@ -8,7 +8,7 @@
             </a>
             </li>
             <li class="nav-item">
-            <a class="nav-link<?php ($contentInc=="welcome") ? print " active" : ""; ?>" aria-current="page" href="index.php">
+            <a class="nav-link<?php ($contentInc=="welcome") ? print " active" : ""; ?>" aria-current="page" href="index.php/welcome">
                 <span data-feather="home"></span>
                 Dashboard
             </a>
