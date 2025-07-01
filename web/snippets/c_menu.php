@@ -2,15 +2,15 @@
     <div class="position-sticky pt-2">
         <ul class="nav flex-column">
             <li class="nav-item">
-            <a class="nav-link<?php ($contentInc=="welcome") ? print " active" : ""; ?>" aria-current="page" href="index.php">
-                <span data-feather="home"></span>
-                Start
-            </a>
-            </li>
-            <li class="nav-item">
             <a class="nav-link<?php ($contentInc=="chat") ? print " active" : ""; ?>" href="index.php/chat">
                 <span data-feather="message-square"></span>
                 Chat
+            </a>
+            </li>
+            <li class="nav-item">
+            <a class="nav-link<?php ($contentInc=="welcome") ? print " active" : ""; ?>" aria-current="page" href="index.php">
+                <span data-feather="home"></span>
+                Dashboard
             </a>
             </li>
             <li class="nav-item">

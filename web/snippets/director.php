@@ -9,7 +9,7 @@ if(isset($_REQUEST['action']) AND $_REQUEST['action'] == "login") {
 if(!isset($_SESSION['USERPROFILE'])) {
     if(isset($_REQUEST['lid']) AND strlen($_REQUEST['lid']) > 3) {
         if(Frontend::setUserFromTicket()) {
-            $contentInc = "welcome";
+            $contentInc = "chat";
         } else {
             $contentInc = "login";
         }
@@ -18,7 +18,7 @@ if(!isset($_SESSION['USERPROFILE'])) {
     }
 } else {
     if(count($_SESSION['USERPROFILE']) > 0) {
-        $contentInc = "welcome";
+        $contentInc = "chat";
         $cleanUriArr = explode("?", $_SERVER['REQUEST_URI']);
         $urlParts = explode("index.php/", $cleanUriArr[0]);
         if(count($urlParts) > 1) {
