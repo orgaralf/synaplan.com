@@ -67,6 +67,7 @@ function _s($str, $file='', $t='en') {
 class db {
     // sends a query to the database and returns the result
     public static function Query($strSQL): mysqli_result|bool {
+        //error_log("****************************** QUERY: " . $strSQL);
         $adminEmail = getenv('ADMIN_EMAIL') ?: 'admin@example.com'; // Fallback to a generic email if not set
         
         $result = mysqli_query($GLOBALS["dbcon"],$strSQL)

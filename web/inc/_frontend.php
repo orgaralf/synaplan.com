@@ -277,8 +277,8 @@ Class Frontend {
         // fill for sorting first
         $inMessageArr['BUSERID'] = $_SESSION["USERPROFILE"]["BID"];
         
-        $cleanPost = $_REQUEST['message'];
-        error_log("****************************** CLEANPOST: " . $cleanPost);
+        $cleanPost = Tools::turnURLencodedIntoUTF8($_REQUEST['message']);
+        //error_log("****************************** CLEANPOST: " . $cleanPost);
 
         $inMessageArr['BTEXT'] = DB::EscString(trim(strip_tags($cleanPost)));
         // --
@@ -310,9 +310,8 @@ Class Frontend {
         // save the message to the database
         // Define the model id to save model to the message
 
-
         $filesAttached = count($filesArr);
-        //error_log("FILES ATTACHED: ".print_r($filesArr, true));
+        // error_log("FILES ATTACHED: ".print_r($filesArr, true));
         // NO FILE ATTACHED
         if($filesAttached == 0) {
             $filesArr[] = [

@@ -493,27 +493,14 @@ class Tools {
     // converting urlencoded into real utf8 
     public static function turnURLencodedIntoUTF8(string $in): string {
         // 1️⃣ %xx  → byte
-        $s = rawurldecode($in);
-    
-        // 2️⃣ \uXXXX  → UTF-8
-        $s = preg_replace_callback(
-            '/\\\\u([0-9a-fA-F]{4})/',
-            fn ($m) => mb_convert_encoding(pack('H*', $m[1]), 'UTF-8', 'UTF-16BE'),
-            $s
-        );
-    
-        // 3️⃣ \xXX  → byte
-        $s = preg_replace_callback(
-            '/\\\\x([0-9a-fA-F]{2})/',
-            fn ($m) => chr(hexdec($m[1])),
-            $s
-        );
-    
-        // 4️⃣ make sure we end up in UTF-8 no matter what
-        if (!mb_check_encoding($s, 'UTF-8')) {
-            $s = mb_convert_encoding($s, 'UTF-8', 'auto');
-        }
-    
-        return $s;
+        // 1️⃣ %xx & + ➜ byte / space
+        $step1 = urldecode($in);
+
+        // 2️⃣ JSON-style unescape (also converts \" \\ \t \n …)
+        //     Wrap in double quotes → valid JSON string
+        $json  = '"' . addcslashes($step1, "\\\"\n\r\t\f\v") . '"';
+        $out   = json_decode($json, flags: JSON_THROW_ON_ERROR);
+
+        return is_string($out) ? $out : $step1;
     }
 }
