@@ -8,6 +8,7 @@
     "easymde": "^2.20.0",
     "feather-icons": "^4.29.2",
     "genai": "^0.0.18",
+    "highlight.js": "^11.11.1",
     "jquery": "^3.7.1",
     "markdown-it": "^14.1.0"
   }

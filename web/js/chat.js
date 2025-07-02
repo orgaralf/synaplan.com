@@ -297,7 +297,6 @@ function handleSendMessage() {
 
     fetch('api.php', {
       method: 'POST',
-      headers: { 'Content-Type': 'charset=UTF-8' },
       body: formData
     })
     .then(res => {
@@ -410,7 +409,15 @@ function sseStream(data, outputObject) {
       if(!eventMessage.message.indexOf('<loading>')) {
         stopWaitingLoader(outputObject);
       }
-      mdText = md.render(eventMessage.message);
+      
+      // Ensure markdown-it is available
+      if (typeof window.md !== 'undefined') {
+        mdText = window.md.render(eventMessage.message);
+      } else {
+        // Fallback if markdown-it is not available
+        mdText = eventMessage.message.replace(/\n/g, '<br>');
+      }
+      
       $("#" + outputObject).append(`${mdText}`);
       $("#chatModalBody").scrollTop( $("#chatModalBody").prop("scrollHeight") );
       //console.log('Processing:', eventMessage.step);

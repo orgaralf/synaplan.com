@@ -4,6 +4,8 @@
 // We have to set the values and the prompt config correctly.
 ?>
 <link rel="stylesheet" href="fa/css/all.min.css">
+<!-- Add highlight.js CSS -->
+<link rel="stylesheet" href="node_modules/highlight.js/styles/github.min.css">
 <main class="col-md-9 ms-sm-auto col-lg-10 px-1 px-md-3 py-2 py-md-3 content-main-bg" id="contentMain">
     <!-- Modern Chat Interface -->
     <div class="chat-container">
@@ -217,6 +219,21 @@
     </div>
 </main>
 <script src="node_modules/markdown-it/dist/markdown-it.min.js"></script>
+<!-- Add highlight.js JS -->
+<script src="node_modules/highlight.js/lib/highlight.min.js"></script>
+<!-- Add common language support -->
+<script src="node_modules/highlight.js/lib/languages/javascript.min.js"></script>
+<script src="node_modules/highlight.js/lib/languages/python.min.js"></script>
+<script src="node_modules/highlight.js/lib/languages/php.min.js"></script>
+<script src="node_modules/highlight.js/lib/languages/java.min.js"></script>
+<script src="node_modules/highlight.js/lib/languages/cpp.min.js"></script>
+<script src="node_modules/highlight.js/lib/languages/csharp.min.js"></script>
+<script src="node_modules/highlight.js/lib/languages/sql.min.js"></script>
+<script src="node_modules/highlight.js/lib/languages/bash.min.js"></script>
+<script src="node_modules/highlight.js/lib/languages/json.min.js"></script>
+<script src="node_modules/highlight.js/lib/languages/xml.min.js"></script>
+<script src="node_modules/highlight.js/lib/languages/css.min.js"></script>
+<script src="node_modules/highlight.js/lib/languages/html.min.js"></script>
 <script>
     // enable everything
     const md = window.markdownit({
@@ -224,7 +241,21 @@
         linkify: true,
         typographer: true,
         breaks: true,
-    });
+        highlight: function (str, lang) {
+            if (lang && hljs.getLanguage(lang)) {
+                try {
+                    return '<pre class="hljs"><code>' +
+                           hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+                           '</code></pre>';
+                } catch (__) {}
+            }
+            
+            // Fallback: use generic highlighting
+            return '<pre class="hljs"><code>' + 
+                   hljs.highlightAuto(str).value + 
+                   '</code></pre>';
+        }
+    }).use("");
     // After: const md = window.markdownit({ ... });
     md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
     // If the link does not already have target, add target="_blank"
@@ -243,6 +274,9 @@
     }
     return self.renderToken(tokens, idx, options);
     };
+
+    // Make md globally accessible for chat.js
+    window.md = md;
 
     // Global variable to store current prompt configuration
     let currentPromptConfig = null;

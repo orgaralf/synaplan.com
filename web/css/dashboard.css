@@ -48,11 +48,11 @@ body, html {
 
 .sidebar {
   position: sticky;
-  top: 50px; /* Height of the top navbar */
-  height: calc(100vh - 50px);
+  top: 0; /* Changed from 50px to 0 since no top navbar */
+  height: 100vh; /* Changed from calc(100vh - 50px) to full height */
   overflow-y: auto; /* Allow scrolling within sidebar if needed */
   overflow-x: hidden;
-  min-height: calc(100vh - 50px); /* Ensure minimum height */
+  min-height: 100vh; /* Changed from calc(100vh - 50px) to full height */
   background: linear-gradient(135deg, #041830, #092852); /* Ensure background is always applied */
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
   z-index: 100; /* Behind the navbar */
@@ -70,7 +70,7 @@ body, html {
 .sidebar-sticky {
   position: relative;
   top: 0;
-  height: calc(100vh - 48px);
+  height: 100vh; /* Changed from calc(100vh - 48px) to full height */
   overflow-x: hidden;
   overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
 }
@@ -947,7 +947,7 @@ CHAT INTERFACE STYLES
 
 /* Chat Container */
 .chat-container {
-  height: calc(100vh - 80px);
+  height: calc(100vh - 30px);
 }
 
 .chatbox {
@@ -1415,3 +1415,83 @@ CHAT INTERFACE STYLES
 }
 
 /* ------------------------------------------------------------ */
+
+/* Mobile toggle button styling */
+.sidebar .btn-link {
+  text-decoration: none;
+  border: none;
+  background: transparent;
+  padding: 0.25rem 0.5rem;
+}
+
+.sidebar .btn-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.sidebar .navbar-brand {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.sidebar .navbar-brand:hover {
+  color: #ffffff;
+  opacity: 0.8;
+}
+
+/* ------------------------------------------------------------ */
+/* *******************************
+SYNTAX HIGHLIGHTING STYLES
+******************************** */
+
+/* Custom styles for syntax highlighting in chat */
+.ai-bubble .hljs {
+    background: #f6f8fa !important;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 16px;
+    margin: 8px 0;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.45;
+    overflow-x: auto;
+}
+
+.ai-bubble .hljs code {
+    background: transparent !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+.ai-bubble pre {
+    margin: 8px 0;
+    background: #f6f8fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 16px;
+    overflow-x: auto;
+}
+
+.ai-bubble pre code {
+    background: transparent !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+/* Dark theme support for code blocks */
+@media (prefers-color-scheme: dark) {
+    .ai-bubble .hljs {
+        background: #2d3748 !important;
+        border-color: #4a5568;
+    }
+    
+    .ai-bubble pre {
+        background: #2d3748;
+        border-color: #4a5568;
+    }
+}

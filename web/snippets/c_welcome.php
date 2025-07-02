@@ -41,11 +41,6 @@
             echo '</div>';
         }
         ?>
-        <script language="javascript">
-            $(document).ready(function() {
-                $("#statusBarText").text("User ID: <?php print $_SESSION['USERPROFILE']['BID']?>");
-            });
-        </script>
         <?php
     }
 

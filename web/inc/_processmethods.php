@@ -340,13 +340,15 @@ class ProcessMethods {
 
         // run exceptions for specific topics
         $defaultPromptArr = ['analyzefile'];
+        // check of the the a call was done
+        $previousCall = false;
         // ----------------------------------------------------- default or extra?
         if(!in_array(self::$msgArr['BTOPIC'], $defaultPromptArr)) {
             if(self::$stream) {
                 Frontend::statusToStream(self::$msgId, 'pre', 'Calling '.$AIGENERAL.'. ');
             }
-            $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, self::$threadArr);
-
+            $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, self::$threadArr, self::$stream);
+            $previousCall = true;
         } else {
             if(self::$stream) {
                 Frontend::statusToStream(self::$msgId, 'pre', 'Calling ' . self::$msgArr['BTOPIC'] . '. ');
@@ -362,8 +364,12 @@ class ProcessMethods {
         if (self::$msgArr['BTOPIC'] === 'mediamaker') {
             // Call specific method for media creation tasks
             $task = $answerSorted['BMEDIA'];
+            $answerText = '';
+            if($previousCall) {
+                $answerText = $answerSorted['BTEXT']."\n\n";
+            }                
             $answerSorted = Tools::migrateArray(self::$msgArr, $answerSorted);
-
+            $answerSorted['BTEXT'] = $answerText.$answerSorted['BTEXT'];
             if($task == 'image') {
                 $answerSorted['BTEXT'] = "/pic ".$answerSorted['BTEXT'];
                 $answerSorted = BasicAI::toolPrompt($answerSorted, self::$threadArr);
@@ -391,7 +397,12 @@ class ProcessMethods {
                 $result['fileName'] = $fileName;
                 $result['fileType'] = $fileExtension;
                 */
+                $answerText = '';
+                if($previousCall) {
+                    $answerText = $answerSorted['BTEXT']."\n\n";
+                }                
                 $result = AIOpenAI::createOfficeFile($answerSorted, self::$usrArr, self::$stream);
+                $answerSorted['BTEXT'] = $answerText.$answerSorted['BTEXT'];
                 $feNote = 'No file created';
 
                 if($result['success']) {
@@ -420,7 +431,13 @@ class ProcessMethods {
         
         if (self::$msgArr['BTOPIC'] === 'analyzefile') {
             $answerSorted = Tools::migrateArray(self::$msgArr, $answerSorted);
+            $answerText = '';
+            if($previousCall) {
+                $answerText = $answerSorted['BTEXT']."\n\n";
+            }                
             $answerSorted = AIGoogle::analyzeFile($answerSorted, self::$stream);
+            $answerSorted['BTEXT'] = $answerText.$answerSorted['BTEXT'];
+
             if(is_string($answerSorted)) {
                 error_log($answerSorted);
                 $answerSorted['BTEXT'] = $answerSorted;
@@ -437,7 +454,12 @@ class ProcessMethods {
 
         // Handle web search if needed
         if($answerSorted['BFILE'] == 10 && strlen($answerSorted['BFILETEXT']) > 0 AND strlen($answerSorted['BFILETEXT']) < 64) {
+            $answerText = '';
+            if($previousCall) {
+                $answerText = $answerSorted['BTEXT']."\n\n";
+            }    
             $answerSorted = Tools::searchWeb(self::$msgArr, $answerSorted['BFILETEXT']);
+            $answerSorted['BTEXT'] = $answerText.$answerSorted['BTEXT'];
             $answerSorted['BFILE'] = 0;
         }
         

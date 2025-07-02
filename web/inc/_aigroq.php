@@ -108,7 +108,7 @@ class AIGroq {
      * @param array $threadArr Thread context for conversation history
      * @return array|string|bool Topic-specific response or error message
      */
-    public static function topicPrompt($msgArr, $threadArr): array|string|bool {
+    public static function topicPrompt($msgArr, $threadArr, $stream = false): array|string|bool {
         //error_log('topicPrompt: '.print_r($msgArr, true));
 
         $systemPrompt = BasicAI::getAprompt($msgArr['BTOPIC'], $msgArr['BLANG'], $msgArr, true);
@@ -150,10 +150,18 @@ class AIGroq {
         return $arrAnswer;
         */
         $answer = $chat['choices'][0]['message']['content'];
-        $answer = str_replace("```json\n", "", $answer);
-        $answer = str_replace("\n```", "", $answer);
-        $answer = str_replace("```json", "", $answer);
-        $answer = str_replace("```", "", $answer);
+        // Clean JSON response - only if it starts with JSON markers
+        if (strpos($answer, "```json\n") === 0) {
+            $answer = substr($answer, 8); // Remove "```json\n" from start
+            if (strpos($answer, "\n```") !== false) {
+                $answer = str_replace("\n```", "", $answer);
+            }
+        } elseif (strpos($answer, "```json") === 0) {
+            $answer = substr($answer, 7); // Remove "```json" from start
+            if (strpos($answer, "```") !== false) {
+                $answer = str_replace("```", "", $answer);
+            }
+        }
         $answer = trim($answer);
 
         if(Tools::isValidJson($answer) == false) {
