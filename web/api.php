@@ -46,6 +46,7 @@ if ($isJsonRpc) {
 
 // If not JSON-RPC, continue with REST handling
 // what does the user want?
+header('Content-Type: application/json; charset=UTF-8');
 $apiAction = $_REQUEST['action'];
 
 // ------------------------------------------------------ API OPTIONS --------------------
@@ -102,7 +103,5 @@ switch($apiAction) {
 }
 
 // ------------------------------------------------------ Json output
-
-header('Content-Type: application/json');
 echo json_encode($resArr);
 exit;

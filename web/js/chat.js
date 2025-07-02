@@ -297,6 +297,7 @@ function handleSendMessage() {
 
     fetch('api.php', {
       method: 'POST',
+      headers: { 'Content-Type': 'charset=UTF-8' },
       body: formData
     })
     .then(res => {

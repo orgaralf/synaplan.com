@@ -276,7 +276,11 @@ Class Frontend {
         }
         // fill for sorting first
         $inMessageArr['BUSERID'] = $_SESSION["USERPROFILE"]["BID"];
-        $inMessageArr['BTEXT'] = DB::EscString(trim(strip_tags($_POST['message'])));
+        
+        $cleanPost = $_REQUEST['message'];
+        error_log("****************************** CLEANPOST: " . $cleanPost);
+
+        $inMessageArr['BTEXT'] = DB::EscString(trim(strip_tags($cleanPost)));
         // --
         $convArr = Central::searchConversation($inMessageArr);
         
