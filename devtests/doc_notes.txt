@@ -13,3 +13,7 @@
 
 // RAG SQL
 // select BMESSAGES.*, VC_DISTANCE_EUCLIDEAN(BEMBED, VC_FromText(%s)) AS distance from BMESSAGES, BRAG order by distance asc limit 5
+
+
+sudo apt update && sudo apt install php-posix
+

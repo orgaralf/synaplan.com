@@ -1092,6 +1092,7 @@ CHAT INTERFACE STYLES
   color: #6c757d; 
   display: block; 
   margin-bottom: 4px;
+  max-width: 70%;
 }
 
 /* File Attachment Header */

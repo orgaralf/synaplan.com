@@ -45,7 +45,7 @@
         }
         if (!empty($errors)) {
             $deleteNotification .= '<div class="alert alert-warning my-2">' . implode('<br>', $errors) . '</div>';
-        }
+        }       
     }
     if (!empty($deleteNotification)) {
         echo $deleteNotification;
@@ -126,6 +126,7 @@
             <!-- Filter Section -->
             <div class="border-bottom pb-3 mb-3">
                 <form method="POST" action="index.php/filemanager" id="fileFilterForm">
+                    <input type="hidden" name="page" value="1">
                     <div class="row align-items-center">
                         <label for="fileGroupSelect" class="col-sm-2 col-form-label"><strong>Filter by Group:</strong></label>
                         <div class="col-sm-10">
@@ -157,6 +158,9 @@
                                     ?>
                                 </select>
                                 <button type="submit" class="btn btn-primary">Filter</button>
+                                <?php if (!empty($selectedGroup)): ?>
+                                <a href="index.php/filemanager" class="btn btn-outline-secondary">Clear Filter</a>
+                                <?php endif; ?>
                             </div>
                             <?php if (!empty($selectedGroup)): ?>
                                 <div class="form-text text-primary">
@@ -172,6 +176,12 @@
 
             <form method="POST" action="index.php/filemanager">
                 <input type="hidden" name="action" value="bulkdelete">
+                <?php if (isset($_GET['page']) && $_GET['page'] > 1): ?>
+                <input type="hidden" name="page" value="<?php echo intval($_GET['page']); ?>">
+                <?php endif; ?>
+                <?php if (isset($_GET['fileGroupSelect']) && !empty($_GET['fileGroupSelect'])): ?>
+                <input type="hidden" name="fileGroupSelect" value="<?php echo htmlspecialchars($_GET['fileGroupSelect']); ?>">
+                <?php endif; ?>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover table-sm">
                         <thead class="table-light">
@@ -202,8 +212,19 @@
                                     AND BMESSAGES.BFILE = 1 
                                     AND BMESSAGES.BFILEPATH != ''";
 
-                                // Check if a group is selected
-                                $selectedGroup = isset($_POST['fileGroupSelect']) ? db::EscString($_POST['fileGroupSelect']) : '';
+                                // Check if a group is selected (from POST or GET)
+                                $selectedGroup = '';
+                                if (isset($_POST['fileGroupSelect']) && !empty($_POST['fileGroupSelect'])) {
+                                    $selectedGroup = db::EscString($_POST['fileGroupSelect']);
+                                } elseif (isset($_GET['fileGroupSelect']) && !empty($_GET['fileGroupSelect'])) {
+                                    $selectedGroup = db::EscString($_GET['fileGroupSelect']);
+                                }
+
+                                // Pagination setup
+                                $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+                                $perPage = 30;
+                                $offset = ($page - 1) * $perPage;
+                                $limit = $perPage + 1; // Get one extra to check if there are more pages
 
                                 if (!empty($selectedGroup)) {
                                     // Only show files in the selected group
@@ -212,19 +233,32 @@
                                             INNER JOIN BRAG ON BRAG.BMID = BMESSAGES.BID
                                             WHERE $where
                                               AND BRAG.BGROUPKEY = '" . $selectedGroup . "'
-                                              GROUP by BRAG.BMID";
+                                              GROUP by BRAG.BMID
+                                            LIMIT $offset, $limit";
                                 } else {
                                     // Show all files for the user with group info
                                     $sql = "SELECT BMESSAGES.*, BRAG.BGROUPKEY 
                                             FROM BMESSAGES
                                             LEFT JOIN BRAG ON BRAG.BMID = BMESSAGES.BID
                                             WHERE $where
-                                            GROUP BY BMESSAGES.BID";
+                                            GROUP BY BMESSAGES.BID
+                                            LIMIT $offset, $limit";
                                 }
 
                                 $res = db::Query($sql);
                                 $hasRows = false;
+                                $rowCount = 0;
+                                $hasMorePages = false;
+                                
                                 while ($row = db::FetchArr($res)) {
+                                    $rowCount++;
+                                    
+                                    // Check if we have more than perPage rows (indicating there are more pages)
+                                    if ($rowCount > $perPage) {
+                                        $hasMorePages = true;
+                                        break;
+                                    }
+                                    
                                     $hasRows = true;
                                     echo "<tr>";
                                     // Checkbox column
@@ -279,6 +313,33 @@
                         Delete Selected</button>
                     <!-- Add more bulk action buttons as needed -->
                 </div>
+                
+                <!-- Pagination Controls -->
+                <?php if ($hasRows || $page > 1): ?>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div class="text-muted small">
+                        Page <?php echo $page; ?> 
+                        <?php if ($hasRows): ?>
+                            (Showing <?php echo $rowCount; ?> files)
+                        <?php endif; ?>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <?php if ($page > 1): ?>
+                            <a href="index.php/filemanager?page=<?php echo ($page - 1); ?><?php echo !empty($selectedGroup) ? '&fileGroupSelect=' . urlencode($selectedGroup) : ''; ?>" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </a>
+                        <?php endif; ?>
+                        
+                        <?php if ($hasMorePages): ?>
+                            <a href="index.php/filemanager?page=<?php echo ($page + 1); ?><?php echo !empty($selectedGroup) ? '&fileGroupSelect=' . urlencode($selectedGroup) : ''; ?>" 
+                               class="btn btn-outline-primary btn-sm">
+                                Next <i class="fas fa-chevron-right"></i>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
             </form>
         </div>
     </div>
@@ -426,7 +487,17 @@ document.addEventListener('DOMContentLoaded', function() {
 // Existing file management functions
 function deleteFile(ID) {
     if(confirm("Delete file with ID: " + ID +"?")) {
-        window.location.href = "index.php/filemanager?action=delete&id=" + ID;
+        // Preserve current page and filter when deleting
+        const urlParams = new URLSearchParams(window.location.search);
+        const page = urlParams.get('page') || '1';
+        const fileGroupSelect = urlParams.get('fileGroupSelect') || '';
+        
+        let deleteUrl = "<?php echo $GLOBALS['baseUrl']; ?>index.php/filemanager?action=delete&id=" + ID;
+
+        if (page && page !== '1') deleteUrl += "&page=" + page;
+        if (fileGroupSelect) deleteUrl += "&fileGroupSelect=" + encodeURIComponent(fileGroupSelect);
+        //alert(deleteUrl);
+        window.location.replace(deleteUrl);
     }
 }
 

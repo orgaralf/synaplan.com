@@ -40,4 +40,6 @@ class Curler {
 
         return $decodedResponse;
     }
+
+
 } 

@@ -1,5 +1,6 @@
 <?php
-set_time_limit(0);
+// Test script for analyzeFile streaming functionality
+set_time_limit(300); // 5 minutes
 
 // Include necessary files
 require_once(__DIR__ . '/inc/_confsys.php');
@@ -10,82 +11,48 @@ require_once(__DIR__ . '/inc/_curler.php');
 require_once(__DIR__ . '/inc/_frontend.php');
 require_once(__DIR__ . '/inc/_aigoogle.php');
 
-echo "Testing AIGoogle::analyzeFile() method with inline data approach...\n";
+// Initialize Google AI
+AIGoogle::init();
 
-// Initialize AIGoogle
-if (!AIGoogle::init()) {
-    echo "Error: Could not initialize AIGoogle - check API key configuration\n";
-    exit(1);
-}
-
-// Create a test text file
-$testContent = "This is a test document for file analysis.
-
-Key Points:
-- This document contains sample text for testing
-- It includes multiple paragraphs and formatting
-- The purpose is to verify the analyzeFile method works correctly
-- It should be processed by Google Gemini API using inline data
-
-Main Topics:
-1. File analysis testing
-2. Google Gemini integration
-3. Document processing capabilities
-4. Inline data processing approach
-
-Important Details:
-- The file should be read and encoded as base64
-- Content should be analyzed and summarized
-- Results should be returned in the specified language
-- This approach avoids complex file uploads
-
-This concludes the test document content.";
-
-$testFilePath = __DIR__ . '/up/test_document.txt';
-file_put_contents($testFilePath, $testContent);
-
-echo "Created test file: $testFilePath\n";
-
-// Prepare test message array
+// Create a test message array
 $testMsgArr = [
-    'BID' => 'test_' . uniqid(),
+    'BID' => 999999,
     'BUSERID' => 1,
-    'BFILEPATH' => 'test_document.txt',
+    'BFILEPATH' => 'test.txt', // You'll need to create this file
     'BFILETYPE' => 'txt',
     'BLANG' => 'en',
-    'BTEXT' => 'Please analyze this test document'
+    'BTEXT' => 'Test file analysis'
 ];
 
-echo "Testing file analysis with inline data approach...\n";
+// Create a simple test file
+$testContent = "This is a test file for analyzing with Google AI.\n\n";
+$testContent .= "It contains multiple paragraphs to make the analysis take longer.\n\n";
+$testContent .= "The purpose is to test the streaming functionality during file analysis.\n\n";
+$testContent .= "This should take enough time to see the progress updates every 10 seconds.\n\n";
+$testContent .= "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n\n";
+$testContent .= "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.\n\n";
+$testContent .= "Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur?\n\n";
 
+// Write test file
+file_put_contents(__DIR__ . '/up/test.txt', $testContent);
+
+echo "Starting file analysis test with streaming...\n";
+echo "This will simulate the streaming updates every 10 seconds.\n\n";
+
+// Test the analyzeFile method with streaming enabled
 try {
-    // Call the analyzeFile method
     $result = AIGoogle::analyzeFile($testMsgArr, true);
     
-    echo "\n=== ANALYSIS RESULT ===\n";
-    echo "Success: " . (isset($result['BFILETEXT']) ? 'Yes' : 'No') . "\n";
-    
-    if (isset($result['BFILETEXT'])) {
-        echo "Analysis Text:\n";
-        echo $result['BFILETEXT'] . "\n";
-    }
-    
-    if (isset($result['BTEXT'])) {
-        echo "Status Message: " . $result['BTEXT'] . "\n";
-    }
-    
-    if (isset($result['BFILEPATH'])) {
-        echo "File Path: " . $result['BFILEPATH'] . "\n";
-    }
+    echo "\nAnalysis completed!\n";
+    echo "Result: " . json_encode($result, JSON_PRETTY_PRINT) . "\n";
     
 } catch (Exception $e) {
-    echo "Error during analysis: " . $e->getMessage() . "\n";
+    echo "Error: " . $e->getMessage() . "\n";
 }
 
 // Clean up test file
-if (file_exists($testFilePath)) {
-    unlink($testFilePath);
-    echo "Cleaned up test file\n";
+if (file_exists(__DIR__ . '/up/test.txt')) {
+    unlink(__DIR__ . '/up/test.txt');
 }
 
 echo "\nTest completed.\n"; 

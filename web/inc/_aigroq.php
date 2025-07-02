@@ -48,6 +48,7 @@ class AIGroq {
      */
     public static function sortingPrompt($msgArr, $threadArr): array|string|bool {
         // prompt builder
+        $threadArr = [];
         $systemPrompt = BasicAI::getAprompt('tools:sort');
 
         $client = self::$client;
@@ -67,8 +68,8 @@ class AIGroq {
                 $arrMessages[] = ['role' => 'user', 'content' => $msgText];
             } 
             if($msg['BDIRECT'] == 'OUT') {
-                if(strlen($msg['BTEXT'])>1000) {
-                    $msg['BTEXT'] = substr($msg['BTEXT'], 0, 1000);
+                if(strlen($msg['BTEXT'])>500) {
+                    $msg['BTEXT'] = substr($msg['BTEXT'], 0, 500);
                 }
                 $arrMessages[] = ['role' => 'assistant', 'content' => "[".$msg['BID']."] ".$msg['BTEXT']];
             }
@@ -76,26 +77,62 @@ class AIGroq {
 
         // Add current message
         $msgText = json_encode($msgArr);
+        
+        // Debug: Log the message being sent
+        /*
+        error_log("=== GROQ SORTING DEBUG ===");
+        error_log("Original msgArr keys: " . implode(', ', array_keys($msgArr)));
+        error_log("BFILETEXT length: " . (isset($msgArr['BFILETEXT']) ? strlen($msgArr['BFILETEXT']) : 'NOT SET'));
+        error_log("BTEXT length: " . (isset($msgArr['BTEXT']) ? strlen($msgArr['BTEXT']) : 'NOT SET'));
+        */
+        
+        $msgText = json_encode($msgArr);
+        //error_log("Final msgText length: " . strlen($msgText));
+        //error_log("First 500 chars of msgText: " . substr($msgText, 0, 500));
+        
         $arrMessages[] = ['role' => 'user', 'content' => Tools::cleanTextBlock($msgText)];
+        
+        // Debug: Log the complete request
+        //error_log("Total messages to send: " . count($arrMessages));
+        //error_log("System prompt length: " . strlen($systemPrompt['BPROMPT']));
 
         try {
+            //error_log("Sending request to Groq API...");
             $chat = $client->chat()->completions()->create([
                 'model' => 'llama-3.3-70b-versatile',
                 'reasoning_format' => 'hidden',
                 'messages' => $arrMessages
             ]);
+            //error_log("API call completed successfully");
+            
+            // Debug: Log the raw response
+            // error_log("Raw API response structure: " . print_r(array_keys($chat), true));
+            if (isset($chat['choices']) && is_array($chat['choices'])) {
+                error_log("Number of choices: " . count($chat['choices']));
+                if (isset($chat['choices'][0])) {
+                    error_log("First choice structure: " . print_r(array_keys($chat['choices'][0]), true));
+                    if (isset($chat['choices'][0]['message'])) {
+                        error_log("Message structure: " . print_r(array_keys($chat['choices'][0]['message']), true));
+                        error_log("Content length: " . strlen($chat['choices'][0]['message']['content']));
+                        error_log("First 200 chars of content: " . substr($chat['choices'][0]['message']['content'], 0, 200));
+                    }
+                }
+            }
+            
         } catch (GroqException $err) {
-            print "Error: ".$err->getMessage();
+            error_log("GROQ API ERROR: " . $err->getMessage());
             return "*API sorting Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
         }
 
         // Clean and return response
         $answer = $chat['choices'][0]['message']['content'];
+        
         $answer = str_replace("```json\n", "", $answer);
         $answer = str_replace("\n```", "", $answer);
         $answer = str_replace("```json", "", $answer);
         $answer = str_replace("```", "", $answer);
-        $answer = trim($answer);
+        $answer = trim($answer);      
+       
         return $answer;
     }
     /**

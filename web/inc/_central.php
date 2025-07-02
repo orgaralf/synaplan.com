@@ -665,6 +665,17 @@ class Central {
                                 VEC_FromText('[".implode(", ", $myVector)."]'))";
 
                 db::Query($updateSQL);
+                // ------------------------------------------------------------
+                // write to stream
+                if($streamOutput) {
+                    $update = [
+                        'msgId' => $arrMessage['BID'],
+                        'status' => 'pre_processing',
+                        'message' => '. '
+                    ];
+                    Frontend::printToStream($update);
+                }
+            // ------------------------------------------------------------
             }    
             // ------------------------------------------------------------
             // write to stream
@@ -685,10 +696,13 @@ class Central {
     // get the message thread up to 15 messages back
     public static function getThread($arrMsg, $timeSeconds = 86400): array|string|bool {
         $arrThread = [];
-        $getSQL = "select * from BMESSAGES where BUSERID = ".$arrMsg['BUSERID']." and BUNIXTIMES < ".$arrMsg['BUNIXTIMES']." and BUNIXTIMES > ".($arrMsg['BUNIXTIMES']-$timeSeconds)." order by BID desc limit 35";
+        $getSQL = "select * from BMESSAGES where BUSERID = ".$arrMsg['BUSERID']." and BUNIXTIMES < ".$arrMsg['BUNIXTIMES']." and BUNIXTIMES > ".($arrMsg['BUNIXTIMES']-$timeSeconds)." order by BID desc limit 5";
         $res = db::Query($getSQL);
 
         while($oneMsg = db::FetchArr($res)) {
+            if(strlen($oneMsg['BFILETEXT'])>0) {
+                $oneMsg['BFILETEXT'] = substr($oneMsg['BFILETEXT'], 0, 100);
+            }
             $arrThread[] = $oneMsg;
         }
         $arrThread=array_reverse($arrThread);
@@ -698,10 +712,13 @@ class Central {
     // get topic filtered thread
     public static function getTopicThread($arrMsg, $timeSeconds = 86400): array|string|bool {
         $arrThread = [];
-        $getSQL = "select * from BMESSAGES where BUSERID = ".$arrMsg['BUSERID']." and BUNIXTIMES < ".$arrMsg['BUNIXTIMES']." and BUNIXTIMES > ".($arrMsg['BUNIXTIMES']-$timeSeconds)." and BTOPIC = '".$arrMsg['BTOPIC']."' order by BID desc limit 35";
+        $getSQL = "select * from BMESSAGES where BUSERID = ".$arrMsg['BUSERID']." and BUNIXTIMES < ".$arrMsg['BUNIXTIMES']." and BUNIXTIMES > ".($arrMsg['BUNIXTIMES']-$timeSeconds)." and BTOPIC = '".$arrMsg['BTOPIC']."' order by BID desc limit 5";
         $res = db::Query($getSQL);
 
         while($oneMsg = db::FetchArr($res)) {
+            if(strlen($oneMsg['BFILETEXT'])>0) {
+                $oneMsg['BFILETEXT'] = substr($oneMsg['BFILETEXT'], 0, 100);
+            }
             $arrThread[] = $oneMsg;
         }
         $arrThread=array_reverse($arrThread);

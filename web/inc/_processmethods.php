@@ -117,8 +117,9 @@ class ProcessMethods {
             $metaSQL = "select BVALUE from BMESSAGEMETA where BMESSID = ".self::$msgArr['BID']." and BTOKEN = 'PROMPTID'";
             $metaRes = DB::Query($metaSQL);
             $metaArr = DB::FetchArr($metaRes);
+
             // ----------------------------------------------------- override the topic with the selected prompt
-            if(isset($metaArr['BVALUE']) AND $metaArr['BVALUE'] != 'tools:sort') {
+            if(isset($metaArr['BVALUE']) AND strlen($metaArr['BVALUE'])>1 AND $metaArr['BVALUE'] != 'tools:sort') {
                 $promptId = $metaArr['BVALUE'];
                 // Override the topic with the selected prompt
                 self::$msgArr['BTOPIC'] = $promptId;
@@ -131,6 +132,7 @@ class ProcessMethods {
                 }
 
             }
+
             // ----------------------------------------------------- Standard sorting
             // -----------------------------------------------------
             if($promptId == 'tools:sort') {
@@ -157,12 +159,22 @@ class ProcessMethods {
                 $sortingArr["BTEXT"]=self::$msgArr['BTEXT'];
                 $sortingArr["BFILETEXT"]=self::$msgArr['BFILETEXT'];
 
-                $answerJson = $AIGENERAL::sortingPrompt($sortingArr, self::$threadArr);
+                try {
+                    $answerJson = $AIGENERAL::sortingPrompt($sortingArr, self::$threadArr);
+                } catch (Exception $err) {
+                    error_log($err->getMessage());
+                    $answerJson = 'Error: '.$err->getMessage();
+                    if(self::$stream) {
+                        Frontend::statusToStream(self::$msgId, 'ai', $answerJson);
+                    }
+                }
+
 
                 $answerJsonArr = json_decode($answerJson, true);
                 self::$msgArr['BTEXT'] = $answerJsonArr['BTEXT'];
                 self::$msgArr['BTOPIC'] = $answerJsonArr['BTOPIC'];
                 self::$msgArr['BLANG'] = $answerJsonArr['BLANG'];
+
                 if(self::$stream) {
                     Frontend::statusToStream(self::$msgId, 'pre', 'Topic and language determined: '.self::$msgArr['BTOPIC'].' ('.self::$msgArr['BLANG'].').');
                 }
@@ -497,8 +509,23 @@ class ProcessMethods {
             $aiAnswer['BTEXT'] = $aiAnswer['BTEXT'];
         }
 
+        // Define valid BMESSAGES table columns
+        $validColumns = [
+            'BID', 'BUSERID', 'BTRACKID', 'BPROVIDX', 'BUNIXTIMES', 
+            'BDATETIME', 'BMESSTYPE', 'BFILE', 'BFILEPATH', 'BFILETYPE', 
+            'BTOPIC', 'BLANG', 'BTEXT', 'BDIRECT', 'BSTATUS', 'BFILETEXT'
+        ];
+
+        // Filter $aiAnswer to only include valid table columns
+        $filteredAnswer = [];
+        foreach ($validColumns as $column) {
+            if (isset($aiAnswer[$column])) {
+                $filteredAnswer[$column] = $aiAnswer[$column];
+            }
+        }
+
         // Prepare database fields and values
-        foreach($aiAnswer as $field => $val) {
+        foreach($filteredAnswer as $field => $val) {
             $fields[] = $field;
             if($field == 'BID') {
                 $values[] = 'DEFAULT';
@@ -514,7 +541,7 @@ class ProcessMethods {
                 }
             }
         }
-
+        
         // Insert the processed message into the database
         $newSQL = "insert into BMESSAGES (" . implode(",", $fields) . ") values (" . implode(",", $values) . ")";
         $newRes = db::Query($newSQL);

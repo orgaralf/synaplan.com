@@ -836,7 +836,74 @@ class AIGoogle {
                 ]]
             ];
 
-            $analyzeResponse = Curler::callJson($url, $headers, $postData);
+            // Set up progress updates if streaming is enabled
+            $progressPid = null;
+            if ($stream) {
+                $update = [
+                    'msgId' => $msgArr['BID'],
+                    'status' => 'pre_processing',
+                    'message' => 'Sending file to Google AI for analysis... '
+                ];
+                Frontend::printToStream($update);
+                
+                // Start a background process for progress updates (if pcntl is available)
+                if (function_exists('pcntl_fork')) {
+                    $pid = pcntl_fork();
+                    if ($pid == 0) {
+                        // Child process - send status updates every 10 seconds
+                        $updateCount = 0;
+                        while (true) {
+                            sleep(10);
+                            $updateCount++;
+                            $update = [
+                                'msgId' => $msgArr['BID'],
+                                'status' => 'pre_processing',
+                                'message' => '(' . ($updateCount * 10) . ') '
+                            ];
+                            Frontend::printToStream($update);
+                            
+                            // Check if parent process is still running
+                            if (!file_exists('/proc/' . getppid())) {
+                                break;
+                            }
+                        }
+                        exit(0);
+                    }
+                    $progressPid = $pid;
+                } else {
+                    // Fallback for systems without pcntl (like Windows)
+                    // Send a single update indicating the process may take time
+                    $update = [
+                        'msgId' => $msgArr['BID'],
+                        'status' => 'pre_processing',
+                        'message' => 'Analysis in progress... (this may take up to 2 minutes) '
+                    ];
+                    Frontend::printToStream($update);
+                }
+            }
+
+            try {
+                $analyzeResponse = Curler::callJson($url, $headers, $postData);
+            } catch (Exception $err) {
+                $errorMessage = "File analysis error: " . $err->getMessage();
+                error_log($errorMessage);
+                $msgArr['BFILETEXT'] = $errorMessage;
+                $msgArr['BTEXT'] = "Error analyzing file: " . $fileName;
+                if ($stream) {
+                    $update = [
+                        'msgId' => $msgArr['BID'],
+                        'status' => 'ai_processing',
+                        'message' => 'Error: ' . $errorMessage . ' '
+                    ];
+                    Frontend::printToStream($update);
+                }
+            }
+
+            // Clean up background progress process if it was started
+            if ($progressPid !== null && function_exists('posix_kill')) {
+                posix_kill($progressPid, SIGTERM);
+                pcntl_waitpid($progressPid, $status);
+            }
 
             // Extract analysis result
             if (isset($analyzeResponse['candidates'][0]['content']['parts'][0]['text'])) {
@@ -851,7 +918,7 @@ class AIGoogle {
                 if ($stream) {
                     $update = [
                         'msgId' => $msgArr['BID'],
-                        'status' => 'completed',
+                        'status' => 'pre_processing',
                         'message' => 'Analysis completed successfully. '
                     ];
                     Frontend::printToStream($update);
@@ -871,7 +938,7 @@ class AIGoogle {
             if ($stream) {
                 $update = [
                     'msgId' => $msgArr['BID'],
-                    'status' => 'error',
+                    'status' => 'ai_processing',
                     'message' => 'Error: ' . $errorMessage . ' '
                 ];
                 Frontend::printToStream($update);
