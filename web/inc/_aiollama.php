@@ -50,7 +50,7 @@ class AIOllama {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $fullPrompt .= "\nCurrent message to analyze: " . Tools::cleanTextBlock($msgText);
 
         try {
@@ -101,7 +101,7 @@ class AIOllama {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $fullPrompt .= "\nCurrent message: " . $msgText;
         
         try {

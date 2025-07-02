@@ -72,7 +72,7 @@ class AIOpenAI {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $arrMessages[] = ['role' => 'user', 'content' => Tools::cleanTextBlock($msgText)];
         $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
 
@@ -121,7 +121,7 @@ class AIOpenAI {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $arrMessages[] = ['role' => 'user', 'content' => $msgText];
 
 
@@ -563,7 +563,7 @@ class AIOpenAI {
             ];
 
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Request data prepared: " . json_encode($responseData));
+                error_log("DEBUG createOfficeFile: Request data prepared: " . json_encode($responseData,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             }
 
             $headers = [

@@ -269,7 +269,7 @@ class ProcessMethods {
         // Ensure BTOPIC is set and valid before calling getPromptDetails
         if (!isset(self::$msgArr['BTOPIC']) || empty(self::$msgArr['BTOPIC'])) {
             self::$msgArr['BTOPIC'] = 'general'; // Default fallback
-            //error_log('Warning: BTOPIC was missing or empty, defaulting to "chat"');
+            //error_log('Warning: BTOPIC was missing or empty, defaulting to "general"');
         }
         
         // For tool-generated responses, skip prompt processing and just return the response
@@ -335,10 +335,10 @@ class ProcessMethods {
         // --------------------------------------------------------------------------------
         // --------------------------------------------------------------------------------
         // --------------------------------------------------------------------------------
-        //error_log('calling '.$AIGENERAL."::topicPrompt");
-        // -----------------------------------------------------
+        // error_log('calling '.$AIGENERAL."::topicPrompt");
         // $answerSorted = AIGoogle::topicPrompt(self::$msgArr, self::$threadArr);
 
+        // run exceptions for specific topics
         $defaultPromptArr = ['analyzefile'];
         // ----------------------------------------------------- default or extra?
         if(!in_array(self::$msgArr['BTOPIC'], $defaultPromptArr)) {
@@ -357,7 +357,7 @@ class ProcessMethods {
         // --------------------------------------------------------------------------------
         // -----------------------------------------------------
         // post processing of the answer
-        //error_log('answerSorted 381: '.print_r($answerSorted, true));
+        // error_log('answerSorted 381: '.print_r($answerSorted, true));
         // Handle preconfigured sorted messages
         if (self::$msgArr['BTOPIC'] === 'mediamaker') {
             // Call specific method for media creation tasks
@@ -378,6 +378,7 @@ class ProcessMethods {
             }
             // $answerSorted['BTEXT'] = Tools::addMediaToText($answerSorted);
         }
+
         // **************************************************************************************************
         if (self::$msgArr['BTOPIC'] === 'officemaker') {
             // Call specific method for office document creation tasks
@@ -457,6 +458,7 @@ class ProcessMethods {
         $outText = Tools::addMediaToText($answerSorted);
         // print to stream
         if(self::$stream) {
+            error_log('outText: '.$outText);
             Frontend::statusToStream(self::$msgId, 'ai', $outText);
         }
 

@@ -75,7 +75,7 @@ class AIGroq {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $arrMessages[] = ['role' => 'user', 'content' => Tools::cleanTextBlock($msgText)];
 
         try {
@@ -109,6 +109,8 @@ class AIGroq {
      * @return array|string|bool Topic-specific response or error message
      */
     public static function topicPrompt($msgArr, $threadArr): array|string|bool {
+        error_log('topicPrompt: '.print_r($msgArr, true));
+
         $systemPrompt = BasicAI::getAprompt($msgArr['BTOPIC'], $msgArr['BLANG'], $msgArr, true);
 
         if(isset($systemPrompt['TOOLS'])) {
@@ -125,7 +127,7 @@ class AIGroq {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $arrMessages[] = ['role' => 'user', 'content' => $msgText];
         
         try {
@@ -155,12 +157,14 @@ class AIGroq {
         $answer = trim($answer);
 
         if(Tools::isValidJson($answer) == false) {
-            //error_log(" __________________________ GROQ ANSWER: ".$answer);
+            error_log(" __________________________ GROQ ANSWER: ".$answer);
+            error_log(" __________________________ GROQ ANSWER: ************************************ NO JSON");
             //return "*API topic Error - Ralf made a bubu - please mail that to him: * " . "Answer is not valid JSON";
             $arrAnswer = $msgArr;
             $arrAnswer['BTEXT'] = $answer;
             $arrAnswer['BDIRECT'] = 'OUT';
         } else {
+            error_log(" __________________________ GROQ ANSWER: ************************************ YES JSON");
             try {
                 $arrAnswer = json_decode($answer, true);
             } catch (GroqException $err) {

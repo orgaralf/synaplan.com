@@ -575,7 +575,7 @@ Class Frontend {
      */
     public static function printToStream($data) {
         $data['timestamp'] = time();
-        echo "data: " . json_encode($data) . "\n\n";
+        echo "data: " . json_encode($data,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
         ob_flush();
         flush();
     }

@@ -19,7 +19,7 @@ class Tools {
         $ticketStr = uniqid(dechex(rand(100000, 999999)));
         $userDetailsArr = json_decode($usrArr['BUSERDETAILS'], true);
         $userDetailsArr['ticket'] = $ticketStr;
-        $usrArr['BUSERDETAILS'] = json_encode($userDetailsArr, JSON_UNESCAPED_UNICODE);
+        $usrArr['BUSERDETAILS'] = json_encode($userDetailsArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $updateSQL = "UPDATE BUSER SET BUSERDETAILS = '".db::EscString($usrArr['BUSERDETAILS'])."' WHERE BID = ".$usrArr['BID'];
         if(db::Query($updateSQL)) {
             $msgArr['BTEXT'] = $GLOBALS["baseUrl"]."?id=".$usrArr['BID']."&lid=".urlencode($ticketStr);
