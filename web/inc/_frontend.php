@@ -589,7 +589,7 @@ Class Frontend {
         $update = [
             'msgId' => $channelId,
             'status' => "{$streamId}_processing",
-            'message' => "{$myText} "
+            'message' => $myText
         ];
         Frontend::printToStream($update);
         return true;

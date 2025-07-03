@@ -504,8 +504,10 @@ class ProcessMethods {
         $outText = Tools::addMediaToText($answerSorted);
         // print to stream
         if(self::$stream) {
-            error_log('outText: '.$outText);
-            Frontend::statusToStream(self::$msgId, 'ai', $outText);
+            //error_log('outText: '.$outText);
+            if(!isset(self::$msgArr['ALREADYSHOWN'])) {
+                Frontend::statusToStream(self::$msgId, 'ai', $outText);
+            }
         }
 
         // Handle audio file generation for WhatsApp

@@ -161,6 +161,7 @@ class AIOpenAI {
 
         error_log(" *************** OPENAI call - response object:" . date("Y-m-d H:i:s"));
         
+        // now ask the AI and give the stream out or the result when done!
         try {
             if ($stream) {
                 // Use streaming mode - simplified
@@ -194,9 +195,7 @@ class AIOpenAI {
 
                         // Try different ways to access delta text
                         if(isset($repArr['data']['delta'])) {
-                            $textChunk = rtrim($repArr['data']['delta'], "\n");
-                            $textChunk = rtrim($textChunk, "\n");
-                            $textChunk = rtrim($textChunk, "\r");
+                            $textChunk = $repArr['data']['delta'];
                             // Debug: log the response structure on localhost
                             if (isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1'])) {
                                 error_log("DEBUG: Response structure: " . print_r($response->toArray(), true));
@@ -218,7 +217,6 @@ class AIOpenAI {
                             error_log("DEBUG: Response event: " . $response->event);
                             error_log("DEBUG: Response structure: " . print_r($response->toArray(), true));
                         }
-                        
                         // Try to access final text
                         if (isset($response->text)) {
                             $finalText = $response->text;
@@ -231,27 +229,27 @@ class AIOpenAI {
                     
                     // Handle errors
                     if ($response->event === 'error') {
-                        error_log(" *************** OPENAI streaming ERROR: " . $response->message);
                         return "*API topic Error - Streaming failed: " . $response->message;
                     }
                 }
+                // **************************************************************************************************                
+                // ** return a different way to the rest of the process
+                $arrAnswer = $msgArr;
+                $arrAnswer['BTEXT'] = $answer;
+                $arrAnswer['BDIRECT'] = 'OUT';
+                $arrAnswer['BDATETIME'] = date('Y-m-d H:i:s');
+                $arrAnswer['BUNIXTIMES'] = time();
                 
-                // Create a mock response object for processing
-                $chat = (object) [
-                    'output' => [
-                        (object) [
-                            'type' => 'message',
-                            'role' => 'assistant',
-                            'status' => 'completed',
-                            'content' => [
-                                (object) [
-                                    'type' => 'output_text',
-                                    'text' => $answer
-                                ]
-                            ]
-                        ]
-                    ]
-                ];
+                // Clear file-related fields since there's no valid JSON
+                $arrAnswer['BFILE'] = 0;
+                $arrAnswer['BFILEPATH'] = '';
+                $arrAnswer['BFILETYPE'] = '';
+                $arrAnswer['BFILETEXT'] = '';
+
+                // avoid double output to the chat window
+                $arrAnswer['ALREADYSHOWN'] = true;
+
+                return $arrAnswer;
                 
             } else {
                 // Use non-streaming mode (existing logic)
@@ -272,77 +270,72 @@ class AIOpenAI {
                         'session_id' => $msgArr['BTRACKID']
                     ]
                 ]);
-            }
-            
-        } catch (Exception $err) {
-            error_log(" *************** OPENAI call - ERROR ".$err->getMessage());
-            return "*APItopic Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
-        }
-
-        error_log(" *************** OPENAI call - response object END:" . print_r($chat, true));
-        error_log(" *************** OPENAI call - response object END:" . date("Y-m-d H:i:s"));
-        
-        // Process the response (same logic for both streaming and non-streaming)
-        $answer = '';
-        foreach ($chat->output as $output) {
-            if ($output->type === 'message'          // nur Messages …
-                && $output->role === 'assistant'     // … vom Assistenten
-                && $output->status === 'completed')  // … die fertig sind
-            {
-                foreach ($output->content as $content) {
-                    if ($content->type === 'output_text') {
-                        if($stream) {
-                            // Already streamed above, just accumulate for final processing
-                            $answer .= $content->text . PHP_EOL;
-                        } else {
-                            $answer .= $content->text . PHP_EOL;   // <- text chunks
+                // JSON response processing
+                // Process the response (same logic for both streaming and non-streaming)
+                $answer = '';
+                foreach ($chat->output as $output) {
+                    if ($output->type === 'message'          // nur Messages …
+                        && $output->role === 'assistant'     // … vom Assistenten
+                        && $output->status === 'completed')  // … die fertig sind
+                    {
+                        foreach ($output->content as $content) {
+                            if ($content->type === 'output_text') {
+                                if($stream) {
+                                    // Already streamed above, just accumulate for final processing
+                                    $answer .= $content->text . PHP_EOL;
+                                } else {
+                                    $answer .= $content->text . PHP_EOL;   // <- text chunks
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
-        
-        // Clean JSON response - only if it starts with JSON markers
-        if (strpos($answer, "```json\n") === 0) {
-            $answer = substr($answer, 8); // Remove "```json\n" from start
-            if (strpos($answer, "\n```") !== false) {
-                $answer = str_replace("\n```", "", $answer);
-            }
-        } elseif (strpos($answer, "```json") === 0) {
-            $answer = substr($answer, 7); // Remove "```json" from start
-            if (strpos($answer, "```") !== false) {
-                $answer = str_replace("```", "", $answer);
-            }
-        }
-        $answer = trim($answer);
+                
+                // Clean JSON response - only if it starts with JSON markers
+                if (strpos($answer, "```json\n") === 0) {
+                    $answer = substr($answer, 8); // Remove "```json\n" from start
+                    if (strpos($answer, "\n```") !== false) {
+                        $answer = str_replace("\n```", "", $answer);
+                    }
+                } elseif (strpos($answer, "```json") === 0) {
+                    $answer = substr($answer, 7); // Remove "```json" from start
+                    if (strpos($answer, "```") !== false) {
+                        $answer = str_replace("```", "", $answer);
+                    }
+                }
+                $answer = trim($answer);
 
-        //error_log(" __________________________ OPENAI ANSWER: ".$answer);
+                //error_log(" __________________________ OPENAI ANSWER: ".$answer);
 
-        if(Tools::isValidJson($answer) == false) {
-            //error_log(" __________________________ OPENAI ANSWER: ".$answer);
-            // Fill $arrAnswer with values from $msgArr when JSON is not valid
-            $arrAnswer = $msgArr;
-            $arrAnswer['BTEXT'] = $answer;
-            $arrAnswer['BDIRECT'] = 'OUT';
-            $arrAnswer['BDATETIME'] = date('Y-m-d H:i:s');
-            $arrAnswer['BUNIXTIMES'] = time();
+                if(Tools::isValidJson($answer) == false) {
+                    //error_log(" __________________________ OPENAI ANSWER: ".$answer);
+                    // Fill $arrAnswer with values from $msgArr when JSON is not valid
+                    $arrAnswer = $msgArr;
+                    $arrAnswer['BTEXT'] = $answer;
+                    $arrAnswer['BDIRECT'] = 'OUT';
+                    $arrAnswer['BDATETIME'] = date('Y-m-d H:i:s');
+                    $arrAnswer['BUNIXTIMES'] = time();
+                    
+                    // Clear file-related fields since there's no valid JSON
+                    $arrAnswer['BFILE'] = 0;
+                    $arrAnswer['BFILEPATH'] = '';
+                    $arrAnswer['BFILETYPE'] = '';
+                    $arrAnswer['BFILETEXT'] = '';
+
+                } else {
+                    try {
+                        $arrAnswer = json_decode($answer, true);
+                    } catch (Exception $err) {
+                        return "*API topic Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
+                    }    
+                }
+                file_put_contents('up/openai_log_'.(date("His")).'.txt', print_r($chat, true));            
+                return $arrAnswer;
+            }
             
-            // Clear file-related fields since there's no valid JSON
-            $arrAnswer['BFILE'] = 0;
-            $arrAnswer['BFILEPATH'] = '';
-            $arrAnswer['BFILETYPE'] = '';
-            $arrAnswer['BFILETEXT'] = '';
-
-        } else {
-            try {
-                $arrAnswer = json_decode($answer, true);
-            } catch (Exception $err) {
-                return "*API topic Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
-            }    
+        } catch (Exception $err) {
+            return "*APItopic Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
         }
-        file_put_contents('up/openai_log_'.(date("His")).'.txt', print_r($chat, true));            
-
-        return $arrAnswer;
     }
 
     /**
