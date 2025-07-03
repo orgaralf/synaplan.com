@@ -32,16 +32,6 @@ require_once($root . '/inc/_coreincludes.php');
     <script src="node_modules/jquery/dist/jquery.min.js"></script>
   </head>
   <body>    
-    <header class="navbar sticky-top flex-md-nowrap p-0 gradient-dots" id="topBar" style="height: 50px;">
-      <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="/"><img src="img/synaplan_logo_ondark.svg" alt="AI management" width="155"></a>
-      <div class="navbar-nav text-white">
-        <span class="mx-3" style="font-size: 0.6em;" id="statusBarText">Welcome</span>
-      </div>
-      <button class="d-md-none collapsed mx-3" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-    </header>
-
     <div class="container-fluid">
       <div class="row">
         <?php include("snippets/director.php"); ?>

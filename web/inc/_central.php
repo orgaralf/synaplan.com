@@ -102,7 +102,7 @@ class Central {
             $userDetails["CREATED"] = date("YmdHi");
 
             $newSQL = "insert into BUSER (BID, BCREATED, BINTYPE, BMAIL, BPW, BPROVIDERID, BUSERLEVEL, BUSERDETAILS) 
-                values (DEFAULT, '".date("YmdHis")."', 'WA', '', '', '".(db::EscString($phoneNumber))."', 'NEW', '".(db::EscString(json_encode($userDetails, JSON_UNESCAPED_UNICODE)))."')";
+                values (DEFAULT, '".date("YmdHis")."', 'WA', '', '', '".(db::EscString($phoneNumber))."', 'NEW', '".(db::EscString(json_encode($userDetails,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)))."')";
 
                 db::Query($newSQL);
             $getSQL = "select * from BUSER where BPROVIDERID = '".(db::EscString($phoneNumber))."'";
@@ -129,7 +129,7 @@ class Central {
             $userDetails["PHONE"] = ''; //$phoneNumberOrTag;
             $userDetails["CREATED"] = date("YmdHi");
             $newSQL = "insert into BUSER (BID, BCREATED, BINTYPE, BMAIL, BPW, BPROVIDERID, BUSERLEVEL, BUSERDETAILS) 
-                values (DEFAULT, '".date("YmdHis")."', 'MAIL', '".(db::EscString($mail))."', '', '".(db::EscString($provId))."', 'NEW', '".(db::EscString(json_encode($userDetails, JSON_UNESCAPED_UNICODE)))."')";
+                values (DEFAULT, '".date("YmdHis")."', 'MAIL', '".(db::EscString($mail))."', '', '".(db::EscString($provId))."', 'NEW', '".(db::EscString(json_encode($userDetails,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)))."')";
             db::Query($newSQL);
             // --
             $getSQL = "select * from BUSER where BPROVIDERID = '".(db::EscString($provId))."'";

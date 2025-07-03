@@ -50,7 +50,7 @@ class AITheHive {
         }
 
         $msgArr['BFILE'] = 1;
-        $msgArr['BFILETEXT'] = json_encode($arrRes['input']);
+        $msgArr['BFILETEXT'] = json_encode($arrRes['input'],JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $msgArr['BFILEPATH'] = $filePath;
         $msgArr['BFILETYPE'] = $fileType;    
 

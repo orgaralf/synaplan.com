@@ -19,7 +19,7 @@ class Tools {
         $ticketStr = uniqid(dechex(rand(100000, 999999)));
         $userDetailsArr = json_decode($usrArr['BUSERDETAILS'], true);
         $userDetailsArr['ticket'] = $ticketStr;
-        $usrArr['BUSERDETAILS'] = json_encode($userDetailsArr, JSON_UNESCAPED_UNICODE);
+        $usrArr['BUSERDETAILS'] = json_encode($userDetailsArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $updateSQL = "UPDATE BUSER SET BUSERDETAILS = '".db::EscString($usrArr['BUSERDETAILS'])."' WHERE BID = ".$usrArr['BID'];
         if(db::Query($updateSQL)) {
             $msgArr['BTEXT'] = $GLOBALS["baseUrl"]."?id=".$usrArr['BID']."&lid=".urlencode($ticketStr);
@@ -489,5 +489,18 @@ class Tools {
         }
         
         return $text;
+    }
+    // converting urlencoded into real utf8 
+    public static function turnURLencodedIntoUTF8(string $in): string {
+        // 1️⃣ %xx  → byte
+        // 1️⃣ %xx & + ➜ byte / space
+        $step1 = urldecode($in);
+
+        // 2️⃣ JSON-style unescape (also converts \" \\ \t \n …)
+        //     Wrap in double quotes → valid JSON string
+        $json  = '"' . addcslashes($step1, "\\\"\n\r\t\f\v") . '"';
+        $out   = json_decode($json, flags: JSON_THROW_ON_ERROR);
+
+        return is_string($out) ? $out : $step1;
     }
 }

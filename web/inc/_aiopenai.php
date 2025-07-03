@@ -72,7 +72,7 @@ class AIOpenAI {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $arrMessages[] = ['role' => 'user', 'content' => Tools::cleanTextBlock($msgText)];
         $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
 
@@ -106,8 +106,9 @@ class AIOpenAI {
      * @param array $threadArr Thread context for conversation history
      * @return array|string|bool Topic-specific response or error message
      */
-    public static function topicPrompt($msgArr, $threadArr): array|string|bool {
-        error_log('topicPrompt 106: '.print_r($msgArr, true));
+    public static function topicPrompt($msgArr, $threadArr, $stream = false): array|string|bool {
+        set_time_limit(300);
+        //error_log('topicPrompt 106: '.print_r($msgArr, true));
         $systemPrompt = BasicAI::getAprompt($msgArr['BTOPIC'], $msgArr['BLANG'], $msgArr, true);
 
         $client = self::$client;
@@ -121,7 +122,7 @@ class AIOpenAI {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $arrMessages[] = ['role' => 'user', 'content' => $msgText];
 
 
@@ -139,35 +140,73 @@ class AIOpenAI {
         } else {
             $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
         }
-
-
+        error_log(" *************** OPENAI call - repsonse object:" . date("Y-m-d H:i:s"));
         try {
-            $chat = $client->chat()->create([
+            $chat = $client->responses()->create([
                 'model' => $myModel,
-                'messages' => $arrMessages
+                'tools' => [],
+                'input' => $arrMessages,
+                'tool_choice' => 'auto',
+                'parallel_tool_calls' => true,
+                'store' => true,
+                'metadata' => [
+                    'user_id' => $msgArr['BUSERID'],
+                    'session_id' => $msgArr['BTRACKID']
+                ]
             ]);
         } catch (Exception $err) {
+            error_log(" *************** OPENAI call - ERROR ".$err->getMessage());
             return "*APItopic Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
         }
+        error_log(" *************** OPENAI call - repsonse object END:" . print_r($chat, true));
+        error_log(" *************** OPENAI call - repsonse object END:" . date("Y-m-d H:i:s"));
         // TESTING FILES
-        if(isset($chat['choices'][0]['message']['attachments'])) {
+        //error_log(" *************** OPENAI ANSWER: ". print_r($chat, true));
+        //error_log(" *************** //OPENAI ANSWER ");
+        /*
+        if(isset($chat['output'][0]['content']['attachments'])) {
             if($chat['choices'][0]['message']['content'] == null) {
                 $chat['choices'][0]['message']['content'] = "File generated! Please download it.";
             }
             error_log(" ***** OPENAI ANSWER: ". print_r($chat['choices'][0]['message']['attachments'], true));
         }
-        $answer = $chat['choices'][0]['message']['content'];
-        $answer = str_replace("```json\n", "", $answer);
-        $answer = str_replace("\n```", "", $answer);
-        $answer = str_replace("```json", "", $answer);
-        $answer = str_replace("```", "", $answer);
+        */ 
+        // Variante A – typisierte Objekte
+        $answer = '';
+        foreach ($chat->output as $output) {
+            if ($output->type === 'message'          // nur Messages …
+                && $output->role === 'assistant'     // … vom Assistenten
+                && $output->status === 'completed')  // … die fertig sind
+            {
+                foreach ($output->content as $content) {
+                    if ($content->type === 'output_text') {
+                        if($stream) {
+                            Frontend::statusToStream($msgArr["BID"], 'pre', '. ');
+                        }
+                        $answer= $answer . $content->text . PHP_EOL;   // <- text chunks
+                    }
+                }
+            }
+        }
+        //$answer = $chat['output'][0]['content']['text'];
+        // Clean JSON response - only if it starts with JSON markers
+        if (strpos($answer, "```json\n") === 0) {
+            $answer = substr($answer, 8); // Remove "```json\n" from start
+            if (strpos($answer, "\n```") !== false) {
+                $answer = str_replace("\n```", "", $answer);
+            }
+        } elseif (strpos($answer, "```json") === 0) {
+            $answer = substr($answer, 7); // Remove "```json" from start
+            if (strpos($answer, "```") !== false) {
+                $answer = str_replace("```", "", $answer);
+            }
+        }
         $answer = trim($answer);
 
         //error_log(" __________________________ OPENAI ANSWER: ".$answer);
 
         if(Tools::isValidJson($answer) == false) {
             //error_log(" __________________________ OPENAI ANSWER: ".$answer);
-            
             // Fill $arrAnswer with values from $msgArr when JSON is not valid
             $arrAnswer = $msgArr;
             $arrAnswer['BTEXT'] = $answer;
@@ -563,7 +602,7 @@ class AIOpenAI {
             ];
 
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Request data prepared: " . json_encode($responseData));
+                error_log("DEBUG createOfficeFile: Request data prepared: " . json_encode($responseData,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             }
 
             $headers = [

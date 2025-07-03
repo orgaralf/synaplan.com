@@ -76,20 +76,7 @@ class AIGroq {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
-        
-        // Debug: Log the message being sent
-        /*
-        error_log("=== GROQ SORTING DEBUG ===");
-        error_log("Original msgArr keys: " . implode(', ', array_keys($msgArr)));
-        error_log("BFILETEXT length: " . (isset($msgArr['BFILETEXT']) ? strlen($msgArr['BFILETEXT']) : 'NOT SET'));
-        error_log("BTEXT length: " . (isset($msgArr['BTEXT']) ? strlen($msgArr['BTEXT']) : 'NOT SET'));
-        */
-        
-        $msgText = json_encode($msgArr);
-        //error_log("Final msgText length: " . strlen($msgText));
-        //error_log("First 500 chars of msgText: " . substr($msgText, 0, 500));
-        
+        $msgText = json_encode($msgArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $arrMessages[] = ['role' => 'user', 'content' => Tools::cleanTextBlock($msgText)];
         
         // Debug: Log the complete request
@@ -145,7 +132,9 @@ class AIGroq {
      * @param array $threadArr Thread context for conversation history
      * @return array|string|bool Topic-specific response or error message
      */
-    public static function topicPrompt($msgArr, $threadArr): array|string|bool {
+    public static function topicPrompt($msgArr, $threadArr, $stream = false): array|string|bool {
+        //error_log('topicPrompt: '.print_r($msgArr, true));
+
         $systemPrompt = BasicAI::getAprompt($msgArr['BTOPIC'], $msgArr['BLANG'], $msgArr, true);
 
         if(isset($systemPrompt['TOOLS'])) {
@@ -162,7 +151,7 @@ class AIGroq {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $arrMessages[] = ['role' => 'user', 'content' => $msgText];
         
         try {
@@ -185,15 +174,23 @@ class AIGroq {
         return $arrAnswer;
         */
         $answer = $chat['choices'][0]['message']['content'];
-        $answer = str_replace("```json\n", "", $answer);
-        $answer = str_replace("\n```", "", $answer);
-        $answer = str_replace("```json", "", $answer);
-        $answer = str_replace("```", "", $answer);
+        // Clean JSON response - only if it starts with JSON markers
+        if (strpos($answer, "```json\n") === 0) {
+            $answer = substr($answer, 8); // Remove "```json\n" from start
+            if (strpos($answer, "\n```") !== false) {
+                $answer = str_replace("\n```", "", $answer);
+            }
+        } elseif (strpos($answer, "```json") === 0) {
+            $answer = substr($answer, 7); // Remove "```json" from start
+            if (strpos($answer, "```") !== false) {
+                $answer = str_replace("```", "", $answer);
+            }
+        }
         $answer = trim($answer);
 
         if(Tools::isValidJson($answer) == false) {
-            //error_log(" __________________________ GROQ ANSWER: ".$answer);
-            //return "*API topic Error - Ralf made a bubu - please mail that to him: * " . "Answer is not valid JSON";
+            // error_log(" __________________________ GROQ ANSWER: ".$answer);
+            // return "*API topic Error - Ralf made a bubu - please mail that to him: * " . "Answer is not valid JSON";
             $arrAnswer = $msgArr;
             $arrAnswer['BTEXT'] = $answer;
             $arrAnswer['BDIRECT'] = 'OUT';

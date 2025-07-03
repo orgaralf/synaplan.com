@@ -276,7 +276,11 @@ Class Frontend {
         }
         // fill for sorting first
         $inMessageArr['BUSERID'] = $_SESSION["USERPROFILE"]["BID"];
-        $inMessageArr['BTEXT'] = DB::EscString(trim(strip_tags($_POST['message'])));
+        
+        $cleanPost = Tools::turnURLencodedIntoUTF8($_REQUEST['message']);
+        //error_log("****************************** CLEANPOST: " . $cleanPost);
+
+        $inMessageArr['BTEXT'] = DB::EscString(trim(strip_tags($cleanPost)));
         // --
         $convArr = Central::searchConversation($inMessageArr);
         
@@ -306,9 +310,8 @@ Class Frontend {
         // save the message to the database
         // Define the model id to save model to the message
 
-
         $filesAttached = count($filesArr);
-        //error_log("FILES ATTACHED: ".print_r($filesArr, true));
+        // error_log("FILES ATTACHED: ".print_r($filesArr, true));
         // NO FILE ATTACHED
         if($filesAttached == 0) {
             $filesArr[] = [
@@ -575,7 +578,7 @@ Class Frontend {
      */
     public static function printToStream($data) {
         $data['timestamp'] = time();
-        echo "data: " . json_encode($data) . "\n\n";
+        echo "data: " . json_encode($data,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
         ob_flush();
         flush();
     }

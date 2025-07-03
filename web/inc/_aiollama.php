@@ -50,7 +50,7 @@ class AIOllama {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $fullPrompt .= "\nCurrent message to analyze: " . Tools::cleanTextBlock($msgText);
 
         try {
@@ -82,7 +82,7 @@ class AIOllama {
      * @param array $threadArr Thread context for conversation history
      * @return array|string|bool Topic-specific response or error message
      */
-    public static function topicPrompt($msgArr, $threadArr): array|string|bool {
+    public static function topicPrompt($msgArr, $threadArr, $stream = false): array|string|bool {
         $systemPrompt = BasicAI::getAprompt($msgArr['BTOPIC'], $msgArr['BLANG'], $msgArr, true);
 
         if(isset($systemPrompt['TOOLS'])) {
@@ -101,7 +101,7 @@ class AIOllama {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $fullPrompt .= "\nCurrent message: " . $msgText;
         
         try {
@@ -116,10 +116,18 @@ class AIOllama {
         }
 
         // Clean response
-        $answer = str_replace("```json\n", "", $answer);
-        $answer = str_replace("\n```", "", $answer);
-        $answer = str_replace("```json", "", $answer);
-        $answer = str_replace("```", "", $answer);
+        // Clean JSON response - only if it starts with JSON markers
+        if (strpos($answer, "```json\n") === 0) {
+            $answer = substr($answer, 8); // Remove "```json\n" from start
+            if (strpos($answer, "\n```") !== false) {
+                $answer = str_replace("\n```", "", $answer);
+            }
+        } elseif (strpos($answer, "```json") === 0) {
+            $answer = substr($answer, 7); // Remove "```json" from start
+            if (strpos($answer, "```") !== false) {
+                $answer = str_replace("```", "", $answer);
+            }
+        }
         $answer = trim($answer);
 
         if(Tools::isValidJson($answer) == false) {

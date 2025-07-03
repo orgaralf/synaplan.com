@@ -4,6 +4,8 @@
 // We have to set the values and the prompt config correctly.
 ?>
 <link rel="stylesheet" href="fa/css/all.min.css">
+<!-- Add highlight.js CSS -->
+<link rel="stylesheet" href="node_modules/@highlightjs/cdn-assets/styles/github-dark.min.css">
 <main class="col-md-9 ms-sm-auto col-lg-10 px-1 px-md-3 py-2 py-md-3 content-main-bg" id="contentMain">
     <!-- Modern Chat Interface -->
     <div class="chat-container">
@@ -217,6 +219,21 @@
     </div>
 </main>
 <script src="node_modules/markdown-it/dist/markdown-it.min.js"></script>
+<!-- Add highlight.js JS -->
+<script src="node_modules/@highlightjs/cdn-assets/highlight.min.js"></script> 
+<script src="node_modules/@highlightjs/cdn-assets/languages/php.min.js"></script>
+<script src="node_modules/@highlightjs/cdn-assets/languages/json.min.js"></script>
+<script src="node_modules/@highlightjs/cdn-assets/languages/javascript.min.js"></script>
+<script src="node_modules/@highlightjs/cdn-assets/languages/python.min.js"></script>
+<script src="node_modules/@highlightjs/cdn-assets/languages/java.min.js"></script>
+<script src="node_modules/@highlightjs/cdn-assets/languages/cpp.min.js"></script>
+<script src="node_modules/@highlightjs/cdn-assets/languages/csharp.min.js"></script>
+<script src="node_modules/@highlightjs/cdn-assets/languages/sql.min.js"></script>
+<script src="node_modules/@highlightjs/cdn-assets/languages/bash.min.js"></script>
+<script src="node_modules/@highlightjs/cdn-assets/languages/css.min.js"></script>
+<script src="node_modules/@highlightjs/cdn-assets/languages/xml.min.js"></script>
+<script src="node_modules/@highlightjs/cdn-assets/languages/sql.min.js"></script>
+<script src="node_modules/@highlightjs/cdn-assets/languages/go.min.js"></script>
 <script>
     // enable everything
     const md = window.markdownit({
@@ -224,7 +241,7 @@
         linkify: true,
         typographer: true,
         breaks: true,
-    });
+    }); //.use(hljs);
     // After: const md = window.markdownit({ ... });
     md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
     // If the link does not already have target, add target="_blank"
@@ -243,6 +260,9 @@
     }
     return self.renderToken(tokens, idx, options);
     };
+
+    // Make md globally accessible for chat.js
+    window.md = md;
 
     // Global variable to store current prompt configuration
     let currentPromptConfig = null;

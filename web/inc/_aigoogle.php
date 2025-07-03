@@ -85,7 +85,7 @@ class AIGoogle {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $contents[] = [
             "role" => "user",
             "parts" => [
@@ -140,7 +140,7 @@ class AIGoogle {
      * @param array $threadArr Thread context for conversation history
      * @return array|string|bool Topic-specific response as array or text, or error message
      */
-    public static function topicPrompt($msgArr, $threadArr): array|string|bool {
+    public static function topicPrompt($msgArr, $threadArr, $stream = false): array|string|bool {
         $systemPrompt = BasicAI::getAprompt($msgArr['BTOPIC'], $msgArr['BLANG'], $msgArr, true);
 
         if(isset($systemPrompt['TOOLS'])) {
@@ -167,7 +167,7 @@ class AIGoogle {
         }
 
         // Add current message
-        $msgText = json_encode($msgArr);
+        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $contents[] = [
             "role" => "user",
             "parts" => [
@@ -192,11 +192,18 @@ class AIGoogle {
             if (isset($arrRes['candidates'][0]['content']['parts'][0]['text'])) {
                 $answer = $arrRes['candidates'][0]['content']['parts'][0]['text'];
                 
-                // Clean JSON response
-                $answer = str_replace("```json\n", "", $answer);
-                $answer = str_replace("\n```", "", $answer);
-                $answer = str_replace("```json", "", $answer);
-                $answer = str_replace("```", "", $answer);
+                // Clean JSON response - only if it starts with JSON markers
+                if (strpos($answer, "```json\n") === 0) {
+                    $answer = substr($answer, 8); // Remove "```json\n" from start
+                    if (strpos($answer, "\n```") !== false) {
+                        $answer = str_replace("\n```", "", $answer);
+                    }
+                } elseif (strpos($answer, "```json") === 0) {
+                    $answer = substr($answer, 7); // Remove "```json" from start
+                    if (strpos($answer, "```") !== false) {
+                        $answer = str_replace("```", "", $answer);
+                    }
+                }
                 $answer = trim($answer);
 
                 if(Tools::isValidJson($answer) == false) {
@@ -479,7 +486,7 @@ class AIGoogle {
             file_put_contents('up/' . $filePath, base64_decode($base64));
 
             $msgArr['BFILE'] = 1;
-            $msgArr['BFILETEXT'] = json_encode($postData);
+            $msgArr['BFILETEXT'] = json_encode($postData,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             $msgArr['BFILEPATH'] = $filePath;
             $msgArr['BFILETYPE'] = $fileType;
         } else {
@@ -589,7 +596,7 @@ class AIGoogle {
                         // Check if there's an error
                         if (isset($checkRes['error'])) {
                             $msgArr['BFILEPATH'] = '';
-                            $msgArr['BFILETEXT'] = "Error: " . json_encode($checkRes['error']);
+                            $msgArr['BFILETEXT'] = "Error: " . json_encode($checkRes['error'],JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                             return $msgArr;
                         }
                         
@@ -625,7 +632,7 @@ class AIGoogle {
                             file_put_contents('up/' . $filePath, $videoData);
 
                             $msgArr['BFILE'] = 1;
-                            $msgArr['BFILETEXT'] = json_encode($postData);
+                            $msgArr['BFILETEXT'] = json_encode($postData,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                             $msgArr['BFILEPATH'] = $filePath;
                             $msgArr['BFILETYPE'] = 'mp4';
                             $msgArr['BTEXT'] = "Video generated successfully: " . $videoPrompt;
@@ -925,7 +932,7 @@ class AIGoogle {
                 }
 
             } else {
-                throw new Exception("Analysis failed: " . json_encode($analyzeResponse));
+                throw new Exception("Analysis failed: " . json_encode($analyzeResponse,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             }
 
         } catch (Exception $err) {
