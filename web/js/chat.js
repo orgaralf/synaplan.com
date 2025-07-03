@@ -11,7 +11,7 @@ const filePreview   = document.getElementById('filePreview');
 const messageInput  = document.getElementById('messageInput');
 const sendButton    = document.getElementById('sendButton');
 const sendButtonMobile = document.getElementById('sendButtonMobile');
-
+let aiTextBuffer = [];
 // ------------------------------------------------------------
 const loaders = new Map();
 
@@ -29,11 +29,13 @@ function stopWaitingLoader(parentId) {
     //console.log('stopWaitingLoader', parentId);
     const parent = document.getElementById(parentId);
     const loader = loaders.get(parentId);
-    if (parent && loader) {
+    if (parent && loader && parent.contains(loader)) {
         parent.removeChild(loader);
         loaders.delete(parentId);
+    } else if (loader) {
+        // If loader exists but is not a child of parent, just clean up the reference
+        loaders.delete(parentId);
     }
-
 }
 
 // Function to reset the file upload section completely
@@ -396,6 +398,7 @@ if (sendButtonMobile) {
 
 // ------------------------------------------------------------
 function sseStream(data, outputObject) {
+  aiTextBuffer[outputObject] = '';
   const ids = data.lastIds.join(',');
   const selectedPromptId = document.getElementById('promptConfigSelect')?.value || 'general';
   const eventSource = new EventSource(`api.php?action=chatStream&lastIds=${ids}&promptId=${selectedPromptId}`);
@@ -410,7 +413,8 @@ function sseStream(data, outputObject) {
         stopWaitingLoader(outputObject);
       }
       outMessage = eventMessage.message.replace(/\\\"/g, '"');
-      $("#" + outputObject).append(`${outMessage}`);
+      aiTextBuffer[outputObject] += outMessage;
+      $("#" + outputObject).html(aiTextBuffer[outputObject]);
       $("#chatModalBody").scrollTop( $("#chatModalBody").prop("scrollHeight") );
       //console.log('Processing:', eventMessage.step);
     }
@@ -440,23 +444,25 @@ function sseStream(data, outputObject) {
   };
 
   // ------------------------------------------------------------
-  eventSource.onerror = function(error) {
+  eventSource.onerror = function(error, outputObject) {
     console.error('SSE error:', error);
     eventSource.close(); // Optional
     // JUST IN CASE
+    aiRender(outputObject);
   };  
 }
 
 // function AI RENDER
 function aiRender(targetId) {
   if (typeof window.md !== 'undefined') {
-    mdText = window.md.render($("#"+targetId).text());
+    mdText = window.md.render(aiTextBuffer[targetId]);
     $("#"+targetId).html(mdText);
   } else {
     // Fallback if markdown-it is not available
-    mdText = contentText.replace(/\n/g, '<br>');
+    mdText = aiTextBuffer[targetId].replace(/\n/g, '<br>');
     $("#ai_processing").html(mdText);
   }
+  aiTextBuffer[targetId] = '';
 }
 
 // Function to show file details for a specific message

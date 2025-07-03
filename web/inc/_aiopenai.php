@@ -114,18 +114,35 @@ class AIOpenAI {
         $systemPrompt = BasicAI::getAprompt($msgArr['BTOPIC'], $msgArr['BLANG'], $msgArr, true);
 
         $client = self::$client;
-        $arrMessages = [
-            ['role' => 'system', 'content' => $systemPrompt['BPROMPT']],
-        ];
-
+        if ($stream) {
+            $arrMessages = [
+                ['role' => 'system', 'content' => 'You are the Synaplan.com AI assistant. Please answer in the language of the user.'],
+            ];
+        } else {
+            $arrMessages = [
+                ['role' => 'system', 'content' => $systemPrompt['BPROMPT']],
+            ];
+        }
         // Build message history
         foreach($threadArr as $msg) {
-            $arrMessages[] = ['role' => 'user', 'content' => "[".$msg['BID']."] ".$msg['BTEXT']];
+            $role = 'user';
+            if($msg['BDIRECT'] == 'OUT') {
+                $role = 'assistant';
+            }   
+            $arrMessages[] = ['role' => $role, 'content' => "[".$msg['BDATETIME']."]: ".$msg['BTEXT']];
         }
 
         // Add current message
-        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $arrMessages[] = ['role' => 'user', 'content' => $msgText];
+        if($stream) {
+            $msgText = $msgArr['BTEXT'];
+            if(strlen($msgArr['BFILETEXT']) > 1) {
+                $msgText .= "\n\n\n---\n\n\nUser provided a file: ".$msgArr['BFILETYPE'].", saying: '".$msgArr['BFILETEXT']."'\n\n";
+            }
+            $arrMessages[] = ['role' => 'user', 'content' => $msgText];
+        } else {
+            $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $arrMessages[] = ['role' => 'user', 'content' => $msgText];    
+        }
 
         // different model configged?
         if(isset($systemPrompt['SETTINGS'])) {
@@ -146,7 +163,7 @@ class AIOpenAI {
         
         try {
             if ($stream) {
-                // Use streaming mode
+                // Use streaming mode - simplified
                 $stream = $client->responses()->createStreamed([
                     'model' => $myModel,
                     'tools' => [
@@ -166,64 +183,75 @@ class AIOpenAI {
                 ]);
 
                 $answer = '';
-                $responseId = null;
                 
                 foreach ($stream as $response) {
-                    $response->event; // 'response.created', 'response.in_progress', etc.
-                    
-                    // Store the response ID for potential later use
-                    if ($response->event === 'response.created' && isset($response->response->id)) {
-                        $responseId = $response->response->id;
+                    // Handle text delta events - stream the difference
+                    if ($response->event === 'response.output_text.delta') {
+                        // Try to access delta text directly from the response object
+                        $textChunk = '';
+                        
+                        // Debug: log the response structure on localhost
+                        if (isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1'])) {
+                            error_log("DEBUG: Response structure: " . print_r($response->toArray(), true));
+                        }
+                        $repArr = $response->toArray();
+
+                        // Try different ways to access delta text
+                        if(isset($repArr['data']['delta'])) {
+                            $textChunk = rtrim($repArr['data']['delta'], "\n");
+                            $textChunk = rtrim($textChunk, "\n");
+                            $textChunk = rtrim($textChunk, "\r");
+                        }
+                        
+                        // Only stream non-empty chunks
+                        if (!empty($textChunk)) {
+                            $answer .= $textChunk;
+                            // Stream the chunk to frontend
+                            Frontend::statusToStream($msgArr["BID"], 'ai', $textChunk);
+                        }
                     }
                     
-                    // Handle streaming text content
-                    if ($response->event === 'response.in_progress' && isset($response->response->output)) {
-                        foreach ($response->response->output as $output) {
-                            if ($output->type === 'message' && 
-                                $output->role === 'assistant' && 
-                                $output->status === 'completed') {
-                                
-                                foreach ($output->content as $content) {
-                                    if ($content->type === 'output_text') {
-                                        $textChunk = $content->text;
-                                        $answer .= $textChunk;
-                                        
-                                        // Stream the chunk to frontend
-                                        Frontend::statusToStream($msgArr["BID"], 'pre', $textChunk);
-                                    }
-                                }
+                    // Handle text done events - might contain final text
+                    if ($response->event === 'response.output_text.done') {
+                        // Debug: log the response structure on localhost
+                        if (isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1'])) {
+                            error_log("DEBUG: Response event: " . $response->event);
+                            error_log("DEBUG: Response structure: " . print_r($response->toArray(), true));
+                        }
+                        
+                        // Try to access final text
+                        if (isset($response->text)) {
+                            $finalText = $response->text;
+                            // If we don't have accumulated text, use the final text
+                            if(empty($answer)) {
+                                $answer = $finalText;
                             }
                         }
                     }
                     
-                    // Check if response is completed
-                    if ($response->event === 'response.completed') {
-                        break;
+                    // Handle errors
+                    if ($response->event === 'error') {
+                        error_log(" *************** OPENAI streaming ERROR: " . $response->message);
+                        return "*API topic Error - Streaming failed: " . $response->message;
                     }
                 }
                 
-                // If we have a response ID, we can retrieve the final response for processing
-                if ($responseId) {
-                    $finalResponse = $client->responses()->retrieve($responseId);
-                    $chat = $finalResponse;
-                } else {
-                    // Fallback: create a mock response object for processing
-                    $chat = (object) [
-                        'output' => [
-                            (object) [
-                                'type' => 'message',
-                                'role' => 'assistant',
-                                'status' => 'completed',
-                                'content' => [
-                                    (object) [
-                                        'type' => 'output_text',
-                                        'text' => $answer
-                                    ]
+                // Create a mock response object for processing
+                $chat = (object) [
+                    'output' => [
+                        (object) [
+                            'type' => 'message',
+                            'role' => 'assistant',
+                            'status' => 'completed',
+                            'content' => [
+                                (object) [
+                                    'type' => 'output_text',
+                                    'text' => $answer
                                 ]
                             ]
                         ]
-                    ];
-                }
+                    ]
+                ];
                 
             } else {
                 // Use non-streaming mode (existing logic)
