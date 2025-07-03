@@ -241,7 +241,7 @@
         linkify: true,
         typographer: true,
         breaks: true,
-    }); //.use(hljs);
+    });
     // After: const md = window.markdownit({ ... });
     md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
     // If the link does not already have target, add target="_blank"

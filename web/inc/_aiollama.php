@@ -23,6 +23,7 @@ class AIOllama {
      */
     public static function sortingPrompt($msgArr, $threadArr): array|string|bool {
         // prompt builder
+        file_put_contents('up/ollama_log_'.(date("His")).'.txt', print_r($msgArr, true));
         $systemPrompt = BasicAI::getAprompt('tools:sort');
 
         $client = self::$client;
