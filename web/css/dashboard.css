@@ -1018,6 +1018,7 @@ CHAT INTERFACE STYLES
   padding: 12px 16px;
   position: relative;
   max-width: 70%;
+  overflow-x: auto;
 }
 
 .message-bubble.user-bubble {
@@ -1483,7 +1484,7 @@ SYNTAX HIGHLIGHTING STYLES
     line-height: 1.45;
 }
 
-/* Dark theme support for code blocks */
+/* Dark theme support for code blocks 
 @media (prefers-color-scheme: dark) {
     .ai-bubble .hljs {
         background: #2d3748 !important;
@@ -1495,3 +1496,4 @@ SYNTAX HIGHLIGHTING STYLES
         border-color: #4a5568;
     }
 }
+*/

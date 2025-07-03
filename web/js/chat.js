@@ -409,24 +409,17 @@ function sseStream(data, outputObject) {
       if(!eventMessage.message.indexOf('<loading>')) {
         stopWaitingLoader(outputObject);
       }
-      
-      // Ensure markdown-it is available
-      if (typeof window.md !== 'undefined') {
-        mdText = window.md.render(eventMessage.message);
-      } else {
-        // Fallback if markdown-it is not available
-        mdText = eventMessage.message.replace(/\n/g, '<br>');
-      }
-      
-      $("#" + outputObject).append(`${mdText}`);
+      outMessage = eventMessage.message.replace(/\\\"/g, '"');
+      $("#" + outputObject).append(`${outMessage}`);
       $("#chatModalBody").scrollTop( $("#chatModalBody").prop("scrollHeight") );
       //console.log('Processing:', eventMessage.step);
     }
+
     if(eventMessage.status == 'pre_processing') {
       if(eventMessage.message == 'status.show') {
-
+          // later useage
       } else if(eventMessage.message == 'status.hide') {
-        
+          // later useage        
       } else {
         // Use proper DOM manipulation to avoid HTML escaping
         const systemElement = document.getElementById(`system${outputObject}`);
@@ -442,7 +435,7 @@ function sseStream(data, outputObject) {
     if(eventMessage.status == 'done') {
       stopWaitingLoader(outputObject);
       eventSource.close(); // Optional
-      //console.log('Done:', eventMessage.step);
+      aiRender(outputObject);
     }
   };
 
@@ -450,7 +443,20 @@ function sseStream(data, outputObject) {
   eventSource.onerror = function(error) {
     console.error('SSE error:', error);
     eventSource.close(); // Optional
+    // JUST IN CASE
   };  
+}
+
+// function AI RENDER
+function aiRender(targetId) {
+  if (typeof window.md !== 'undefined') {
+    mdText = window.md.render($("#"+targetId).text());
+    $("#"+targetId).html(mdText);
+  } else {
+    // Fallback if markdown-it is not available
+    mdText = contentText.replace(/\n/g, '<br>');
+    $("#ai_processing").html(mdText);
+  }
 }
 
 // Function to show file details for a specific message

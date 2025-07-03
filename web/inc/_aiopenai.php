@@ -101,9 +101,11 @@ class AIOpenAI {
      * 
      * Generates responses based on the specific topic of the message.
      * Uses topic-specific prompts to create more focused and relevant responses.
+     * Supports both streaming and non-streaming modes.
      * 
      * @param array $msgArr Message array containing topic information
      * @param array $threadArr Thread context for conversation history
+     * @param bool $stream Whether to use streaming mode
      * @return array|string|bool Topic-specific response or error message
      */
     public static function topicPrompt($msgArr, $threadArr, $stream = false): array|string|bool {
@@ -125,7 +127,6 @@ class AIOpenAI {
         $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $arrMessages[] = ['role' => 'user', 'content' => $msgText];
 
-
         // different model configged?
         if(isset($systemPrompt['SETTINGS'])) {
             foreach($systemPrompt['SETTINGS'] as $setting) {
@@ -140,38 +141,120 @@ class AIOpenAI {
         } else {
             $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
         }
-        error_log(" *************** OPENAI call - repsonse object:" . date("Y-m-d H:i:s"));
+
+        error_log(" *************** OPENAI call - response object:" . date("Y-m-d H:i:s"));
+        
         try {
-            $chat = $client->responses()->create([
-                'model' => $myModel,
-                'tools' => [],
-                'input' => $arrMessages,
-                'tool_choice' => 'auto',
-                'parallel_tool_calls' => true,
-                'store' => true,
-                'metadata' => [
-                    'user_id' => $msgArr['BUSERID'],
-                    'session_id' => $msgArr['BTRACKID']
-                ]
-            ]);
+            if ($stream) {
+                // Use streaming mode
+                $stream = $client->responses()->createStreamed([
+                    'model' => $myModel,
+                    'tools' => [
+                        [
+                            "type" => "web_search_preview",
+                            "search_context_size" => "low"
+                        ]
+                    ],
+                    'input' => $arrMessages,
+                    'tool_choice' => 'auto',
+                    'parallel_tool_calls' => true,
+                    'store' => true,
+                    'metadata' => [
+                        'user_id' => $msgArr['BUSERID'],
+                        'session_id' => $msgArr['BTRACKID']
+                    ]
+                ]);
+
+                $answer = '';
+                $responseId = null;
+                
+                foreach ($stream as $response) {
+                    $response->event; // 'response.created', 'response.in_progress', etc.
+                    
+                    // Store the response ID for potential later use
+                    if ($response->event === 'response.created' && isset($response->response->id)) {
+                        $responseId = $response->response->id;
+                    }
+                    
+                    // Handle streaming text content
+                    if ($response->event === 'response.in_progress' && isset($response->response->output)) {
+                        foreach ($response->response->output as $output) {
+                            if ($output->type === 'message' && 
+                                $output->role === 'assistant' && 
+                                $output->status === 'completed') {
+                                
+                                foreach ($output->content as $content) {
+                                    if ($content->type === 'output_text') {
+                                        $textChunk = $content->text;
+                                        $answer .= $textChunk;
+                                        
+                                        // Stream the chunk to frontend
+                                        Frontend::statusToStream($msgArr["BID"], 'pre', $textChunk);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Check if response is completed
+                    if ($response->event === 'response.completed') {
+                        break;
+                    }
+                }
+                
+                // If we have a response ID, we can retrieve the final response for processing
+                if ($responseId) {
+                    $finalResponse = $client->responses()->retrieve($responseId);
+                    $chat = $finalResponse;
+                } else {
+                    // Fallback: create a mock response object for processing
+                    $chat = (object) [
+                        'output' => [
+                            (object) [
+                                'type' => 'message',
+                                'role' => 'assistant',
+                                'status' => 'completed',
+                                'content' => [
+                                    (object) [
+                                        'type' => 'output_text',
+                                        'text' => $answer
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ];
+                }
+                
+            } else {
+                // Use non-streaming mode (existing logic)
+                $chat = $client->responses()->create([
+                    'model' => $myModel,
+                    'tools' => [
+                        [
+                            "type" => "web_search_preview",
+                            "search_context_size" => "low"
+                        ]
+                    ],
+                    'input' => $arrMessages,
+                    'tool_choice' => 'auto',
+                    'parallel_tool_calls' => true,
+                    'store' => true,
+                    'metadata' => [
+                        'user_id' => $msgArr['BUSERID'],
+                        'session_id' => $msgArr['BTRACKID']
+                    ]
+                ]);
+            }
+            
         } catch (Exception $err) {
             error_log(" *************** OPENAI call - ERROR ".$err->getMessage());
             return "*APItopic Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
         }
-        error_log(" *************** OPENAI call - repsonse object END:" . print_r($chat, true));
-        error_log(" *************** OPENAI call - repsonse object END:" . date("Y-m-d H:i:s"));
-        // TESTING FILES
-        //error_log(" *************** OPENAI ANSWER: ". print_r($chat, true));
-        //error_log(" *************** //OPENAI ANSWER ");
-        /*
-        if(isset($chat['output'][0]['content']['attachments'])) {
-            if($chat['choices'][0]['message']['content'] == null) {
-                $chat['choices'][0]['message']['content'] = "File generated! Please download it.";
-            }
-            error_log(" ***** OPENAI ANSWER: ". print_r($chat['choices'][0]['message']['attachments'], true));
-        }
-        */ 
-        // Variante A – typisierte Objekte
+
+        error_log(" *************** OPENAI call - response object END:" . print_r($chat, true));
+        error_log(" *************** OPENAI call - response object END:" . date("Y-m-d H:i:s"));
+        
+        // Process the response (same logic for both streaming and non-streaming)
         $answer = '';
         foreach ($chat->output as $output) {
             if ($output->type === 'message'          // nur Messages …
@@ -181,14 +264,16 @@ class AIOpenAI {
                 foreach ($output->content as $content) {
                     if ($content->type === 'output_text') {
                         if($stream) {
-                            Frontend::statusToStream($msgArr["BID"], 'pre', '. ');
+                            // Already streamed above, just accumulate for final processing
+                            $answer .= $content->text . PHP_EOL;
+                        } else {
+                            $answer .= $content->text . PHP_EOL;   // <- text chunks
                         }
-                        $answer= $answer . $content->text . PHP_EOL;   // <- text chunks
                     }
                 }
             }
         }
-        //$answer = $chat['output'][0]['content']['text'];
+        
         // Clean JSON response - only if it starts with JSON markers
         if (strpos($answer, "```json\n") === 0) {
             $answer = substr($answer, 8); // Remove "```json\n" from start
@@ -227,6 +312,7 @@ class AIOpenAI {
                 return "*API topic Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
             }    
         }
+        file_put_contents('up/openai_log_'.(date("His")).'.txt', print_r($chat, true));            
 
         return $arrAnswer;
     }

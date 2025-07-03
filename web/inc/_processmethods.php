@@ -292,13 +292,15 @@ class ProcessMethods {
             // ------------------------------------------------
             // do internet search before the prompt is executed!
             if($setting['BTOKEN'] == 'tool_internet' AND $setting['BVALUE'] == '1') {
+                
                 $searchArr = self::$msgArr;
                 $searchArr['BTOPIC'] = "tools:search";
                 $answerJsonArr = $AIGENERAL::topicPrompt($searchArr, self::$threadArr);
+
                 if(isset($answerJsonArr['SEARCH_TERM'])) {
                     $searchArr = Tools::searchWeb($searchArr, $answerJsonArr['SEARCH_TERM']);
                     if(isset($searchArr['BTEXT'])) {
-                        self::$msgArr['BTEXT'] .= "\n\n".'Add URLs to your answer from todays WEB SEARCH RESULTS, if you find it helpful:'."\n\n".$searchArr['BTEXT'];
+                        self::$msgArr['BTEXT'] .= "\n\n\n---\n\n\n".$searchArr['BTEXT'];
                     }
                     if(self::$stream) {
                         Frontend::statusToStream(self::$msgId, 'pre', 'Web search '.$answerJsonArr['SEARCH_TERM'].". ");
@@ -388,6 +390,7 @@ class ProcessMethods {
         // **************************************************************************************************
         if (self::$msgArr['BTOPIC'] === 'officemaker') {
             // Call specific method for office document creation tasks
+            $previousCall = true;
             $task = $answerSorted['BMEDIA'];
             $answerSorted = Tools::migrateArray(self::$msgArr, $answerSorted);
             if($task == 'xls' || $task == 'ppt' || $task == 'doc') {
@@ -429,7 +432,8 @@ class ProcessMethods {
         }
         // **************************************************************************************************
         
-        if (self::$msgArr['BTOPIC'] === 'analyzefile') {
+        if (self::$msgArr['BTOPIC'] === 'analyzefile' && self::$msgArr['BFILE'] == 1 && substr(self::$msgArr['BFILEPATH'], -4) == '.pdf') {
+            $previousCall = true;
             $answerSorted = Tools::migrateArray(self::$msgArr, $answerSorted);
             $answerText = '';
             if($previousCall) {
@@ -465,12 +469,20 @@ class ProcessMethods {
         
         // do we have found files for this answer?
         if(count($ragArr) > 0) {
-            $answerSorted['BTEXT'] .= "\n";
+            $previousCall = true;
             foreach($ragArr as $rag) {
                 if(strlen(basename($rag['BFILEPATH'])) > 0) {
                     $answerSorted['BTEXT'] .= "\n".'* ['.basename($rag['BFILEPATH']).']('.$GLOBALS["baseUrl"].'up/'.$rag['BFILEPATH'].')';
                 }
             }
+        }
+        // check, if we have called anything
+        if(!$previousCall) {
+            self::$msgArr['BTOPIC'] = 'general';
+            if(self::$stream) {
+                Frontend::statusToStream(self::$msgId, 'pre', 'Calling '.$AIGENERAL.'. ');
+            }
+            $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, self::$threadArr, self::$stream);
         }
         // -----------------------------------------------------
         // ----------------------------------------------------- DONE

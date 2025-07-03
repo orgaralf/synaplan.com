@@ -52,23 +52,23 @@ class Tools {
         //error_log("arrRes: ".print_r($arrRes, true));
         
         if(array_key_exists('news', $arrRes) && count($arrRes['news']['results']) > 0) {
-            $msgArr['BTEXT'] .= "\n\n"."NEWS"."\n";
+            $msgArr['BTEXT'] .= "\n\n"."**NEWS**"."\n\n";
             foreach($arrRes['news']['results'] as $news) {
-                $msgArr['BTEXT'] .= "\n".$news['title'] . "\n" . $news['url'] . "\n" . $news['description']. "\n";
+                $msgArr['BTEXT'] .= "\n* [".$news['title'] . "](" . $news['url']. ")\n\n";
             }
         }
         
         if(array_key_exists('videos', $arrRes) && count($arrRes['videos']['results']) > 0) {
-            $msgArr['BTEXT'] .= "\n\n"."VIDEO"."\n";
+            $msgArr['BTEXT'] .= "\n\n"."**VIDEO**"."\n";
             foreach($arrRes['videos']['results'] as $videos) {
-                $msgArr['BTEXT'] .= "\n".$videos['title'] . "\n" . $videos['url']. "\n";
+                $msgArr['BTEXT'] .= "\n* [".$videos['title'] . "](" . $videos['url']. ")\n\n";
             }
         }
 
         if(array_key_exists('web', $arrRes) && count($arrRes['web']['results']) > 0) {
-            $msgArr['BTEXT'] .= "\n\n"."WEB"."\n";
+            $msgArr['BTEXT'] .= "\n\n"."**WEB**"."\n";
             foreach($arrRes['web']['results'] as $web) {
-                $msgArr['BTEXT'] .= "\n".$web['title'] . "\n" . $web['url']. "\n";
+                $msgArr['BTEXT'] .= "\n* [".$web['title'] . "](" . $web['url']. ")\n\n";
             }
         }
         return $msgArr;
