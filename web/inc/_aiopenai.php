@@ -190,10 +190,6 @@ class AIOpenAI {
                         // Try to access delta text directly from the response object
                         $textChunk = '';
                         
-                        // Debug: log the response structure on localhost
-                        if (isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1'])) {
-                            error_log("DEBUG: Response structure: " . print_r($response->toArray(), true));
-                        }
                         $repArr = $response->toArray();
 
                         // Try different ways to access delta text
@@ -201,6 +197,10 @@ class AIOpenAI {
                             $textChunk = rtrim($repArr['data']['delta'], "\n");
                             $textChunk = rtrim($textChunk, "\n");
                             $textChunk = rtrim($textChunk, "\r");
+                            // Debug: log the response structure on localhost
+                            if (isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1'])) {
+                                error_log("DEBUG: Response structure: " . print_r($response->toArray(), true));
+                            }
                         }
                         
                         // Only stream non-empty chunks
