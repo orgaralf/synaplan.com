@@ -6,34 +6,44 @@
 <link rel="stylesheet" href="fa/css/all.min.css">
 <!-- Add highlight.js CSS -->
 <link rel="stylesheet" href="node_modules/@highlightjs/cdn-assets/styles/github-dark.min.css">
-<main class="col-md-9 ms-sm-auto col-lg-10 px-1 px-md-3 py-2 py-md-3 content-main-bg" id="contentMain">
+<main class="col-md-9 ms-sm-auto col-lg-10 px-1 px-md-3 py-2 py-md-1 content-main-bg" id="contentMain">
+    <!-- Chat Page Header (now inside main, above chat-container) -->
+    <div class="chat-page-header">
+        <div style="flex: 1; min-width: 280px;">
+            <div class="dropdown custom-prompt-dropdown">
+                <button class="btn btn-light dropdown-toggle" type="button" id="promptDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="dropdown-main">🤖 Default AI Assistant</span>
+                    <span class="dropdown-desc">General-purpose AI assistant for all tasks</span>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="promptDropdownBtn">
+                    <li>
+                        <a class="dropdown-item" href="#" data-value="tools:sort">
+                            <span class="dropdown-main">🤖 Default AI Assistant</span>
+                            <span class="dropdown-desc">General-purpose AI assistant for all tasks</span>
+                        </a>
+                    </li>
+                    <?php
+                        $prompts = BasicAI::getAllPrompts();
+                        foreach($prompts as $prompt) {
+                            $ownerHint = $prompt['BOWNERID'] != 0 ? "👤" : "🏢";
+                            $desc = htmlspecialchars(substr($prompt['BSHORTDESC'],0,84));
+                            echo "<li>
+                                <a class='dropdown-item' href='#' data-value='".htmlspecialchars($prompt['BTOPIC'])."'>
+                                    <span class='dropdown-main'>{$ownerHint} {$prompt['BTOPIC']}</span>
+                                    <span class='dropdown-desc'>{$desc}</span>
+                                </a>
+                            </li>";
+                        }
+                    ?>
+                </ul>
+                <input type="hidden" name="promptConfigSelect" id="promptConfigSelect" value="tools:sort">
+            </div>
+        </div>
+    </div>
     <!-- Modern Chat Interface -->
     <div class="chat-container">
         <!-- Enhanced chatbox with shadow and modern styling -->
         <div class="chatbox">
-                    <!-- Enhanced Prompt Configuration Header -->
-                    <div class="chat-header">
-                        <div class="d-flex align-items-center w-100">
-                            <div class="me-3">
-                                <i class="fas fa-robot text-white ai-icon"></i>
-                            </div>
-                            <label for="promptConfigSelect" class="me-3 mb-0 text-white fw-bold" style="white-space: nowrap;">
-                                AI Mode:
-                            </label>
-                            <select class="form-select prompt-select" name="promptConfigSelect" id="promptConfigSelect" 
-                                    onchange="onPromptConfigChange()">
-                                <option value='tools:sort'>🤖 Default AI Assistant</option>
-                                <?php
-                                    $prompts = BasicAI::getAllPrompts();
-                                    foreach($prompts as $prompt) {
-                                        $isSelected = isset($_REQUEST['promptConfigSelect']) && $prompt['BTOPIC'] == $_REQUEST['promptConfigSelect'] ? "selected" : "";
-                                        $ownerHint = $prompt['BOWNERID'] != 0 ? "👤" : "🏢";
-                                        echo "<option value='".$prompt['BTOPIC']."' ".$isSelected.">".$ownerHint." ".$prompt['BTOPIC']. " - ".substr($prompt['BSHORTDESC'],0,32)."...</option>";
-                                    }
-                                ?>
-                            </select>
-                        </div>
-                    </div>
                     
                     <div class="chat-messages" id="chatModalBody">
                         <div class="messages-container">
@@ -324,4 +334,22 @@
             $("#chatModalBody").scrollTop( $("#chatModalBody").prop("scrollHeight") );
         }, 500);
     });
+</script>
+
+<script>
+document.querySelectorAll('.custom-prompt-dropdown .dropdown-item').forEach(function(item) {
+  item.addEventListener('click', function(e) {
+    e.preventDefault();
+    // Update button text
+    var main = this.querySelector('.dropdown-main').textContent;
+    var desc = this.querySelector('.dropdown-desc').textContent;
+    document.getElementById('promptDropdownBtn').innerHTML =
+      '<span class="dropdown-main">' + main + '</span>' +
+      '<span class="dropdown-desc">' + desc + '</span>';
+    // Update hidden input
+    document.getElementById('promptConfigSelect').value = this.getAttribute('data-value');
+    // Optionally, trigger your config change logic
+    if (typeof onPromptConfigChange === 'function') onPromptConfigChange();
+  });
+});
 </script>
