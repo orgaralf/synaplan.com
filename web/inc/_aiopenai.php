@@ -159,7 +159,7 @@ class AIOpenAI {
             $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
         }
 
-        error_log(" *************** OPENAI call - response object:" . date("Y-m-d H:i:s"));
+        //error_log(" *************** OPENAI call - response object:" . date("Y-m-d H:i:s"));
         
         // now ask the AI and give the stream out or the result when done!
         try {
@@ -329,7 +329,7 @@ class AIOpenAI {
                         return "*API topic Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
                     }    
                 }
-                file_put_contents('up/openai_log_'.(date("His")).'.txt', print_r($chat, true));            
+                //file_put_contents('up/openai_log_'.(date("His")).'.txt', print_r($chat, true));            
                 return $arrAnswer;
             }
             

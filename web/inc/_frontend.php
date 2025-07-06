@@ -365,7 +365,7 @@ Class Frontend {
         $userId = $_SESSION["USERPROFILE"]["BID"];
         
         // Get the group key from POST data
-        $groupKey = isset($_POST['groupKey']) ? trim(db::EscString($_POST['groupKey'])) : 'DEFAULT';
+        $groupKey = isset($_REQUEST['groupKey']) ? trim(db::EscString($_REQUEST['groupKey'])) : 'DEFAULT';
         
         if(empty($groupKey) || $groupKey === '') {
             $retArr['error'] = "Group key is required";
@@ -413,7 +413,7 @@ Class Frontend {
                         $inMessageArr['BDATETIME'] = date("YmdHis");
                         $inMessageArr['BTRACKID'] = (int) (microtime(true) * 1000000);
                         $inMessageArr['BLANG'] = 'en';
-                        $inMessageArr['BTOPIC'] = 'rag';
+                        $inMessageArr['BTOPIC'] = 'RAG';
                         $inMessageArr['BID'] = 'DEFAULT';
                         $inMessageArr['BPROVIDX'] = session_id();
                         $inMessageArr['BMESSTYPE'] = 'RAG';
@@ -450,6 +450,7 @@ Class Frontend {
         }
 
         // Process files through RAG system
+        error_log("* * * * * * ************** _________ PROCESSING RAG FILES: ".print_r($filesArr, true));
         $ragResult = Central::processRAGFiles($filesArr, $userId, $groupKey, false);
         
         $retArr['success'] = $ragResult['success'];
@@ -681,24 +682,24 @@ Class Frontend {
         // Example structure for when you implement it:
         /*
         // Update profile fields from POST data
-        $userDetails['firstName'] = DB::EscString($_POST['firstName'] ?? '');
-        $userDetails['lastName'] = DB::EscString($_POST['lastName'] ?? '');
-        $userDetails['phone'] = DB::EscString($_POST['phone'] ?? '');
-        $userDetails['companyName'] = DB::EscString($_POST['companyName'] ?? '');
-        $userDetails['vatId'] = DB::EscString($_POST['vatId'] ?? '');
-        $userDetails['street'] = DB::EscString($_POST['street'] ?? '');
-        $userDetails['zipCode'] = DB::EscString($_POST['zipCode'] ?? '');
-        $userDetails['city'] = DB::EscString($_POST['city'] ?? '');
-        $userDetails['country'] = DB::EscString($_POST['country'] ?? '');
-        $userDetails['language'] = DB::EscString($_POST['language'] ?? '');
-        $userDetails['timezone'] = DB::EscString($_POST['timezone'] ?? '');
-        $userDetails['invoiceEmail'] = DB::EscString($_POST['invoiceEmail'] ?? '');
+        $userDetails['firstName'] = DB::EscString($_REQUEST['firstName'] ?? '');
+        $userDetails['lastName'] = DB::EscString($_REQUEST['lastName'] ?? '');
+        $userDetails['phone'] = DB::EscString($_REQUEST['phone'] ?? '');
+        $userDetails['companyName'] = DB::EscString($_REQUEST['companyName'] ?? '');
+        $userDetails['vatId'] = DB::EscString($_REQUEST['vatId'] ?? '');
+        $userDetails['street'] = DB::EscString($_REQUEST['street'] ?? '');
+        $userDetails['zipCode'] = DB::EscString($_REQUEST['zipCode'] ?? '');
+        $userDetails['city'] = DB::EscString($_REQUEST['city'] ?? '');
+        $userDetails['country'] = DB::EscString($_REQUEST['country'] ?? '');
+        $userDetails['language'] = DB::EscString($_REQUEST['language'] ?? '');
+        $userDetails['timezone'] = DB::EscString($_REQUEST['timezone'] ?? '');
+        $userDetails['invoiceEmail'] = DB::EscString($_REQUEST['invoiceEmail'] ?? '');
         
         // Handle password change if provided
-        if (!empty($_POST['currentPassword']) && !empty($_POST['newPassword'])) {
-            $currentPasswordMd5 = md5($_POST['currentPassword']);
+        if (!empty($_REQUEST['currentPassword']) && !empty($_REQUEST['newPassword'])) {
+            $currentPasswordMd5 = md5($_REQUEST['currentPassword']);
             if ($currentPasswordMd5 === $userArr['BPW']) {
-                $newPasswordMd5 = md5($_POST['newPassword']);
+                $newPasswordMd5 = md5($_REQUEST['newPassword']);
                 // Update password in separate query
             } else {
                 $retArr["error"] = "Current password is incorrect";

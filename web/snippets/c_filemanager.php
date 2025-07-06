@@ -63,9 +63,9 @@
             <form id="ragUploadForm" enctype="multipart/form-data">
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <label for="groupKeyInput" class="form-label"><strong>Group Keyword:</strong></label>
+                        <label for="groupKey" class="form-label"><strong>Group Keyword:</strong></label>
                         <div class="input-group">
-                            <input type="text" class="form-control" id="groupKeyInput" name="groupKey" 
+                            <input type="text" class="form-control" id="groupKey" name="groupKey" 
                                    placeholder="Enter keyword for file grouping" required maxlength="50">
                             <select class="form-select" id="existingGroupSelect" style="max-width: 200px;">
                                 <option value="">Or select existing...</option>
@@ -351,7 +351,7 @@ let selectedRAGFiles = [];
 
 document.addEventListener('DOMContentLoaded', function() {
     const ragFilesInput = document.getElementById('ragFiles');
-    const groupKeyInput = document.getElementById('groupKeyInput');
+    const groupKey = document.getElementById('groupKey');
     const existingGroupSelect = document.getElementById('existingGroupSelect');
     const ragUploadBtn = document.getElementById('ragUploadBtn');
     const ragFilePreview = document.getElementById('ragFilePreview');
@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle existing group selection
     existingGroupSelect.addEventListener('change', function() {
         if (this.value) {
-            groupKeyInput.value = this.value;
+            groupKey.value = this.value;
             validateRAGForm();
         }
     });
@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Handle group key input
-    groupKeyInput.addEventListener('input', validateRAGForm);
+    groupKey.addEventListener('input', validateRAGForm);
 
     // Handle form submission
     ragUploadForm.addEventListener('submit', function(e) {
@@ -406,14 +406,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function validateRAGForm() {
         const hasFiles = selectedRAGFiles.length >= 1;
-        const hasGroupKey = groupKeyInput.value.trim().length >= 3;
+        const hasGroupKey = groupKey.value.trim().length >= 3;
         
         ragUploadBtn.disabled = !(hasFiles && hasGroupKey);
         
         if (!hasFiles && selectedRAGFiles.length > 0) {
             ragUploadStatus.textContent = 'Please select at least 1 file';
             ragUploadStatus.className = 'text-warning';
-        } else if (!hasGroupKey && groupKeyInput.value.trim().length > 0) {
+        } else if (!hasGroupKey && groupKey.value.trim().length > 0) {
             ragUploadStatus.textContent = 'Group keyword must be at least 3 characters';
             ragUploadStatus.className = 'text-warning';
         } else if (hasFiles && hasGroupKey) {
@@ -427,7 +427,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function uploadRAGFiles() {
         const formData = new FormData();
         formData.append('action', 'ragUpload');
-        formData.append('groupKey', groupKeyInput.value.trim());
+        formData.append('groupKey', $('#groupKey').val().trim());
         
         selectedRAGFiles.forEach(file => {
             formData.append('files[]', file);
@@ -590,7 +590,7 @@ function saveFileGroup(fileId) {
         console.log('changeGroupOfFile response:', data);
         if (data.success) {
             document.getElementById('genericModalBody').innerHTML = '<div class="alert alert-success">Group updated successfully!</div>';
-            document.getElementById('genericModalFooter').innerHTML = '<button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="location.reload()">Close & Refresh</button>';
+            document.getElementById('genericModalFooter').innerHTML = '<button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="window.location.reload()">Close & Refresh</button>';
         } else {
             document.getElementById('genericModalBody').innerHTML = '<div class="alert alert-danger">Error updating group: ' + (data.error || 'Unknown error') + '</div>';
             document.getElementById('genericModalFooter').innerHTML = '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>';
