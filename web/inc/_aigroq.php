@@ -68,8 +68,17 @@ class AIGroq {
                 $arrMessages[] = ['role' => 'user', 'content' => $msgText];
             } 
             if($msg['BDIRECT'] == 'OUT') {
-                if(strlen($msg['BTEXT'])>500) {
-                    $msg['BTEXT'] = substr($msg['BTEXT'], 0, 500);
+                if(strlen($msg['BTEXT'])>200) {
+                    // Truncate at word boundary to avoid breaking JSON or quotes
+                    $truncatedText = substr($msg['BTEXT'], 0, 200);
+                    // Find the last complete word
+                    $lastSpace = strrpos($truncatedText, ' ');
+                    if ($lastSpace !== false && $lastSpace > 150) {
+                        $truncatedText = substr($truncatedText, 0, $lastSpace);
+                    }
+                    // Clean up any trailing quotes or incomplete JSON
+                    $truncatedText = rtrim($truncatedText, '"\'{}[]');
+                    $msg['BTEXT'] = $truncatedText . "...";
                 }
                 $arrMessages[] = ['role' => 'assistant', 'content' => "[".$msg['BID']."] ".$msg['BTEXT']];
             }
@@ -77,7 +86,8 @@ class AIGroq {
 
         // Add current message
         $msgText = json_encode($msgArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $arrMessages[] = ['role' => 'user', 'content' => Tools::cleanTextBlock($msgText)];
+        error_log("******************** DEBUG: IS JSON SENDING: " . 0 + Tools::isValidJson($msgText));
+        $arrMessages[] = ['role' => 'user', 'content' => $msgText];
         
         // Debug: Log the complete request
         //error_log("Total messages to send: " . count($arrMessages));
@@ -105,7 +115,6 @@ class AIGroq {
                     }
                 }
             }
-            
         } catch (GroqException $err) {
             error_log("GROQ API ERROR: " . $err->getMessage());
             return "*API sorting Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
@@ -118,8 +127,9 @@ class AIGroq {
         $answer = str_replace("\n```", "", $answer);
         $answer = str_replace("```json", "", $answer);
         $answer = str_replace("```", "", $answer);
-        $answer = trim($answer);      
-       
+        $answer = trim($answer);
+        error_log("******************** DEBUG: answer: " . $answer);
+        error_log("******************** DEBUG: JSON " . 0 + Tools::isValidJson($answer));
         return $answer;
     }
     /**

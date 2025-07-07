@@ -278,7 +278,7 @@ Class Frontend {
         $inMessageArr['BUSERID'] = $_SESSION["USERPROFILE"]["BID"];
         
         $cleanPost = Tools::turnURLencodedIntoUTF8($_REQUEST['message']);
-        //error_log("****************************** CLEANPOST: " . $cleanPost);
+        // error_log("****************************** CLEANPOST: " . $cleanPost);
 
         $inMessageArr['BTEXT'] = DB::EscString(trim(strip_tags($cleanPost)));
         // --
@@ -555,7 +555,7 @@ Class Frontend {
         // Handle file translation if needed
         // todo: check the config of the user, if he wants it in English as well!
         // ProcessMethods::fileTranslation();
-
+        
         // Retrieve and process message thread
         $timeSeconds = 1200;
         ProcessMethods::$threadArr = Central::getThread(ProcessMethods::$msgArr, $timeSeconds);
@@ -565,6 +565,7 @@ Class Frontend {
 
         // Prepare AI answer for database storage
         $aiLastId = ProcessMethods::saveAnswerToDB();
+
         return $aiLastId;
     }
 

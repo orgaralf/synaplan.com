@@ -496,11 +496,8 @@ class Tools {
         // 1️⃣ %xx & + ➜ byte / space
         $step1 = urldecode($in);
 
-        // 2️⃣ JSON-style unescape (also converts \" \\ \t \n …)
-        //     Wrap in double quotes → valid JSON string
-        $json  = '"' . addcslashes($step1, "\\\"\n\r\t\f\v") . '"';
-        $out   = json_decode($json, flags: JSON_THROW_ON_ERROR);
-
-        return is_string($out) ? $out : $step1;
+        // Since we fixed the frontend to send proper newlines and Unicode characters,
+        // we don't need JSON-style unescaping anymore. Just return the URL-decoded string.
+        return $step1;
     }
 }

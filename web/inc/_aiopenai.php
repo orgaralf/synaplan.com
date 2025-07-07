@@ -65,7 +65,16 @@ class AIOpenAI {
             } 
             if($msg['BDIRECT'] == 'OUT') {
                 if(strlen($msg['BTEXT'])>1000) {
-                    $msg['BTEXT'] = substr($msg['BTEXT'], 0, 1000);
+                    // Truncate at word boundary to avoid breaking JSON or quotes
+                    $truncatedText = substr($msg['BTEXT'], 0, 1000);
+                    // Find the last complete word
+                    $lastSpace = strrpos($truncatedText, ' ');
+                    if ($lastSpace !== false && $lastSpace > 800) {
+                        $truncatedText = substr($truncatedText, 0, $lastSpace);
+                    }
+                    // Clean up any trailing quotes or incomplete JSON
+                    $truncatedText = rtrim($truncatedText, '"\'{}[]');
+                    $msg['BTEXT'] = $truncatedText . "...";
                 }
                 $arrMessages[] = ['role' => 'assistant', 'content' => "[".$msg['BID']."] ".$msg['BTEXT']];
             }
@@ -73,7 +82,7 @@ class AIOpenAI {
 
         // Add current message
         $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $arrMessages[] = ['role' => 'user', 'content' => Tools::cleanTextBlock($msgText)];
+        $arrMessages[] = ['role' => 'user', 'content' => $msgText];
         $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
 
         try {

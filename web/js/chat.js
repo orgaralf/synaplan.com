@@ -232,7 +232,7 @@ const messageHistory = [];
 let historyIndex = -1;
 
 function setMessageInput(text) {
-    messageInput.innerText = text;
+    messageInput.textContent = text;
     placeCaretAtEnd(messageInput);
 }
 
@@ -271,9 +271,13 @@ messageInput.addEventListener("keydown", function (e) {
 
 // 3) Sending logic (front-end demonstration)
 function handleSendMessage() {
-    // Grab the user's text
-    const userMessage = messageInput.innerText.trim();
+    // Grab the user's text - use textContent instead of innerText to preserve actual newlines
+    const userMessage = messageInput.textContent.trim();
     const actionMessage = 'messageNew';
+    
+    // Debug: Log the message to verify newlines are preserved
+    console.log('Sending message:', JSON.stringify(userMessage));
+    console.log('User message (raw):', userMessage, Array.from(userMessage));
     
     // Get the selected prompt configuration
     const selectedPromptId = document.getElementById('promptConfigSelect')?.value || 'general';
@@ -344,6 +348,11 @@ function handleSendMessage() {
           cleanMessage = data.message.replace(/<br>\s*<small>\(\+ \d+ files?\)<\/small>/g, '');
         }
         
+        // Convert literal \n to real newlines first
+        cleanMessage = cleanMessage.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\r/g, '');
+        // Then convert newlines to <br>
+        cleanMessage = cleanMessage.replace(/\n/g, '<br>');
+        
         $("#chatHistory").append(`
           <li class="message-item user-message">
             <div class="message-bubble user-bubble">
@@ -386,7 +395,7 @@ function handleSendMessage() {
     });
     
     // Clear out the form for demonstration
-    messageInput.innerText = '';
+    messageInput.textContent = '';
     // Note: File upload section is now reset only on success via resetFileUploadSection()
 }
 

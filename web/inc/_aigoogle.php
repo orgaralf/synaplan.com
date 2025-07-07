@@ -73,7 +73,16 @@ class AIGoogle {
             } 
             if($msg['BDIRECT'] == 'OUT') {
                 if(strlen($msg['BTEXT'])>1000) {
-                    $msg['BTEXT'] = substr($msg['BTEXT'], 0, 1000);
+                    // Truncate at word boundary to avoid breaking JSON or quotes
+                    $truncatedText = substr($msg['BTEXT'], 0, 1000);
+                    // Find the last complete word
+                    $lastSpace = strrpos($truncatedText, ' ');
+                    if ($lastSpace !== false && $lastSpace > 800) {
+                        $truncatedText = substr($truncatedText, 0, $lastSpace);
+                    }
+                    // Clean up any trailing quotes or incomplete JSON
+                    $truncatedText = rtrim($truncatedText, '"\'{}[]');
+                    $msg['BTEXT'] = $truncatedText . "...";
                 }
                 $contents[] = [
                     "role" => "model", 
@@ -89,7 +98,7 @@ class AIGoogle {
         $contents[] = [
             "role" => "user",
             "parts" => [
-                ["text" => Tools::cleanTextBlock($msgText)]
+                ["text" => $msgText]
             ]
         ];
 

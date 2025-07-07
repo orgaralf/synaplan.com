@@ -44,7 +44,16 @@ class AIOllama {
             } 
             if($msg['BDIRECT'] == 'OUT') {
                 if(strlen($msg['BTEXT'])>1000) {
-                    $msg['BTEXT'] = substr($msg['BTEXT'], 0, 1000);
+                    // Truncate at word boundary to avoid breaking JSON or quotes
+                    $truncatedText = substr($msg['BTEXT'], 0, 1000);
+                    // Find the last complete word
+                    $lastSpace = strrpos($truncatedText, ' ');
+                    if ($lastSpace !== false && $lastSpace > 800) {
+                        $truncatedText = substr($truncatedText, 0, $lastSpace);
+                    }
+                    // Clean up any trailing quotes or incomplete JSON
+                    $truncatedText = rtrim($truncatedText, '"\'{}[]');
+                    $msg['BTEXT'] = $truncatedText . "...";
                 }
                 $fullPrompt .= "Assistant: [".$msg['BID']."] ".$msg['BTEXT'] . "\n";
             }
@@ -52,7 +61,7 @@ class AIOllama {
 
         // Add current message
         $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $fullPrompt .= "\nCurrent message to analyze: " . Tools::cleanTextBlock($msgText);
+        $fullPrompt .= "\nCurrent message to analyze: " . $msgText;
 
         try {
             $completions = $client->completions()->create([

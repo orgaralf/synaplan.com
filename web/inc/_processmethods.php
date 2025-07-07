@@ -271,7 +271,8 @@ class ProcessMethods {
             $answerJsonArr['BFILETEXT'] = self::$msgArr['BFILETEXT'];
             $answerJsonArr['BUNIXTIMES'] = self::$msgArr['BUNIXTIMES'];
         }
-
+        // -----------------------------------------------------
+        error_log('************** GO ON ** msgArr: '.print_r(self::$msgArr, true));
         // -----------------------------------------------------
         $AIGENERAL = $GLOBALS["AI_CHAT"]["SERVICE"];
 
