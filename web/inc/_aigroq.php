@@ -86,24 +86,20 @@ class AIGroq {
 
         // Add current message
         $msgText = json_encode($msgArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        error_log("******************** DEBUG: IS JSON SENDING: " . 0 + Tools::isValidJson($msgText));
         $arrMessages[] = ['role' => 'user', 'content' => $msgText];
-        
-        // Debug: Log the complete request
-        //error_log("Total messages to send: " . count($arrMessages));
-        //error_log("System prompt length: " . strlen($systemPrompt['BPROMPT']));
 
+        // ------------------------------------------------
         try {
-            //error_log("Sending request to Groq API...");
+            // set model
+            $AIGENERALmodel = $GLOBALS["AI_SORT"]["MODEL"];
             $chat = $client->chat()->completions()->create([
-                'model' => 'llama-3.3-70b-versatile',
+                'model' => $AIGENERALmodel,
                 'reasoning_format' => 'hidden',
                 'messages' => $arrMessages
             ]);
-            //error_log("API call completed successfully");
             
             // Debug: Log the raw response
-            // error_log("Raw API response structure: " . print_r(array_keys($chat), true));
+            /*
             if (isset($chat['choices']) && is_array($chat['choices'])) {
                 error_log("Number of choices: " . count($chat['choices']));
                 if (isset($chat['choices'][0])) {
@@ -115,11 +111,12 @@ class AIGroq {
                     }
                 }
             }
+            */
         } catch (GroqException $err) {
             error_log("GROQ API ERROR: " . $err->getMessage());
             return "*API sorting Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
         }
-
+        // ------------------------------------------------
         // Clean and return response
         $answer = $chat['choices'][0]['message']['content'];
         
@@ -128,8 +125,6 @@ class AIGroq {
         $answer = str_replace("```json", "", $answer);
         $answer = str_replace("```", "", $answer);
         $answer = trim($answer);
-        error_log("******************** DEBUG: answer: " . $answer);
-        error_log("******************** DEBUG: JSON " . 0 + Tools::isValidJson($answer));
         return $answer;
     }
     /**

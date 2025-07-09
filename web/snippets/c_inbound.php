@@ -72,7 +72,9 @@ require_once("inc/_inboundconf.php");
             <h5 class="card-title mb-0"><i class="fa-solid fa-window-maximize"></i> Web Widget</h5>
         </div>
         <div class="card-body">
-            <strong>This is the fourth item's accordion body.</strong> 
+            <strong>To activate the widget, please enter your domain name like "yourdomain.net" in the field below.</strong>
+            <BR>
+             
             It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. 
             These classes control the overall appearance, as well as the showing and hiding via CSS transitions. 
         </div>

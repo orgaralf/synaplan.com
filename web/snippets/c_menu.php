@@ -40,7 +40,7 @@
             <li class="nav-item">
             <a class="nav-link<?php ($contentInc=="tools") ? print " active" : ""; ?>" href="index.php/tools">
                 <span data-feather="tool"></span>
-                MCP
+                Tools
             </a>
             </li>
             <li class="nav-item">

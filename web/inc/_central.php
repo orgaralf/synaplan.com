@@ -562,7 +562,7 @@ class Central {
 
         // docx 
         // ********************************************** DOCX2TEXT **********************************************
-        if ($arrMessage['BFILETYPE'] == "docx") {
+        if($arrMessage['BFILETYPE'] == "docx" || $arrMessage['BFILETYPE'] == "doc") {
             // Extract text from DOCX/DOC
             $fileType = 4;
             $text = '';
@@ -877,10 +877,10 @@ class Central {
         }
         
         // DOCX file
-        elseif ($arrMessage['BFILETYPE'] == "docx") {
+        elseif ($arrMessage['BFILETYPE'] == "docx" || $arrMessage['BFILETYPE'] == "doc") {
             $fileType = 4;
             $text = '';
-            
+            error_log("******************** DEBUG: DOCX file: " . $arrMessage['BFILEPATH']);
             try {
                 $phpWord = WordIOFactory::load('./up/' . $arrMessage['BFILEPATH']);
                 

@@ -258,11 +258,6 @@ Class Frontend {
 
                     // Speichern
                     move_uploaded_file($tmpName, $targetPath);
-                    /*
-                        $inMessageArr['BFILEPATH'] = $fileRelPath;
-                        $inMessageArr['BFILETYPE'] = $fileType;
-                        $inMessageArr['BFILE'] = 1;
-                    */
                     $filesArr[] = [
                         'BFILEPATH' => $userRelPath.$newFileName,
                         'BFILETYPE' => $fileExtension,
@@ -276,14 +271,12 @@ Class Frontend {
         }
         // fill for sorting first
         $inMessageArr['BUSERID'] = $_SESSION["USERPROFILE"]["BID"];
-        
+       
         $cleanPost = Tools::turnURLencodedIntoUTF8($_REQUEST['message']);
-        // error_log("****************************** CLEANPOST: " . $cleanPost);
-
         $inMessageArr['BTEXT'] = DB::EscString(trim(strip_tags($cleanPost)));
-        // --
+        // ------------------------------------------------
         $convArr = Central::searchConversation($inMessageArr);
-        
+        // ------------------------------------------------
         if(is_array($convArr) AND $convArr['BID'] > 0) {
             $inMessageArr['BTRACKID'] = $convArr['BTRACKID'];
             $inMessageArr['BTOPIC'] = $convArr['BTOPIC'];

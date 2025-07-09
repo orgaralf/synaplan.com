@@ -31,7 +31,7 @@ $config = [
 ];
 // Output the widget JavaScript
 ?>
-alert('<?php echo $widgetUrl; ?>');
+//alert('<?php echo $widgetUrl; ?>');
 (function() {
     // Create widget container
     const widgetContainer = document.createElement('div');

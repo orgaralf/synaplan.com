@@ -206,7 +206,7 @@ class AIOpenAI {
                         if(isset($repArr['data']['delta'])) {
                             $textChunk = $repArr['data']['delta'];
                             // Debug: log the response structure on localhost
-                            if (isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1'])) {
+                            if (isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1']) && 1==2) {
                                 error_log("DEBUG: Response structure: " . print_r($response->toArray(), true));
                             }
                         }
@@ -222,7 +222,7 @@ class AIOpenAI {
                     // Handle text done events - might contain final text
                     if ($response->event === 'response.output_text.done') {
                         // Debug: log the response structure on localhost
-                        if (isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1'])) {
+                        if (isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1']) && 1==2) {
                             error_log("DEBUG: Response event: " . $response->event);
                             error_log("DEBUG: Response structure: " . print_r($response->toArray(), true));
                         }

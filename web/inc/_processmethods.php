@@ -272,8 +272,6 @@ class ProcessMethods {
             $answerJsonArr['BUNIXTIMES'] = self::$msgArr['BUNIXTIMES'];
         }
         // -----------------------------------------------------
-        error_log('************** GO ON ** msgArr: '.print_r(self::$msgArr, true));
-        // -----------------------------------------------------
         $AIGENERAL = $GLOBALS["AI_CHAT"]["SERVICE"];
 
         // get the tools for the prompt

@@ -16,7 +16,7 @@
     <?php
     if(isset($_SESSION['USERPROFILE']['BUSERDETAILS'])) {
         $userDetails = json_decode($_SESSION['USERPROFILE']['BUSERDETAILS'], true);
-        if(!isset($userDetails['MAIL']) AND $_SESSION['USERPROFILE']['BINTYPE'] == 'WA') {
+        if(!isset($_SESSION['USERPROFILE']["BMAIL"]) AND $_SESSION['USERPROFILE']['BINTYPE'] == 'WA') {
             echo '<div class="alert alert-warning" role="alert">';
             _s("Please register your email address to use this service right: ", __FILE__, $_SESSION["LANG"]);
             echo "<a href='index.php/settings' class='alert-link'>";
@@ -24,24 +24,6 @@
             echo "</a>";
             echo '</div>';
         }
-        if($_SESSION['USERPROFILE']['BINTYPE'] == 'MAIL') {
-            echo '<div class="alert alert-info" role="alert">';
-            _s("You may want to connect your WhatsApp account to your login?", __FILE__, $_SESSION["LANG"]);
-            echo "<br><br>";
-            _s("Please send ", __FILE__, $_SESSION["LANG"]);
-            echo "<br><br>";
-            echo  "<a href='https://wa.me/4915116038214?text=".urlencode("/reg ").$_SESSION['USERPROFILE']['BPROVIDERID']."' class='btn btn-sm btn-success me-2'>";
-            echo "/reg ".$_SESSION['USERPROFILE']['BPROVIDERID'];
-            echo " (German number)</a>";
-            echo  "<a href='https://wa.me/16282253244?text=".urlencode("/reg ").$_SESSION['USERPROFILE']['BPROVIDERID']."' class='btn btn-sm btn-success'>";
-            echo "/reg ".$_SESSION['USERPROFILE']['BPROVIDERID'];
-            echo " (US number)</a>";
-            echo "<br><br>";
-            _s("via the WhatsApp links above.", __FILE__, $_SESSION["LANG"]);
-            echo '</div>';
-        }
-        ?>
-        <?php
     }
 
     // Get dashboard statistics

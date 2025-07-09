@@ -14,5 +14,12 @@ Class InboundConf {
         }
         return $numArr;
     }
+    // *****************************************************
+    // set the widget domain(s) in the BCONFIG table
+    public static function setWidgetDomain($domain) {
+        $userId = $_SESSION["USERPROFILE"]["BID"];
+        $waSQL = "";
+        $waRes = DB::Query($waSQL);
+    }
 }
 ?>
