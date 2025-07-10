@@ -368,35 +368,6 @@ class ProcessMethods {
             }
         }
 
-        // --------------------------------------------------------------------------------
-        // --------------------------------------------------------------------------------
-        // -----------------------------------------------------
-        // post processing of the answer
-        // error_log('answerSorted 381: '.print_r($answerSorted, true));
-        // Handle preconfigured sorted messages
-        if (self::$msgArr['BTOPIC'] === 'mediamaker') {
-            // Call specific method for media creation tasks
-            $task = $answerSorted['BMEDIA'];
-            $answerText = '';
-            if($previousCall) {
-                $answerText = $answerSorted['BTEXT']."\n\n";
-            }                
-            $answerSorted = Tools::migrateArray(self::$msgArr, $answerSorted);
-            $answerSorted['BTEXT'] = $answerText.$answerSorted['BTEXT'];
-            if($task == 'image') {
-                $answerSorted['BTEXT'] = "/pic ".$answerSorted['BTEXT'];
-                $answerSorted = BasicAI::toolPrompt($answerSorted, self::$threadArr);
-            }
-            if($task == 'video') {
-                $answerSorted['BTEXT'] = "/vid  ".$answerSorted['BTEXT'];
-                $answerSorted = BasicAI::toolPrompt($answerSorted, self::$threadArr);
-            }
-            if($task == 'audio') {
-                $answerSorted['BTEXT'] = "/audio ".$answerSorted['BTEXT'];
-                $answerSorted = BasicAI::toolPrompt($answerSorted, self::$threadArr);
-            }
-            // $answerSorted['BTEXT'] = Tools::addMediaToText($answerSorted);
-        }
 
         // **************************************************************************************************
         if (self::$msgArr['BTOPIC'] === 'officemaker') {

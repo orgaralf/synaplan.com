@@ -5,7 +5,7 @@
 ?>
 <link rel="stylesheet" href="fa/css/all.min.css">
 <!-- Add highlight.js CSS -->
-<link rel="stylesheet" href="node_modules/@highlightjs/cdn-assets/styles/github-dark.min.css">
+<link rel="stylesheet" href="node_modules/@highlightjs/cdn-assets/styles/googlecode.min.css">
 <main class="col-md-9 ms-sm-auto col-lg-10 px-1 px-md-3 py-2 py-md-1 content-main-bg" id="contentMain">
     <!-- Chat Page Header (now inside main, above chat-container) -->
     <div class="chat-page-header">

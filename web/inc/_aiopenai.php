@@ -118,20 +118,15 @@ class AIOpenAI {
      * @return array|string|bool Topic-specific response or error message
      */
     public static function topicPrompt($msgArr, $threadArr, $stream = false): array|string|bool {
-        set_time_limit(300);
-        //error_log('topicPrompt 106: '.print_r($msgArr, true));
+        set_time_limit(3600);
         $systemPrompt = BasicAI::getAprompt($msgArr['BTOPIC'], $msgArr['BLANG'], $msgArr, true);
 
         $client = self::$client;
-        if ($stream) {
-            $arrMessages = [
-                ['role' => 'system', 'content' => 'You are the Synaplan.com AI assistant. Please answer in the language of the user.'],
-            ];
-        } else {
-            $arrMessages = [
-                ['role' => 'system', 'content' => $systemPrompt['BPROMPT']],
-            ];
-        }
+        
+        $arrMessages = [
+            ['role' => 'system', 'content' => $systemPrompt['BPROMPT']],
+        ];
+
         // Build message history
         foreach($threadArr as $msg) {
             $role = 'user';
@@ -213,6 +208,7 @@ class AIOpenAI {
                         
                         // Only stream non-empty chunks
                         if (!empty($textChunk)) {
+                            error_log("DEBUG: Streaming chunk: " . $textChunk);
                             $answer .= $textChunk;
                             // Stream the chunk to frontend
                             Frontend::statusToStream($msgArr["BID"], 'ai', $textChunk);
