@@ -2,10 +2,11 @@
 // ------------------------------------ my mail sender
 function _mymail($strFrom, $strTo, $subject, $htmltext, $plaintext, $strReplyTo='',$strFileAttach='') {
     // available SMTP providers
+    $arrAWScreds = ApiKeys::getAWS();
     $arrSmtpSrvs = array(
         'aws'    => array('h' => 'email-smtp.eu-west-1.amazonaws.com',
-            'auth' => true, 'po'=>587, 'u' => 'AKIA5BN6EOKN225XBSVI',
-            'p' => 'BHddUbY9cA5E0MAQx+peJKLvxkhLLhF3r7fa6i5r+891', 'f'=>'info@metadist.de',
+            'auth' => true, 'po'=>587, 'u' => $arrAWScreds['access_key'],
+            'p' => $arrAWScreds['secret_key'], 'f'=>'info@metadist.de',
             'fn' => 'Ralfs.AI Mail Service'),
     );
 
@@ -61,10 +62,11 @@ function _mymail($strFrom, $strTo, $subject, $htmltext, $plaintext, $strReplyTo=
         return true;
     }
     else {
+        error_log($mail->ErrorInfo);
         // error, fall back on SENDMAIL on the Linux OS
         //echo $mail->ErrorInfo;
         //print_r($arrSmtpSrvs[$strUseProvider]);
-        mail("rs@metadist.de","Ralfs.AI Mailing Error",date("YmdHis").": Could not send to ".$strTo." via ".$strUseProvider."\n\n".$mail->ErrorInfo."\n\n".$plaintext);
+        mail("rs@metadist.de","Synaplan.org Mailing Error",date("YmdHis").": Could not send to ".$strTo." via ".$strUseProvider."\n\n".$mail->ErrorInfo."\n\n".$plaintext);
         mail($strTo,"Plain: ".$subject,$plaintext);
     }
 }

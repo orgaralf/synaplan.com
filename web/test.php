@@ -16,6 +16,7 @@ set_time_limit(0);
 require_once(__DIR__ . '/vendor/autoload.php');
 
 // ------------------------------------------------------ base config
+require_once(__DIR__ . '/inc/_confkeys.php');
 require_once(__DIR__ . '/inc/_confsys.php');
 require_once(__DIR__ . '/inc/_confdb.php');
 require_once(__DIR__ . '/inc/_mail.php');
@@ -28,12 +29,11 @@ use Web\Inc\Curler;
 use LucianoTonet\GroqPHP\Groq;
 use LucianoTonet\GroqPHP\GroqException;
 
-$GLOBALS['theHiveKey'] = file_get_contents(__DIR__ . '/.keys/.thehive.txt');
-$GLOBALS['braveKey'] = file_get_contents(__DIR__ . '/.keys/.bravekey.txt');
 echo "Testing...\n";
-echo _mymail("ralf@metadist.de", "ralf@metadist.de", "Test", "Test");
+echo _mymail("rs@metadist.de", "rs@metadist.de", "Test", "Test", "sdfg sdfg dsf");
 
 exit;
+
 $testSQL = "SELECT * FROM BMESSAGES limit 1";
 $res = db::Query($testSQL);
 $one = db::FetchArr($res);
