@@ -201,7 +201,7 @@ class ProcessMethods {
             if(self::$stream) {
                 Frontend::statusToStream(self::$msgId, 'pre', 'Tool requested. ');
             }       
-            
+
             // ************************* CALL THE TOOL *************
             self::$toolAnswer = BasicAI::toolPrompt(self::$msgArr, self::$stream);
             
@@ -233,6 +233,8 @@ class ProcessMethods {
             if(self::$stream) {
                 Frontend::statusToStream(self::$msgId, 'ai', $outText);
             }
+            self::$AIdetailArr['TARGET'] = substr(self::$msgArr['BTEXT'], 0, strpos(self::$msgArr['BTEXT'], ' '));
+            XSControl::storeAIDetails($msgArr, 'AITOOL', $self::$AIdetailArr['TARGET'], $stream);
         }
         // -----------------------------------------------------
         // ----------------------------------------------------- maybe process it
@@ -354,6 +356,8 @@ class ProcessMethods {
                 Frontend::statusToStream(self::$msgId, 'pre', 'Calling standard '.$AIGENERAL.'. ');
             }
             $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, self::$threadArr, self::$stream);
+            XSControl::storeAIDetails($answerSorted, 'AISERVICE', $AIGENERAL, self::$stream);
+            XSControl::storeAIDetails($answerSorted, 'AIMODEL', $GLOBALS["AI_CHAT"]["MODEL"], self::$stream);
             $previousCall = true;
         } else {
             if(self::$stream) {
@@ -369,6 +373,8 @@ class ProcessMethods {
             if(self::$stream) {
                 Frontend::statusToStream(self::$msgId, 'pre', 'Modifying prompt with '.$AIGENERAL.'. ');
             }
+            XSControl::storeAIDetails($answerSorted, 'AISERVICE', $AIGENERAL, self::$stream);
+
             $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, [], false);
             $previousCall = true;
 
@@ -394,6 +400,8 @@ class ProcessMethods {
                 $answerSorted = BasicAI::toolPrompt($answerSorted, self::$threadArr);
             }
             if(substr($answerSorted['BTEXT'], 0, 1) == '/') {
+                XSControl::storeAIDetails($answerSorted, 'AIMODEL', $task, self::$stream);
+
                 self::$msgArr = $answerSorted;
                 self::sortMessage();
                 return;
@@ -554,7 +562,12 @@ class ProcessMethods {
      * 
      * @return int The last inserted ID
      */
-    public static function saveAnswerToDB(): int {        
+    public static function saveAnswerToDB(): int {
+        // **************************************************************************************************
+        // get the incoming id
+        $incomingId = self::$msgArr['BID'];
+        // **************************************************************************************************
+        // **************************************************************************************************
         $aiAnswer = self::$msgArr;
         $aiAnswer['BUNIXTIMES'] = time();
         $aiAnswer['BDATETIME'] = date("YmdHis");
@@ -606,9 +619,28 @@ class ProcessMethods {
         $newRes = db::Query($newSQL);
         $aiLastId = db::LastId();
 
+        // **************************************************************************************************
         // count bytes
         $aiAnswer['BID'] = $aiLastId;
-        XSControl::countBytes($aiAnswer, 'BOTH', self::$stream);
+        XSControl::countBytes($aiAnswer, 'ALL', self::$stream);
+        // **************************************************************************************************
+        // **************************************************************************************************
+        XSControl::storeAIDetails($aiAnswer, 'AISYSPROMPT', self::$msgArr['BTOPIC'], self::$stream);
+
+        // Fetch AI service and model information for AI messages
+        $serviceSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($incomingId)." AND BTOKEN = 'AISERVICE' ORDER BY BID DESC LIMIT 1";
+        $serviceRes = db::Query($serviceSQL);
+        if($serviceArr = db::FetchArr($serviceRes)) {
+            XSControl::storeAIDetails($aiAnswer, 'AISERVICE', $serviceArr['BVALUE'], self::$stream);
+        }
+        //
+        $modelSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($incomingId)." AND BTOKEN = 'AIMODEL' ORDER BY BID DESC LIMIT 1";
+        $modelRes = db::Query($modelSQL);
+        if($modelArr = db::FetchArr($modelRes)) {
+            XSControl::storeAIDetails($aiAnswer, 'AIMODEL', $modelArr['BVALUE'], self::$stream);
+        }
+        // **************************************************************************************************
+        // **************************************************************************************************
 
         return $aiLastId;
     }

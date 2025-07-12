@@ -1099,11 +1099,21 @@ CHAT INTERFACE STYLES
 .ai-details.ai-time .ai-service {
   color: #007bff;
   font-weight: 500;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
 }
 
 .ai-details.ai-time .ai-model {
   color: #28a745;
   font-weight: 500;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
 }
 
 /* AI Avatar */
