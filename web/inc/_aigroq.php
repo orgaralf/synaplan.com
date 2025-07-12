@@ -159,9 +159,12 @@ class AIGroq {
         $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $arrMessages[] = ['role' => 'user', 'content' => $msgText];
         
+        // which model on groq?
+        $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+
         try {
             $chat = $client->chat()->completions()->create([
-                'model' => 'llama-3.3-70b-versatile',
+                'model' => $myModel,
                 'reasoning_format' => 'hidden',
                 'messages' => $arrMessages
             ]);
@@ -169,16 +172,9 @@ class AIGroq {
             return "*APItopic Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
         }
 
-        //return $chat->message->content;
-        // the prompt asks for a JSON object, so we need to decode it
-        /* deepseek
-        $myTextArr = explode("</think>\n", $chat['choices'][0]['message']['content']);
-        $myTextArr[1] = str_replace("```json", "", $myTextArr[1]);
-        $myTextArr[1] = str_replace("```", "", $myTextArr[1]);
-        $arrAnswer = json_decode(trim($myTextArr[1]), true);
-        return $arrAnswer;
-        */
         $answer = $chat['choices'][0]['message']['content'];
+
+        // error_log("***************** DEBUG: GROQ answer: ".$answer);
         // Clean JSON response - only if it starts with JSON markers
         if (strpos($answer, "```json\n") === 0) {
             $answer = substr($answer, 8); // Remove "```json\n" from start
@@ -190,7 +186,13 @@ class AIGroq {
             if (strpos($answer, "```") !== false) {
                 $answer = str_replace("```", "", $answer);
             }
+        } elseif (strpos($answer, "```") === 0) {
+            $answer = substr($answer, 3); // Remove "```" from start
+            if (strpos($answer, "```") !== false) {
+                $answer = str_replace("```", "", $answer);
+            }
         }
+        
         $answer = trim($answer);
 
         if(Tools::isValidJson($answer) == false) {

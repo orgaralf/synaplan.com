@@ -176,7 +176,7 @@ class ProcessMethods {
                 self::$msgArr['BLANG'] = $answerJsonArr['BLANG'];
 
                 if(self::$stream) {
-                    Frontend::statusToStream(self::$msgId, 'pre', 'Topic and language determined: '.self::$msgArr['BTOPIC'].' ('.self::$msgArr['BLANG'].').');
+                    Frontend::statusToStream(self::$msgId, 'pre', 'Topic and language determined: '.self::$msgArr['BTOPIC'].' ('.self::$msgArr['BLANG'].'). ');
                 }
                 // add the tools: prefix to the text
                 // error_log('BTOPIC: '.self::$msgArr['BTOPIC']);
@@ -254,13 +254,6 @@ class ProcessMethods {
         $answerJsonArr = [];
         $answerSorted = [];
         $ragArr = [];
-
-        // Handle new user case
-        /*
-        if(count(ProcessMethods::$threadArr) < 1) {
-            $welcomeText = $AISORT::welcomePrompt(['BCOMMAND' => "/list", 'BLANG' => self::$msgArr['BLANG']]);
-        }
-        */
         
         // Initialize answer array with file information
         if(self::$msgArr['BFILE']>0) {
@@ -342,33 +335,74 @@ class ProcessMethods {
             }
         }
 
-        // --------------------------------------------------------------------------------
+        // **************************************************************************************************
         // ----------------------------------------------------- now call the topic prompt
-        // --------------------------------------------------------------------------------
-        // --------------------------------------------------------------------------------
-        // --------------------------------------------------------------------------------
-        // --------------------------------------------------------------------------------
+        // **************************************************************************************************
+        // **************************************************************************************************
+        // **************************************************************************************************
+        // **************************************************************************************************
         // error_log('calling '.$AIGENERAL."::topicPrompt");
         // $answerSorted = AIGoogle::topicPrompt(self::$msgArr, self::$threadArr);
 
         // run exceptions for specific topics
-        $defaultPromptArr = ['analyzefile'];
+        $defaultPromptArr = ['analyzefile','mediamaker'];
         // check of the the a call was done
         $previousCall = false;
         // ----------------------------------------------------- default or extra?
         if(!in_array(self::$msgArr['BTOPIC'], $defaultPromptArr)) {
             if(self::$stream) {
-                Frontend::statusToStream(self::$msgId, 'pre', 'Calling '.$AIGENERAL.'. ');
+                Frontend::statusToStream(self::$msgId, 'pre', 'Calling standard '.$AIGENERAL.'. ');
             }
             $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, self::$threadArr, self::$stream);
             $previousCall = true;
         } else {
             if(self::$stream) {
-                Frontend::statusToStream(self::$msgId, 'pre', 'Calling ' . self::$msgArr['BTOPIC'] . '. ');
+                Frontend::statusToStream(self::$msgId, 'pre', 'Calling extra ' . self::$msgArr['BTOPIC'] . '. ');
             }
         }
+        // **************************************************************************************************
+        // **************************************************************************************************
+        // **************************************************************************************************
+        // **************************************************************************************************
+        if (self::$msgArr['BTOPIC'] === 'mediamaker') {
+            // Call specific method for media creation tasks
+            if(self::$stream) {
+                Frontend::statusToStream(self::$msgId, 'pre', 'Modifying prompt with '.$AIGENERAL.'. ');
+            }
+            $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, [], false);
+            $previousCall = true;
 
+            error_log('answerSorted MEDIAMAKER *************************** : '.print_r($answerSorted, true));
+            $task = $answerSorted['BMEDIA'];
+            $answerText = '';
+            if($previousCall) {
+                $previousAnswerText = $answerSorted['BTEXT']."\n\n";
+            }           
+            $answerSorted = Tools::migrateArray(self::$msgArr, $answerSorted);
+            $answerSorted['BTEXT'] = $answerText.$answerSorted['BTEXT'];
 
+            if($task == 'image') {
+                $answerSorted['BTEXT'] = "/pic ".$answerSorted['BTEXT'];
+                $answerSorted = BasicAI::toolPrompt($answerSorted, self::$threadArr);
+            }
+            if($task == 'video') {
+                $answerSorted['BTEXT'] = "/vid  ".$answerSorted['BTEXT'];
+                $answerSorted = BasicAI::toolPrompt($answerSorted, self::$threadArr);
+            }
+            if($task == 'audio') {
+                $answerSorted['BTEXT'] = "/audio ".$answerSorted['BTEXT'];
+                $answerSorted = BasicAI::toolPrompt($answerSorted, self::$threadArr);
+            }
+            if(substr($answerSorted['BTEXT'], 0, 1) == '/') {
+                self::$msgArr = $answerSorted;
+                self::sortMessage();
+                return;
+            }
+            // $answerSorted['BTEXT'] = Tools::addMediaToText($answerSorted);
+        }
+        // **************************************************************************************************
+        // **************************************************************************************************
+        // **************************************************************************************************
         // **************************************************************************************************
         if (self::$msgArr['BTOPIC'] === 'officemaker') {
             // Call specific method for office document creation tasks
@@ -413,7 +447,10 @@ class ProcessMethods {
             // $answerSorted['BTEXT'] = Tools::addMediaToText($answerSorted);
         }
         // **************************************************************************************************
-        
+        // **************************************************************************************************
+        // **************************************************************************************************
+        // **************************************************************************************************
+
         if (self::$msgArr['BTOPIC'] === 'analyzefile' && self::$msgArr['BFILE'] == 1 && substr(self::$msgArr['BFILEPATH'], -4) == '.pdf') {
             $previousCall = true;
             $answerSorted = Tools::migrateArray(self::$msgArr, $answerSorted);
@@ -438,6 +475,8 @@ class ProcessMethods {
             XSControl::storeAIDetails(self::$msgArr, 'AIMODELID', '0', self::$stream);
         }
 
+        // **************************************************************************************************
+        // **************************************************************************************************
         // Handle web search if needed
         if($answerSorted['BFILE'] == 10 && strlen($answerSorted['BFILETEXT']) > 0 AND strlen($answerSorted['BFILETEXT']) < 64) {
             $answerText = '';
@@ -448,7 +487,9 @@ class ProcessMethods {
             $answerSorted['BTEXT'] = $answerText.$answerSorted['BTEXT'];
             $answerSorted['BFILE'] = 0;
         }
-        
+
+        // **************************************************************************************************
+        // **************************************************************************************************        
         // do we have found files for this answer?
         if(count($ragArr) > 0) {
             $previousCall = true;
@@ -458,6 +499,8 @@ class ProcessMethods {
                 }
             }
         }
+        // **************************************************************************************************
+        // **************************************************************************************************
         // check, if we have called anything
         if(!$previousCall) {
             self::$msgArr['BTOPIC'] = 'general';
@@ -466,9 +509,12 @@ class ProcessMethods {
             }
             $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, self::$threadArr, self::$stream);
         }
-        // -----------------------------------------------------
+
+        // **************************************************************************************************
+        // **************************************************************************************************
         // ----------------------------------------------------- DONE
-        // -----------------------------------------------------
+        // **************************************************************************************************
+
         self::$msgArr = $answerSorted;
         
         $outText = Tools::addMediaToText($answerSorted);
@@ -480,6 +526,8 @@ class ProcessMethods {
             }
         }
 
+        // **************************************************************************************************
+        // **************************************************************************************************        
         // Handle audio file generation for WhatsApp
         if(self::$msgArr['BFILE'] == 1 && self::$answerMethod == 'WA' && strlen(self::$msgArr['BTEXT']) > 0 && self::$msgArr['BFILETYPE'] == 'mp3') {
             $soundArr = AIOpenAI::textToSpeech(self::$msgArr, self::$usrArr);
@@ -490,12 +538,15 @@ class ProcessMethods {
             }
         }
         
+        // **************************************************************************************************
+        // **************************************************************************************************        
         // Clean up file information for WhatsApp messages without files
         if(self::$answerMethod == 'WA' && self::$msgArr['BFILE'] == 0) {
             self::$msgArr['BFILEPATH'] = '';
             self::$msgArr['BFILETYPE'] = '';    
         }
 
+        return;
     }
     
     /**

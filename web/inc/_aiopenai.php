@@ -122,11 +122,15 @@ class AIOpenAI {
         $systemPrompt = BasicAI::getAprompt($msgArr['BTOPIC'], $msgArr['BLANG'], $msgArr, true);
 
         $client = self::$client;
-        
-        $arrMessages = [
-            ['role' => 'system', 'content' => $systemPrompt['BPROMPT']],
-        ];
-
+        if ($stream) {
+            $arrMessages = [
+                ['role' => 'system', 'content' => 'You are the Synaplan.com AI assistant. Please answer in the language of the user.'],
+            ];
+        } else {
+            $arrMessages = [
+                ['role' => 'system', 'content' => $systemPrompt['BPROMPT']],
+            ];
+        }
         // Build message history
         foreach($threadArr as $msg) {
             $role = 'user';
@@ -163,8 +167,7 @@ class AIOpenAI {
             $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
         }
 
-        //error_log(" *************** OPENAI call - response object:" . date("Y-m-d H:i:s"));
-        
+        //error_log(" *************** OPENAI call - response object:" . date("Y-m-d H:i:s"));        
         // now ask the AI and give the stream out or the result when done!
         try {
             if ($stream) {
@@ -237,6 +240,7 @@ class AIOpenAI {
                         return "*API topic Error - Streaming failed: " . $response->message;
                     }
                 }
+                // error_log("***************** DEBUG: Streaming done - answer: ".$answer);
                 // **************************************************************************************************                
                 // ** return a different way to the rest of the process
                 $arrAnswer = $msgArr;
@@ -304,6 +308,11 @@ class AIOpenAI {
                     }
                 } elseif (strpos($answer, "```json") === 0) {
                     $answer = substr($answer, 7); // Remove "```json" from start
+                    if (strpos($answer, "```") !== false) {
+                        $answer = str_replace("```", "", $answer);
+                    }
+                } elseif (strpos($answer, "```") === 0) {
+                    $answer = substr($answer, 3); // Remove "```" from start
                     if (strpos($answer, "```") !== false) {
                         $answer = str_replace("```", "", $answer);
                     }
