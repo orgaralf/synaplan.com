@@ -372,7 +372,7 @@ class ProcessMethods {
             $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, [], false);
             $previousCall = true;
 
-            error_log('answerSorted MEDIAMAKER *************************** : '.print_r($answerSorted, true));
+            //error_log('answerSorted MEDIAMAKER *************************** : '.print_r($answerSorted, true));
             $task = $answerSorted['BMEDIA'];
             $answerText = '';
             if($previousCall) {

@@ -44,19 +44,38 @@
     <div class="chat-container">
         <!-- Enhanced chatbox with shadow and modern styling -->
         <div class="chatbox">
-                    
-                    <div class="chat-messages" id="chatModalBody">
-                        <div class="messages-container">
-                            <ul id="chatHistory">
-                            <?php
-                                $historyChatArr = Frontend::getLatestChats(30);
-                                if(count($historyChatArr) > 0) {
-                                    foreach($historyChatArr as $chat) {
-                                        if($chat['BDIRECT'] == 'IN') { ?>
-                                        <li class="message-item user-message">
-                                            <div class="message-bubble user-bubble">
-                                                <p><?php echo $chat['BTEXT']; ?></p>
-                                                <?php if(isset($chat['FILECOUNT']) && $chat['FILECOUNT'] > 0) { ?>
+            <div class="chat-messages" id="chatModalBody">
+                <div class="messages-container">
+                    <ul id="chatHistory">
+                        <?php
+                        $historyChatArr = Frontend::getLatestChats(10);
+                        if(count($historyChatArr) > 0) {
+                            foreach($historyChatArr as $chat) {
+                                // Fetch AI service and model information for AI messages
+                                $aiService = '';
+                                $aiModel = '';
+                                if($chat['BDIRECT'] == 'OUT') {
+                                    $serviceSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($chat['BID'])." AND BTOKEN = 'AISERVICE' ORDER BY BID DESC LIMIT 1";
+                                    $serviceRes = db::Query($serviceSQL);
+                                    if($serviceArr = db::FetchArr($serviceRes)) {
+                                        $aiService = $serviceArr['BVALUE'];
+                                    }
+                                    //print "<li>aiService: ".$aiService. $serviceSQL."</li>";
+                                    $modelSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($chat['BID'])." AND BTOKEN = 'AIMODEL' ORDER BY BID DESC LIMIT 1";
+                                    $modelRes = db::Query($modelSQL);
+                                    if($modelArr = db::FetchArr($modelRes)) {
+                                        $aiModel = $modelArr['BVALUE'];
+                                    }
+                                    //print "<li>aiModel: ".$aiModel."</li>";
+                                }
+                                // **************************************************************************************************
+                                // IN OR OUT?
+                                // **************************************************************************************************
+                                if($chat['BDIRECT'] == 'IN') { ?>
+                                    <li class="message-item user-message">
+                                        <div class="message-bubble user-bubble">
+                                            <p><?php echo $chat['BTEXT']; ?></p>
+                                            <?php if(isset($chat['FILECOUNT']) && $chat['FILECOUNT'] > 0) { ?>
                                                 <div class="file-attachment-header" onclick="showMessageFiles(<?php echo $chat['BID']; ?>)">
                                                     <i class="fas fa-paperclip paperclip-icon"></i>
                                                     <span><?php echo $chat['FILECOUNT']; ?> file<?php echo $chat['FILECOUNT'] > 1 ? 's' : ''; ?> attached</span>
@@ -65,103 +84,110 @@
                                                 <div id="files-<?php echo $chat['BID']; ?>" class="message-files" style="display: none;">
                                                     <!-- File details will be loaded here -->
                                                 </div>
-                                                <?php } ?>
-                                                <span class="message-time user-time"><?php echo Tools::myDateTime($chat['BDATETIME']); ?></span>
+                                            <?php } ?>
+                                            <span class="message-time user-time"><?php echo Tools::myDateTime($chat['BDATETIME']); ?></span>
+                                        </div>
+                                    </li>
+                                <?php } else { 
+                                    // Process markdown for AI messages, but handle files specially
+                                    $displayText = $chat['BTEXT'];
+                                    if(substr($chat['BTEXT'], 0, 1) == '/') {
+                                        $displayText = "File generated";
+                                    }
+                                    $hasFile = ($chat['BFILE'] > 0 && !empty($chat['BFILETYPE']) && !empty($chat['BFILEPATH']) && strpos($chat['BFILEPATH'], '/') !== false);
+                                    
+                                    // Debug output for localhost
+                                    if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0 AND 1==2) {
+                                        error_log("DEBUG Chat Message BID {$chat['BID']}: BFILE={$chat['BFILE']}, BFILETYPE='{$chat['BFILETYPE']}', BFILEPATH='{$chat['BFILEPATH']}', hasFile=" . ($hasFile ? 'true' : 'false'));
+                                    }
+                                    
+                                    // If the message starts with a tool command but has a file, show a better message
+                                    if ($hasFile && substr($chat['BTEXT'], 0, 1) == '/') {
+                                        if ($chat['BFILETYPE'] == 'mp4' || $chat['BFILETYPE'] == 'webm') {
+                                            $displayText = "Video";
+                                        } elseif (in_array($chat['BFILETYPE'], ['png', 'jpg', 'jpeg', 'gif'])) {
+                                            $displayText = "Image";
+                                        } else {
+                                            $displayText = "File";
+                                        }
+                                    }
+                                    
+                                    $Parsedown = new Parsedown();
+                                    $mdText = $Parsedown->text($displayText);
+                                    ?>
+                                    <li class="message-item ai-message">
+                                        <div class="ai-avatar">
+                                            <i class="fas fa-robot text-white"></i>
+                                        </div>
+                                        <div class="message-content">
+                                            <span id="system<?php echo $chat['BID']; ?>" class="system-message"></span>
+                                            <div class="message-bubble ai-bubble">
+                                                <div id="rep<?php echo $chat['BID']; ?>" class="message-content">
+                                                    <?php 
+                                                    // Debug output for localhost
+                                                    if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0) {
+                                                        echo "<!-- DEBUG: Message {$chat['BID']}, hasFile=" . ($hasFile ? 'true' : 'false') . ", BFILETYPE='{$chat['BFILETYPE']}' -->";
+                                                    }
+                                                    
+                                                    if($hasFile) {
+                                                        // Construct file URL safely
+                                                        $baseUrl = $GLOBALS["baseUrl"];
+                                                        $fileUrl = $baseUrl . "up/" . $chat['BFILEPATH'];
+                                                        
+                                                        // Debug output
+                                                        if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0 AND 1==2) {
+                                                            error_log("DEBUG: Rendering file - URL: $fileUrl, Type: {$chat['BFILETYPE']}");
+                                                        }
+                                                        
+                                                        if($chat['BFILETYPE'] == 'png' OR $chat['BFILETYPE'] == 'jpg' OR $chat['BFILETYPE'] == 'jpeg') {
+                                                            echo "<div class='generated-file-container'>";
+                                                            echo "<img src='".$fileUrl."' class='generated-image' alt='Generated Image' loading='lazy'>";
+                                                            echo "</div>";
+                                                        }
+                                                        if($chat['BFILETYPE'] == 'mp4' OR $chat['BFILETYPE'] == 'webm') {
+                                                            echo "<div class='generated-file-container'>";
+                                                            echo "<video src='".$fileUrl."' class='generated-video' controls preload='metadata'>";
+                                                            echo "Your browser does not support the video tag.";
+                                                            echo "</video>";
+                                                            echo "</div>";
+                                                        }
+                                                        
+                                                        // Debug: Add a small link to check if file exists
+                                                        if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0) {
+                                                            echo "<small><a href='".$fileUrl."' target='_blank' class='generated-file-link'>🔗 " . basename($chat['BFILEPATH']) . "</a></small><br>";
+                                                        }
+                                                    } else {
+                                                        // Debug: Why no file?
+                                                        if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0 AND 1==2) {
+                                                            error_log("DEBUG: No file for message {$chat['BID']} - BFILE={$chat['BFILE']}, BFILETYPE='{$chat['BFILETYPE']}', BFILEPATH='{$chat['BFILEPATH']}'");
+                                                        }
+                                                    }
+                                                    echo $mdText;
+                                                    ?>
+                                                </div>
+                                                <span class="ai-details ai-time">
+                                                    <span class="message-time"><?php echo $chat['BTOPIC']; ?></span>
+                                                    <?php if(!empty($aiService) || !empty($aiModel)) { ?>
+                                                        <?php if(!empty($aiService)) { ?>
+                                                            <span class="ai-service"><?php echo htmlspecialchars($aiService); ?></span>
+                                                        <?php } ?>
+                                                        <?php if(!empty($aiModel)) { ?>
+                                                            <span class="ai-model"><?php echo htmlspecialchars($aiModel); ?></span>
+                                                        <?php } ?>
+                                                        <span class="message-time"><?php echo Tools::myDateTime($chat['BDATETIME']); ?></span>
+                                                    <?php } else { ?>
+                                                        <span class="message-time"><?php echo Tools::myDateTime($chat['BDATETIME']); ?></span>
+                                                    <?php } ?>
+                                                </span>
                                             </div>
-                                        </li>
-                                        <?php } else { 
-                                            // Debug: Check if this AI message is being processed
-                                            if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0 AND 1==2) {
-                                                error_log("DEBUG: Processing AI message BID {$chat['BID']}, BDIRECT='{$chat['BDIRECT']}', BTEXT='" . substr($chat['BTEXT'], 0, 50) . "...'");
-                                                // Also show in browser for easier debugging
-                                                //echo "<!-- DEBUG: Processing AI message BID {$chat['BID']}, BFILE={$chat['BFILE']}, BFILETYPE='{$chat['BFILETYPE']}' -->";
-                                            }
-                                            
-                                            // Process markdown for AI messages, but handle files specially
-                                            $displayText = $chat['BTEXT'];
-                                            if(substr($chat['BTEXT'], 0, 1) == '/') {
-                                                $displayText = "File generated";
-                                            }
-                                            $hasFile = ($chat['BFILE'] > 0 && !empty($chat['BFILETYPE']) && !empty($chat['BFILEPATH']) && strpos($chat['BFILEPATH'], '/') !== false);
-                                            
-                                            // Debug output for localhost
-                                            if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0 AND 1==2) {
-                                                error_log("DEBUG Chat Message BID {$chat['BID']}: BFILE={$chat['BFILE']}, BFILETYPE='{$chat['BFILETYPE']}', BFILEPATH='{$chat['BFILEPATH']}', hasFile=" . ($hasFile ? 'true' : 'false'));
-                                            }
-                                            
-                                            // If the message starts with a tool command but has a file, show a better message
-                                            if ($hasFile && substr($chat['BTEXT'], 0, 1) == '/') {
-                                                if ($chat['BFILETYPE'] == 'mp4' || $chat['BFILETYPE'] == 'webm') {
-                                                    $displayText = "Video";
-                                                } elseif (in_array($chat['BFILETYPE'], ['png', 'jpg', 'jpeg', 'gif'])) {
-                                                    $displayText = "Image";
-                                                } else {
-                                                    $displayText = "File";
-                                                }
-                                            }
-                                            
-                                            $Parsedown = new Parsedown();
-                                            $mdText = $Parsedown->text($displayText);
-                                            ?>
-                                            <li class="message-item ai-message">
-                                                <div class="ai-avatar">
-                                                    <i class="fas fa-robot text-white"></i>
-                                                </div>
-                                                <div class="message-content">
-                                                    <span id="system<?php echo $chat['BID']; ?>" class="system-message"></span>
-                                                    <div class="message-bubble ai-bubble">
-                                                        <div id="rep<?php echo $chat['BID']; ?>" class="message-content">
-                                                            <?php 
-                                                            // Debug output for localhost
-                                                            if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0) {
-                                                                echo "<!-- DEBUG: Message {$chat['BID']}, hasFile=" . ($hasFile ? 'true' : 'false') . ", BFILETYPE='{$chat['BFILETYPE']}' -->";
-                                                            }
-                                                            
-                                                            if($hasFile) {
-                                                                // Construct file URL safely
-                                                                $baseUrl = $GLOBALS["baseUrl"];
-                                                                $fileUrl = $baseUrl . "up/" . $chat['BFILEPATH'];
-                                                                
-                                                                // Debug output
-                                                                if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0 AND 1==2) {
-                                                                    error_log("DEBUG: Rendering file - URL: $fileUrl, Type: {$chat['BFILETYPE']}");
-                                                                }
-                                                                
-                                                                if($chat['BFILETYPE'] == 'png' OR $chat['BFILETYPE'] == 'jpg' OR $chat['BFILETYPE'] == 'jpeg') {
-                                                                    echo "<div class='generated-file-container'>";
-                                                                    echo "<img src='".$fileUrl."' class='generated-image' alt='Generated Image' loading='lazy'>";
-                                                                    echo "</div>";
-                                                                }
-                                                                if($chat['BFILETYPE'] == 'mp4' OR $chat['BFILETYPE'] == 'webm') {
-                                                                    echo "<div class='generated-file-container'>";
-                                                                    echo "<video src='".$fileUrl."' class='generated-video' controls preload='metadata'>";
-                                                                    echo "Your browser does not support the video tag.";
-                                                                    echo "</video>";
-                                                                    echo "</div>";
-                                                                }
-                                                                
-                                                                // Debug: Add a small link to check if file exists
-                                                                if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0) {
-                                                                    echo "<small><a href='".$fileUrl."' target='_blank' class='generated-file-link'>🔗 " . basename($chat['BFILEPATH']) . "</a></small><br>";
-                                                                }
-                                                            } else {
-                                                                // Debug: Why no file?
-                                                                if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0 AND 1==2) {
-                                                                    error_log("DEBUG: No file for message {$chat['BID']} - BFILE={$chat['BFILE']}, BFILETYPE='{$chat['BFILETYPE']}', BFILEPATH='{$chat['BFILEPATH']}'");
-                                                                }
-                                                            }
-                                                            echo $mdText;
-                                                            ?>
-                                                        </div>
-                                                        <span class="message-time ai-time"><?php echo Tools::myDateTime($chat['BDATETIME']); ?></span>
-                                                    </div>
-                                                </div>
-                                            </li>
-                                        <?php } ?>
-                                    <?php 
-                                    } 
-                                }
-                            ?>
+                                        </div>
+                                    </li>
+                                <?php 
+                                } ?>
+                            <?php 
+                            } 
+                        }
+                        ?>
                             </ul>
                         </div>
                     </div>

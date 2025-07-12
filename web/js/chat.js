@@ -456,6 +456,7 @@ function sseStream(data, outputObject) {
   eventSource.onerror = function(error, outputObject) {
     console.error('SSE error:', error);
     eventSource.close(); // Optional
+    stopWaitingLoader(outputObject);
     // JUST IN CASE
     aiRender(outputObject);
   };  
@@ -464,7 +465,7 @@ function sseStream(data, outputObject) {
 // function AI RENDER
 function aiRender(targetId) {
   if (typeof window.md !== 'undefined') {
-    mdText = window.md.render(aiTextBuffer[targetId]);
+    mdText = window.md.render(aiTextBuffer[targetId]) + "<br><br><b>Stream ended with error.</b>";
     $("#"+targetId).html(mdText);
   } else {
     // Fallback if markdown-it is not available

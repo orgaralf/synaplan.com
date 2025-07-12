@@ -1087,6 +1087,25 @@ CHAT INTERFACE STYLES
   margin-top: 8px;
 }
 
+.ai-details.ai-time {
+  color: #6c757d;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+}
+
+.ai-details.ai-time .ai-service {
+  color: #007bff;
+  font-weight: 500;
+}
+
+.ai-details.ai-time .ai-model {
+  color: #28a745;
+  font-weight: 500;
+}
+
 /* AI Avatar */
 .ai-avatar {
   width: 36px;
