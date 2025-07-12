@@ -27,7 +27,7 @@ require_once($root . '/inc/_coreincludes.php');
     <title>synaplan - digital thinking</title>
     <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom styles for this template -->
-    <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/dashboard.css?v=<?php echo date("Ymd"); ?>-1" rel="stylesheet">
     <!-- JQuery we need quickly, sorry SEO -->
     <script src="node_modules/jquery/dist/jquery.min.js"></script>
   </head>
