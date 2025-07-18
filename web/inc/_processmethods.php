@@ -234,7 +234,7 @@ class ProcessMethods {
                 Frontend::statusToStream(self::$msgId, 'ai', $outText);
             }
             self::$AIdetailArr['TARGET'] = substr(self::$msgArr['BTEXT'], 0, strpos(self::$msgArr['BTEXT'], ' '));
-            XSControl::storeAIDetails($msgArr, 'AITOOL', $self::$AIdetailArr['TARGET'], $stream);
+            XSControl::storeAIDetails(self::$msgArr, 'AITOOL', self::$AIdetailArr['TARGET'], self::$stream);
         }
         // -----------------------------------------------------
         // ----------------------------------------------------- maybe process it
