@@ -79,7 +79,8 @@ class ApiKeys {
             'WHATSAPP_TOKEN',
             'AWS_CREDENTIALS',
             'GOOGLE_OAUTH_CREDENTIALS',
-            'GMAIL_OAUTH_TOKEN'
+            'GMAIL_OAUTH_TOKEN',
+            'OLLAMA_SERVER'
         ];
 
         foreach ($keyConfig as $envKey) {

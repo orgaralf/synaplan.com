@@ -7,7 +7,8 @@ class AIOllama {
     private static $client;
 
     public static function init(): void {
-        self::$host = 'http://localhost:11434';
+        $myServer = ApiKeys::getKey("OLLAMA_SERVER");
+        self::$host = 'http://'.$myServer;
         self::$client = Ollama::client(self::$host);
     }
 
