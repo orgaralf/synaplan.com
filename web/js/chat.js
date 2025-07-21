@@ -465,7 +465,7 @@ function sseStream(data, outputObject) {
 // function AI RENDER
 function aiRender(targetId) {
   if (typeof window.md !== 'undefined') {
-    mdText = window.md.render(aiTextBuffer[targetId]) + "<br><br><b>Stream ended with error.</b>";
+    mdText = window.md.render(aiTextBuffer[targetId]) + "<br>";
     $("#"+targetId).html(mdText);
   } else {
     // Fallback if markdown-it is not available
