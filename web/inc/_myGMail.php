@@ -12,7 +12,7 @@ class myGMail {
      */
     public static function refreshToken() {
         try {
-            $client = OAuthConfig::createGoogleClient('https://wa.metadist.de/gmail_callback2oauth.php');
+            $client = OAuthConfig::createGoogleClient($GLOBALS["baseUrl"].'gmail_callback2oauth.php');
             return $client;
         } catch (Exception $e) {
             throw new Exception('OAuth configuration error: ' . $e->getMessage());

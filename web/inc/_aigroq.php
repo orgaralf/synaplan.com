@@ -264,7 +264,7 @@ class AIGroq {
             $imagePath = 'up/'.$arrMessage['BFILEPATH'];
         }
 
-        $imageURL = 'https://wa.metadist.de/'.($imagePath);
+        $imageURL = 'https://app.s/'.($imagePath);
         $client = self::$client;
 
         // Use the global prompt if available, otherwise use default

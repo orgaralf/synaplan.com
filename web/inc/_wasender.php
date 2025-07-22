@@ -22,8 +22,6 @@ class waSender {
 
     // send image
     public function sendImage($phoneNumber, $msgArr): mixed {
-        // https://wa.metadist.de/up/701/11/202502/hive_8c2a5c69-e3d7-11ef-8fb3-aa198a347dfe.png
-        // $link_id = new LinkID('https://wa.metadist.de/up/701/11/202502/hive_8c2a5c69-e3d7-11ef-8fb3-aa198a347dfe.png');
 
         $link_id = new LinkID($GLOBALS["baseUrl"] . "up/" . $msgArr['BFILEPATH']);
         $resp = $this->waApi->sendImage($phoneNumber, $link_id, $msgArr['BTEXT']);
@@ -34,8 +32,6 @@ class waSender {
 
     // send doc
     public function sendDoc($phoneNumber, $msgArr): mixed {
-        // https://wa.metadist.de/up/701/11/202502/hive_8c2a5c69-e3d7-11ef-8fb3-aa198a347dfe.png
-        // $link_id = new LinkID('https://wa.metadist.de/up/701/11/202502/hive_8c2a5c69-e3d7-11ef-8fb3-aa198a347dfe.png');
 
         $link_id = new LinkID($GLOBALS["baseUrl"] . "up/" . $msgArr['BFILEPATH']);
         $resp = $this->waApi->sendDocument($phoneNumber, $link_id, basename($msgArr['BFILEPATH']), substr($msgArr['BTEXT'],0,64)."...");

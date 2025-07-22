@@ -7,7 +7,7 @@ class AIOllama {
     private static $client;
 
     public static function init(): void {
-        $myServer = ApiKeys::getKey("OLLAMA_SERVER");
+        $myServer = ApiKeys::get("OLLAMA_SERVER");
         self::$host = 'http://'.$myServer;
         self::$client = Ollama::client(self::$host);
     }
@@ -64,6 +64,9 @@ class AIOllama {
         $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $fullPrompt .= "\nCurrent message to analyze: " . $msgText;
 
+        // which model on ollama?
+        $myModel = $GLOBALS["AI_SORT"]["MODEL"];
+        
         try {
             $completions = $client->completions()->create([
                 'model' => 'deepseek-r1:32b',
@@ -114,6 +117,9 @@ class AIOllama {
         // Add current message
         $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $fullPrompt .= "\nCurrent message: " . $msgText;
+        
+        // which model on groq?
+        $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
         
         try {
             $completions = $client->completions()->create([
@@ -174,9 +180,12 @@ class AIOllama {
         $msgText = '{"BCOMMAND":"/list","BLANG":"'.$msgArr['BLANG'].'"}';
         $fullPrompt .= "User message: " . $msgText;
         
+        // which model on groq?
+        $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+        
         try {
             $completions = $client->completions()->create([
-                'model' => 'deepseek-r1:32b',
+                'model' => $myModel,
                 'prompt' => $fullPrompt,
             ]);
             
@@ -212,9 +221,11 @@ class AIOllama {
             $imgPrompt .= ' User requested: '.$arrMessage['BTEXT'];
         }
 
+        // which model on ollama?
+        
         try {
             $completions = $client->completions()->create([
-                'model' => 'llama3.2-vision:11b',
+                'model' => $$GLOBALS["AI_PIC2TEXT"]["MODEL"],
                 'prompt' => $imgPrompt,
                 'images' => [$myImage],
             ]); 
@@ -271,9 +282,12 @@ class AIOllama {
         $tPrompt = BasicAI::getAprompt('tools:lang');
         $fullPrompt = $tPrompt . "\n\nUser message: " . $qTerm;
 
+        // which model on ollama?
+        $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+        
         try {
             $completions = $client->completions()->create([
-                'model' => 'deepseek-r1:32b',
+                'model' => $myModel,
                 'prompt' => $fullPrompt,
             ]);
             
@@ -295,12 +309,14 @@ class AIOllama {
      */
     public static function summarizePrompt($text): string {
         $client = self::$client;
+        // which model on ollama?
+        $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
         
         $prompt = 'You summarize the text of the user to a short 2-3 sentence summary. Do not add any other text, just the essence of the text. Stay under 128 characters. Answer in the language of the text.\n\nText to summarize: ' . $text;
         
         try {
             $completions = $client->completions()->create([
-                'model' => 'deepseek-r1:32b',
+                'model' => $myModel,
                 'prompt' => $prompt,
             ]);
             
@@ -327,9 +343,12 @@ class AIOllama {
     // nicefy the text with a LLM locally
     // ****************************************************************************************************** 
     public static function nicefy($text, $lang) {
-        $client = self::$client;
+        $client = self::$client;    
+        // which model on ollama?
+        $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+        
         $completions = $client->completions()->create([
-            'model' => 'deepseek-r1:32b',
+            'model' => $myModel,
             'prompt' => 'Translate the following text into language "'.$lang.'". Try to improve the text, if you see typos: '.$text
         ]);
         return $completions->response;
