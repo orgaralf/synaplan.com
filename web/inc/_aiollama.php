@@ -24,7 +24,6 @@ class AIOllama {
      */
     public static function sortingPrompt($msgArr, $threadArr): array|string|bool {
         // prompt builder
-        file_put_contents('up/ollama_log_'.(date("His")).'.txt', print_r($msgArr, true));
         $systemPrompt = BasicAI::getAprompt('tools:sort');
 
         $client = self::$client;
@@ -69,7 +68,7 @@ class AIOllama {
         
         try {
             $completions = $client->completions()->create([
-                'model' => 'deepseek-r1:32b',
+                'model' => $myModel,
                 'prompt' => $fullPrompt,
             ]);
             
@@ -94,6 +93,7 @@ class AIOllama {
      * 
      * @param array $msgArr Message array containing topic information
      * @param array $threadArr Thread context for conversation history
+     * @param bool $stream Whether to use streaming mode
      * @return array|string|bool Topic-specific response or error message
      */
     public static function topicPrompt($msgArr, $threadArr, $stream = false): array|string|bool {
@@ -105,61 +105,135 @@ class AIOllama {
         
         $client = self::$client;
         
-        // Build the complete prompt with system context and message history
-        $fullPrompt = $systemPrompt['BPROMPT'] . "\n\n";
-        
-        // Add conversation history
-        $fullPrompt .= "Conversation History:\n";
-        foreach($threadArr as $msg) {
-            $fullPrompt .= "[".$msg['BID']."] ".$msg['BTEXT'] . "\n";
-        }
-
-        // Add current message
-        $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $fullPrompt .= "\nCurrent message: " . $msgText;
-        
-        // which model on groq?
+        // which model on ollama?
         $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
         
         try {
-            $completions = $client->completions()->create([
-                'model' => 'deepseek-r1:32b',
-                'prompt' => $fullPrompt,
-            ]);
-            
-            $answer = $completions->response;
+            if ($stream) {
+                // Use streaming mode - simplified prompt for streaming
+                $fullPrompt = 'You are the Synaplan.com AI assistant. Please answer in the language of the user.' . "\n\n";
+                
+                // Add conversation history
+                $fullPrompt .= "Conversation History:\n";
+                foreach($threadArr as $msg) {
+                    $fullPrompt .= "[".$msg['BID']."] ".$msg['BTEXT'] . "\n";
+                }
+
+                // Add current message
+                $msgText = $msgArr['BTEXT'];
+                if(strlen($msgArr['BFILETEXT']) > 1) {
+                    $msgText .= "\n\n\n---\n\n\nUser provided a file: ".$msgArr['BFILETYPE'].", saying: '".$msgArr['BFILETEXT']."'\n\n";
+                }
+                $fullPrompt .= "\nCurrent message: " . $msgText;
+
+                // different model configured?
+                if(isset($systemPrompt['SETTINGS'])) {
+                    foreach($systemPrompt['SETTINGS'] as $setting) {
+                        $systemPrompt[$setting['BTOKEN']] = $setting['BVALUE'];
+                    }
+                    if(isset($systemPrompt['aiModel']) AND intval($systemPrompt['aiModel']) > 0) {
+                        $modelArr = BasicAI::getModelDetails(intval($systemPrompt['aiModel']));
+                        $myModel = $modelArr['BPROVID'];
+                    } else {
+                        $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+                    }
+                } else {
+                    $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+                }
+
+                $completions = $client->completions()->createStreamed([
+                    'model' => $myModel,
+                    'prompt' => $fullPrompt,
+                ]);
+
+                $answer = '';
+                
+                foreach ($completions as $completion) {
+                    $textChunk = $completion->response;
+                    
+                    // Only stream non-empty chunks
+                    if (!empty($textChunk)) {
+                        $answer .= $textChunk;
+                        // Stream the chunk to frontend
+                        Frontend::statusToStream($msgArr["BID"], 'ai', $textChunk);
+                    }
+                }
+                
+                // Return a different way to the rest of the process
+                $arrAnswer = $msgArr;
+                $arrAnswer['BTEXT'] = $answer;
+                $arrAnswer['BDIRECT'] = 'OUT';
+                $arrAnswer['BDATETIME'] = date('Y-m-d H:i:s');
+                $arrAnswer['BUNIXTIMES'] = time();
+                
+                // Clear file-related fields since there's no valid JSON
+                $arrAnswer['BFILE'] = 0;
+                $arrAnswer['BFILEPATH'] = '';
+                $arrAnswer['BFILETYPE'] = '';
+                $arrAnswer['BFILETEXT'] = '';
+
+                // avoid double output to the chat window
+                $arrAnswer['ALREADYSHOWN'] = true;
+
+                return $arrAnswer;
+                
+            } else {
+                // Use non-streaming mode (existing logic)
+                // Build the complete prompt with system context and message history
+                $fullPrompt = $systemPrompt['BPROMPT'] . "\n\n";
+                
+                // Add conversation history
+                $fullPrompt .= "Conversation History:\n";
+                foreach($threadArr as $msg) {
+                    $fullPrompt .= "[".$msg['BID']."] ".$msg['BTEXT'] . "\n";
+                }
+
+                // Add current message
+                $msgText = json_encode($msgArr,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $fullPrompt .= "\nCurrent message: " . $msgText;
+
+                $completions = $client->completions()->create([
+                    'model' => $myModel,
+                    'prompt' => $fullPrompt,
+                ]);
+                
+                $answer = $completions->response;
+            }
         } catch (Exception $err) {
             return "*API topic Error - Ollama error: * " . $err->getMessage();
         }
 
-        // Clean response
-        // Clean JSON response - only if it starts with JSON markers
-        if (strpos($answer, "```json\n") === 0) {
-            $answer = substr($answer, 8); // Remove "```json\n" from start
-            if (strpos($answer, "\n```") !== false) {
-                $answer = str_replace("\n```", "", $answer);
+        // Clean response (only for non-streaming mode)
+        if (!$stream) {
+            // Clean JSON response - only if it starts with JSON markers
+            if (strpos($answer, "```json\n") === 0) {
+                $answer = substr($answer, 8); // Remove "```json\n" from start
+                if (strpos($answer, "\n```") !== false) {
+                    $answer = str_replace("\n```", "", $answer);
+                }
+            } elseif (strpos($answer, "```json") === 0) {
+                $answer = substr($answer, 7); // Remove "```json" from start
+                if (strpos($answer, "```") !== false) {
+                    $answer = str_replace("```", "", $answer);
+                }
             }
-        } elseif (strpos($answer, "```json") === 0) {
-            $answer = substr($answer, 7); // Remove "```json" from start
-            if (strpos($answer, "```") !== false) {
-                $answer = str_replace("```", "", $answer);
+            $answer = trim($answer);
+
+            if(Tools::isValidJson($answer) == false) {
+                $arrAnswer = $msgArr;
+                $arrAnswer['BTEXT'] = $answer;
+                $arrAnswer['BDIRECT'] = 'OUT';
+            } else {
+                try {
+                    $arrAnswer = json_decode($answer, true);
+                } catch (Exception $err) {
+                    return "*API topic Error - Ollama error: * " . $err->getMessage();
+                }    
             }
-        }
-        $answer = trim($answer);
 
-        if(Tools::isValidJson($answer) == false) {
-            $arrAnswer = $msgArr;
-            $arrAnswer['BTEXT'] = $answer;
-            $arrAnswer['BDIRECT'] = 'OUT';
-        } else {
-            try {
-                $arrAnswer = json_decode($answer, true);
-            } catch (Exception $err) {
-                return "*API topic Error - Ollama error: * " . $err->getMessage();
-            }    
+            return $arrAnswer;
         }
-
-        return $arrAnswer;
+        return [];
     }
 
     /**

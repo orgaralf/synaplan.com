@@ -42,6 +42,9 @@ if(!isset($_SESSION['USERPROFILE'])) {
 if($contentInc != "login") {
     include("snippets/c_menu.php");
     include("snippets/c_".$contentInc.".php");
+    $serverIp = $_SERVER['SERVER_ADDR'];
+    $serverArr = explode(".", $serverIp);
+    echo "\n<!-- SERVER: ".$_SERVER['SERVER_NAME']."_".$serverIp." -->\n";
 } else {
     include("snippets/c_login.php");
 }
