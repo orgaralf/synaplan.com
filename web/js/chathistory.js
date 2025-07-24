@@ -196,4 +196,14 @@ document.addEventListener('DOMContentLoaded', function() {
             loadChatHistory(amount);
         });
     });
+    
+    // Add event listener to hide history button
+    document.querySelectorAll('.hide-history-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const buttonsContainer = document.getElementById('chatHistoryButtons');
+            if (buttonsContainer) {
+                buttonsContainer.remove();
+            }
+        });
+    });
 }); 

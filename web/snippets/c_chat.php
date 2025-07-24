@@ -17,45 +17,6 @@
 <link rel="stylesheet" href="fa/css/all.min.css">
 <!-- Add highlight.js CSS -->
 <link rel="stylesheet" href="node_modules/@highlightjs/cdn-assets/styles/googlecode.min.css">
-<style>
-    /* Chat History Loading Buttons Styling */
-    .load-history-btn {
-        transition: all 0.3s ease;
-        border-radius: 20px;
-        padding: 8px 16px;
-        font-weight: 500;
-    }
-    
-    .load-history-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
-    }
-    
-    .load-history-btn .badge {
-        font-size: 0.75em;
-        padding: 4px 8px;
-        border-radius: 12px;
-    }
-    
-    #chatHistoryButtons {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-radius: 12px;
-        margin: 20px;
-        border: 1px solid #dee2e6;
-    }
-    
-    /* Loading spinner styling */
-    .spinner-border {
-        width: 2rem;
-        height: 2rem;
-    }
-    
-    /* Error alert styling */
-    .alert {
-        border-radius: 8px;
-        border: none;
-    }
-</style>
 <main class="col-md-9 ms-sm-auto col-lg-10 px-1 px-md-3 py-2 py-md-1 content-main-bg" id="contentMain">
     <!-- Chat Page Header (now inside main, above chat-container) -->
     <div class="chat-page-header">
@@ -97,22 +58,27 @@
             <div class="chat-messages" id="chatModalBody">
                 <div class="messages-container">
                     <!-- Chat History Loading Buttons -->
-                    <div id="chatHistoryButtons" class="text-center py-4">
-                        <div class="d-flex justify-content-center gap-3">
-                            <button type="button" class="btn btn-outline-primary btn-sm load-history-btn" data-amount="10">
-                                <i class="fas fa-clock me-1"></i>
-                                <span class="badge bg-primary">10</span>
-                            </button>
-                            <button type="button" class="btn btn-outline-primary btn-sm load-history-btn" data-amount="20">
-                                <i class="fas fa-clock me-1"></i>
-                                <span class="badge bg-primary">20</span>
-                            </button>
-                            <button type="button" class="btn btn-outline-primary btn-sm load-history-btn" data-amount="30">
-                                <i class="fas fa-clock me-1"></i>
-                                <span class="badge bg-primary">30</span>
+                    <div id="chatHistoryButtons" class="py-4">
+                        <div class="d-flex justify-content-between">
+                            <div class="d-flex gap-3">
+                                <button type="button" class="btn btn-outline-primary btn-sm load-history-btn m-2" data-amount="10">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <span class="badge bg-primary">10</span>
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm load-history-btn m-2" data-amount="20">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <span class="badge bg-primary">20</span>
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm load-history-btn m-2" data-amount="30">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <span class="badge bg-primary">30</span>
+                                </button>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm hide-history-btn m-2" title="Hide chat history options">
+                                <i class="fas fa-times"></i>
                             </button>
                         </div>
-                        <small class="text-muted mt-2 d-block">Click to load chat history</small>
+                        <small class="text-muted m-2">Click to load chat history</small>
                     </div>
                     
                     <ul id="chatHistory">

@@ -1636,3 +1636,56 @@ SYNTAX HIGHLIGHTING STYLES
   background: #f5f6fa;
   border-bottom: 1px solid #e0e0e0;
 }
+  /* Chat History Loading Buttons Styling */
+.load-history-btn {
+    transition: all 0.3s ease;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-weight: 500;
+}
+
+.load-history-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+}
+
+.load-history-btn .badge {
+    font-size: 0.75em;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.hide-history-btn {
+    transition: all 0.3s ease;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hide-history-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 4px rgba(108, 117, 125, 0.2);
+}
+
+#chatHistoryButtons {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    margin: 20px;
+    border: 1px solid #dee2e6;
+}
+
+/* Loading spinner styling */
+.spinner-border {
+    width: 2rem;
+    height: 2rem;
+}
+
+/* Error alert styling */
+.alert {
+    border-radius: 8px;
+    border: none;
+}
