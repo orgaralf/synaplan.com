@@ -14,19 +14,19 @@
     </div>
 
     <form id="docSummaryForm" method="POST" action="index.php/docsummary">
-        <input type="hidden" name="action" id="action" value="processSummary">
+        <input type="hidden" name="action" id="action" value="docsum">
         
         <!-- Input Configuration Section -->
         <div class="card mb-4">
             <div class="card-header">
                 <h5 class="card-title mb-0"><i class="fas fa-cog"></i> Summary Configuration</h5>
+                <small class="text-muted">This builds a prompt for the configured AI model to summarize the submitted text.</small>
             </div>
             <div class="card-body">
                 <div class="row mb-3">
                     <label for="summaryType" class="col-sm-2 col-form-label"><strong>Summary Type:</strong></label>
                     <div class="col-sm-4">
                         <select class="form-select" name="summaryType" id="summaryType">
-                            <option value="extractive">Extractive Summary</option>
                             <option value="abstractive">Abstractive Summary</option>
                             <option value="bullet_points">Bullet Points</option>
                             <option value="key_points">Key Points</option>
@@ -104,7 +104,7 @@
                             <label class="btn btn-outline-primary" for="textInput">
                                 <i class="fas fa-keyboard"></i> Text Input
                             </label>
-                            
+                            <!--
                             <input type="radio" class="btn-check" name="inputMethod" id="fileUpload" value="file">
                             <label class="btn btn-outline-primary" for="fileUpload">
                                 <i class="fas fa-upload"></i> File Upload
@@ -114,6 +114,7 @@
                             <label class="btn btn-outline-primary" for="urlInput">
                                 <i class="fas fa-link"></i> URL
                             </label>
+                            -->
                         </div>
                     </div>
                 </div>
@@ -121,9 +122,9 @@
                 <!-- Text Input -->
                 <div id="textInputSection" class="input-section">
                     <div class="row mb-3">
-                        <label for="documentText" class="col-sm-2 col-form-label"><strong>Document Text:</strong></label>
+                        <label for="BFILETEXT" class="col-sm-2 col-form-label"><strong>Document Text:</strong></label>
                         <div class="col-sm-10">
-                            <textarea class="form-control" name="documentText" id="documentText" rows="15" placeholder="Paste your document text here..."></textarea>
+                            <textarea class="form-control" name="BFILETEXT" id="BFILETEXT" rows="15" placeholder="Paste your document text here..." oninput="updateCounts()"></textarea>
                             <div class="form-text">
                                 <span id="charCount">0</span> characters | 
                                 <span id="wordCount">0</span> words | 
@@ -157,67 +158,15 @@
             </div>
         </div>
 
-        <!-- Processing Options Section -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0"><i class="fas fa-sliders-h"></i> Processing Options</h5>
-            </div>
-            <div class="card-body">
-                <div class="row mb-3">
-                    <label for="includeMetadata" class="col-sm-2 col-form-label"><strong>Include Metadata:</strong></label>
-                    <div class="col-sm-4">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="includeMetadata" id="includeMetadata" checked>
-                            <label class="form-check-label" for="includeMetadata">
-                                Include document metadata
-                            </label>
-                        </div>
-                        <div class="form-text">Add source info and processing details</div>
-                    </div>
-                    <label for="preserveFormatting" class="col-sm-2 col-form-label"><strong>Preserve Formatting:</strong></label>
-                    <div class="col-sm-4">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="preserveFormatting" id="preserveFormatting">
-                            <label class="form-check-label" for="preserveFormatting">
-                                Keep original formatting
-                            </label>
-                        </div>
-                        <div class="form-text">Maintain paragraph structure</div>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <label for="confidenceThreshold" class="col-sm-2 col-form-label"><strong>Confidence Threshold:</strong></label>
-                    <div class="col-sm-4">
-                        <input type="range" class="form-range" name="confidenceThreshold" id="confidenceThreshold" min="0" max="100" value="70">
-                        <div class="form-text">Minimum confidence level: <span id="confidenceValue">70</span>%</div>
-                    </div>
-                    <label for="maxProcessingTime" class="col-sm-2 col-form-label"><strong>Max Processing Time:</strong></label>
-                    <div class="col-sm-4">
-                        <select class="form-select" name="maxProcessingTime" id="maxProcessingTime">
-                            <option value="30">30 seconds</option>
-                            <option value="60" selected>1 minute</option>
-                            <option value="120">2 minutes</option>
-                            <option value="300">5 minutes</option>
-                        </select>
-                        <div class="form-text">Maximum time to wait for processing</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Action Buttons -->
         <div class="card">
             <div class="card-body text-center">
                 <div class="btn-group" role="group" aria-label="Document summary actions">
-                    <button type="submit" class="btn btn-success btn-lg">
+                    <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
                         <i class="fas fa-magic"></i> Generate Summary
                     </button>
                     <button type="button" class="btn btn-secondary btn-lg" onclick="clearForm()">
                         <i class="fas fa-eraser"></i> Clear Form
-                    </button>
-                    <button type="button" class="btn btn-info btn-lg" onclick="loadSampleText()">
-                        <i class="fas fa-file-text"></i> Load Sample
                     </button>
                 </div>
                 <div class="mt-3">
@@ -267,11 +216,11 @@
         // Handle summary length changes
         document.getElementById('summaryLength').addEventListener('change', toggleCustomLength);
 
-        // Handle confidence threshold slider
-        document.getElementById('confidenceThreshold').addEventListener('input', updateConfidenceValue);
-
         // Handle text input changes for character/word counting
-        document.getElementById('documentText').addEventListener('input', updateCounts);
+        document.getElementById('BFILETEXT').addEventListener('input', updateCounts);
+
+        // Handle form submission
+        document.getElementById('docSummaryForm').addEventListener('submit', handleFormSubmit);
     }
 
     // Toggle input sections based on selected method
@@ -290,52 +239,200 @@
         customLength.disabled = !isCustom;
     }
 
-    // Update confidence value display
-    function updateConfidenceValue() {
-        const value = document.getElementById('confidenceThreshold').value;
-        document.getElementById('confidenceValue').textContent = value;
-    }
-
     // Update character and word counts
     function updateCounts() {
-        const text = document.getElementById('documentText').value;
+        const text = document.getElementById('BFILETEXT').value;
         const charCount = text.length;
         const wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
-        const estimatedTokens = Math.ceil(charCount / 4); // Rough estimation
+        const estimatedTokens = Math.ceil(charCount / 3.5); // Rough estimation
 
         document.getElementById('charCount').textContent = charCount.toLocaleString();
         document.getElementById('wordCount').textContent = wordCount.toLocaleString();
         document.getElementById('estimatedTokens').textContent = estimatedTokens.toLocaleString();
     }
 
+    // Handle form submission via AJAX
+    function handleFormSubmit(event) {
+        event.preventDefault();
+        
+        // Validate form
+        if (!validateForm()) {
+            return false;
+        }
+
+        // Show loading state
+        showLoadingState();
+
+        // Collect form data
+        const formData = new FormData();
+        formData.append('action', 'docSum');
+        formData.append('BFILETEXT', document.getElementById('BFILETEXT').value);
+        formData.append('summaryType', document.getElementById('summaryType').value);
+        formData.append('summaryLength', document.getElementById('summaryLength').value);
+        formData.append('language', document.getElementById('language').value);
+        
+        // Add custom length if selected
+        if (document.getElementById('summaryLength').value === 'custom') {
+            formData.append('customLength', document.getElementById('customLength').value);
+        }
+
+        // Add focus areas
+        const focusAreas = document.querySelectorAll('input[name="focusAreas[]"]:checked');
+        focusAreas.forEach(checkbox => {
+            formData.append('focusAreas[]', checkbox.value);
+        });
+
+        // Submit via AJAX
+        fetch('api.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Server response:', data);
+            if (data.success) {
+                displaySummary(data.summary);
+            } else {
+                showError(data.error || 'An error occurred while generating the summary.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showError('An error occurred while processing your request. Please try again.');
+        })
+        .finally(() => {
+            hideLoadingState();
+        });
+    }
+
+    // Validate form before submission
+    function validateForm() {
+        const documentText = document.getElementById('BFILETEXT').value.trim();
+        
+        if (!documentText) {
+            showError('Please enter some text to summarize.');
+            return false;
+        }
+
+        if (documentText.length < 10) {
+            showError('Please enter at least 10 characters of text to summarize.');
+            return false;
+        }
+
+        // Validate custom length if selected
+        if (document.getElementById('summaryLength').value === 'custom') {
+            const customLength = parseInt(document.getElementById('customLength').value);
+            if (isNaN(customLength) || customLength < 50 || customLength > 2000) {
+                showError('Custom length must be between 50 and 2000 words.');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // Show loading state
+    function showLoadingState() {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Summary...';
+        
+        // Show loading indicator in results section
+        document.getElementById('resultsSection').style.display = 'block';
+        document.getElementById('summaryContent').innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3 text-muted">Generating summary, please wait...</p>
+            </div>
+        `;
+    }
+
+    // Hide loading state
+    function hideLoadingState() {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Summary';
+    }
+
+    // Display the generated summary
+    function displaySummary(summary) {
+        document.getElementById('summaryContent').innerHTML = `
+            <div class="summary-result">
+                <div class="summary-text">
+                    ${summary.replace(/\n/g, '<br>')}
+                </div>
+                <div class="summary-meta mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-clock"></i> Generated on ${new Date().toLocaleString()}
+                    </small>
+                </div>
+            </div>
+        `;
+    }
+
+    // Show error message
+    function showError(message) {
+        document.getElementById('resultsSection').style.display = 'block';
+        document.getElementById('summaryContent').innerHTML = `
+            <div class="alert alert-danger" role="alert">
+                <i class="fas fa-exclamation-triangle"></i> ${message}
+            </div>
+        `;
+    }
+
     // Clear form
     function clearForm() {
         document.getElementById('docSummaryForm').reset();
-        document.getElementById('documentText').value = '';
+        document.getElementById('BFILETEXT').value = '';
         updateCounts();
         document.getElementById('resultsSection').style.display = 'none';
     }
 
-    // Load sample text
-    function loadSampleText() {
-        const sampleText = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.`;
-        
-        document.getElementById('documentText').value = sampleText;
-        updateCounts();
-    }
-
     // Download summary
     function downloadSummary() {
-        // TODO: Implement download functionality
-        console.log('Downloading summary...');
+        const summaryContent = document.getElementById('summaryContent').textContent;
+        if (!summaryContent) {
+            showError('No summary available to download.');
+            return;
+        }
+
+        const blob = new Blob([summaryContent], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'document-summary.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     }
 
     // Copy summary to clipboard
     function copySummary() {
-        // TODO: Implement copy functionality
-        console.log('Copying summary to clipboard...');
+        const summaryContent = document.getElementById('summaryContent').textContent;
+        if (!summaryContent) {
+            showError('No summary available to copy.');
+            return;
+        }
+
+        navigator.clipboard.writeText(summaryContent).then(() => {
+            // Show success message
+            const originalText = document.querySelector('.btn-outline-secondary').innerHTML;
+            document.querySelector('.btn-outline-secondary').innerHTML = '<i class="fas fa-check"></i> Copied!';
+            setTimeout(() => {
+                document.querySelector('.btn-outline-secondary').innerHTML = originalText;
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            showError('Failed to copy to clipboard.');
+        });
     }
 </script>
 

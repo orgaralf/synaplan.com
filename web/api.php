@@ -59,6 +59,9 @@ switch($apiAction) {
     case 'chatStream':
         $resArr = Frontend::chatStream();
         exit;
+    case 'docSum':
+        $resArr = BasicAI::doDocSum();
+        break;
     case 'promptLoad':
         $resArr = BasicAI::getAprompt($_REQUEST['promptKey'], $_REQUEST['lang'], [], false);
         break;

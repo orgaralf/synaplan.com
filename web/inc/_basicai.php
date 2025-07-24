@@ -592,4 +592,47 @@ Class BasicAI {
         
         return $resArr;
     }
+
+    // ****************************************************************************************************** 
+    // document summarization functionality
+    // ****************************************************************************************************** 
+    public static function doDocSum(): array {
+        $resArr = ['success' => false, 'error' => '', 'summary' => ''];
+        
+        try {
+            // Validate input
+            if (empty($_REQUEST['BFILETEXT'])) {
+                $resArr['error'] = 'No document text provided';
+                return $resArr;
+            }
+
+            $documentText = trim($_REQUEST['BFILETEXT']);
+            if (strlen($documentText) < 100) {
+                $resArr['error'] = 'Document text is too short (minimum 100 characters)';
+                return $resArr;
+            }
+
+            // Get configuration parameters
+            $summaryType = $_REQUEST['summaryType'] ?? 'abstractive';
+            $summaryLength = $_REQUEST['summaryLength'] ?? 'medium';
+            $language = $_REQUEST['language'] ?? 'en';
+            $customLength = $_REQUEST['customLength'] ?? null;
+            $focusAreas = $_REQUEST['focusAreas'] ?? ['main_ideas', 'key_facts'];
+
+            // TODO: Implement the actual summarization logic here
+            // This is where you will add your summarization implementation
+            
+            // For now, return a placeholder response
+            $resArr['success'] = true;
+            $resArr['summary'] = "This is a placeholder summary. Please implement the actual summarization logic in the doDocSum() method.\n\nDocument length: " . strlen($documentText) . " characters\nSummary type: " . $summaryType . "\nLength: " . $summaryLength . "\nLanguage: " . $language;
+            
+            error_log("BasicAI::doDocSum - Placeholder response generated for document of " . strlen($documentText) . " characters");
+            
+        } catch (Exception $e) {
+            error_log("BasicAI::doDocSum - Error: " . $e->getMessage());
+            $resArr['error'] = 'An error occurred while processing the document: ' . $e->getMessage();
+        }
+        
+        return $resArr;
+    }
 }
