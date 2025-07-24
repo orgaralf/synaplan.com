@@ -13,3 +13,7 @@ while($confARR = db::FetchArr($confRES)) {
     //error_log(__FILE__.": AI_models: ".$confARR["BSETTING"].": ".$detailARR["BSERVICE"].": ".$detailARR["BPROVID"]);
 }
 //error_log(__FILE__.": AI_models: ".print_r($GLOBALS, true));
+
+// Initialize extra servicecredentials
+$GLOBALS['WAtoken'] = ApiKeys::getWhatsApp();
+$GLOBALS['braveKey'] = ApiKeys::getBraveSearch();

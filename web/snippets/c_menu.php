@@ -16,9 +16,24 @@
             </a>
             </li>
             <li class="nav-item">
-            <a class="nav-link<?php ($contentInc=="welcome") ? print " active" : ""; ?>" aria-current="page" href="index.php/welcome">
+            <a class="nav-link<?php ($contentInc=="tools") ? print " active" : ""; ?>" href="index.php/tools">
+                <span data-feather="tool"></span>
+                Tools
+            </a>
+            <?php if($contentInc == "tools" || $contentInc == "webwidget" || $contentInc == "docsummary" 
+                || $contentInc == "soundstream") { ?>
+                <ul class="nav flex-column" style="margin-left: 18px;">
+                    <li class="subitem"><a href="index.php/webwidget" id="toolMenu1">Chat Widget</a></li>
+                    <li class="subitem"><a href="index.php/docsummary" id="toolMenu2">Doc Summary</a></li>
+                    <li class="subitem"><a href="index.php/soundstream" id="toolMenu3">Sound2Text</a></li>
+                    <!-- li class="subitem"><a href="index.php/outprocessor">Outbound</a></li -->
+                </ul>
+            <?php } ?>
+            </li>
+            <li class="nav-item">
+            <a class="nav-link<?php ($contentInc=="statistics") ? print " active" : ""; ?>" aria-current="page" href="index.php/statistics">
                 <span data-feather="home"></span>
-                Dashboard
+                Statistics
             </a>
             </li>
             <li class="nav-item">
@@ -29,19 +44,13 @@
             <?php if($contentInc == "ais" || $contentInc == "inbound" || $contentInc == "preprocessor" 
                 || $contentInc == "prompts" || $contentInc == "aimodels" || $contentInc == "outprocessor") { ?>
                 <ul class="nav flex-column" style="margin-left: 18px;">
-                <li class="subitem"><a href="index.php/inbound" id="menuPoint1">Inbound</a></li>
-                <li class="subitem"><a href="index.php/aimodels" id="menuPoint4">AI Models</a></li>
+                    <li class="subitem"><a href="index.php/inbound" id="menuPoint1">Inbound</a></li>
+                    <li class="subitem"><a href="index.php/aimodels" id="menuPoint4">AI Models</a></li>
                     <li class="subitem"><a href="index.php/prompts" id="menuPoint3">Task Prompts</a></li>
                     <li class="subitem"><a href="index.php/preprocessor" id="menuPoint2">Sorting Prompt</a></li>
                     <!-- li class="subitem"><a href="index.php/outprocessor">Outbound</a></li -->
                 </ul>
             <?php } ?>
-            </li>
-            <li class="nav-item">
-            <a class="nav-link<?php ($contentInc=="tools") ? print " active" : ""; ?>" href="index.php/tools">
-                <span data-feather="tool"></span>
-                Tools
-            </a>
             </li>
             <li class="nav-item">
             <a class="nav-link<?php ($contentInc=="filemanager") ? print " active" : ""; ?>" href="index.php/filemanager">

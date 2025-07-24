@@ -7,15 +7,11 @@
 # https://github.com/logiscapedev/mcp-sdk-php work with that, when called the MCP way
 // Set execution time limit to 6 minutes
 set_time_limit(360);
-
 session_start();
+
 // core app files with relative paths
 $root = __DIR__ . '/';
 require_once($root . '/inc/_coreincludes.php');
-
-// Initialize API credentials
-$GLOBALS['WAtoken'] = ApiKeys::getWhatsApp();
-$GLOBALS['braveKey'] = ApiKeys::getBraveSearch();
 
 // Check if this is a JSON-RPC request
 $isJsonRpc = false;
@@ -93,9 +89,6 @@ switch($apiAction) {
         break;
     case 'getProfile':
         $resArr = Frontend::getProfile();
-        break;
-    case 'updateProfile':
-        $resArr = Frontend::updateProfile();
         break;
     default:
         $resArr = ['error' => 'Invalid action'];

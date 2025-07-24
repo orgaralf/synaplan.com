@@ -45,5 +45,3 @@ if (substr_count($server, "localhost") > 0) {
 } else {
     $GLOBALS["baseUrl"] = $liveUrl;
 }
-
-//$GLOBALS["AI_CHAT"]["SERVICE"] = "AIGroq";
