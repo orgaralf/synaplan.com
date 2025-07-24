@@ -1,0 +1,79 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.0
+-- https://www.phpmyadmin.net/
+--
+-- Host: localhost
+-- Generation Time: Jul 24, 2025 at 01:13 PM
+-- Server version: 11.7.2-MariaDB-ubu2204-log
+-- PHP Version: 8.3.22
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `synaplan`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `BCONFIG`
+--
+
+CREATE TABLE `BCONFIG` (
+  `BID` bigint(20) NOT NULL,
+  `BOWNERID` bigint(20) NOT NULL DEFAULT 0,
+  `BGROUP` varchar(64) NOT NULL DEFAULT '',
+  `BSETTING` varchar(96) NOT NULL DEFAULT '',
+  `BVALUE` varchar(250) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+--
+-- Dumping data for table `BCONFIG`
+--
+
+INSERT INTO `BCONFIG` (`BID`, `BOWNERID`, `BGROUP`, `BSETTING`, `BVALUE`) VALUES
+(1, 0, 'DEFAULTMODEL', 'CHAT', '30'),
+(5, 0, 'DEFAULTMODEL', 'SORT', '9'),
+(9, 0, 'DEFAULTMODEL', 'SUMMARIZE', '9'),
+(13, 0, 'DEFAULTMODEL', 'TEXT2PIC', '29'),
+(17, 0, 'DEFAULTMODEL', 'TEXT2SOUND', '41'),
+(21, 0, 'DEFAULTMODEL', 'SOUND2TEXT', '21'),
+(25, 0, 'DEFAULTMODEL', 'PIC2TEXT', '17'),
+(29, 0, 'DEFAULTMODEL', 'VECTORIZE', '13'),
+(33, 0, 'DEFAULTMODEL', 'TEXT2VID', '45');
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `BCONFIG`
+--
+ALTER TABLE `BCONFIG`
+  ADD PRIMARY KEY (`BID`),
+  ADD KEY `BOWNERID` (`BOWNERID`),
+  ADD KEY `BSETTING` (`BSETTING`),
+  ADD KEY `BGROUP` (`BGROUP`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `BCONFIG`
+--
+ALTER TABLE `BCONFIG`
+  MODIFY `BID` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Jul 09, 2025 at 07:59 AM
+-- Generation Time: Jul 24, 2025 at 01:21 PM
 -- Server version: 11.7.2-MariaDB-ubu2204-log
 -- PHP Version: 8.3.22
 
@@ -27,7 +27,6 @@ SET time_zone = "+00:00";
 -- Table structure for table `BMODELS`
 --
 
-DROP TABLE IF EXISTS `BMODELS`;
 CREATE TABLE `BMODELS` (
   `BID` bigint(20) NOT NULL,
   `BSERVICE` varchar(32) NOT NULL DEFAULT '',
