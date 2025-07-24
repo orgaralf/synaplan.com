@@ -2,10 +2,60 @@
 // this page can be included in the widget loader page
 // or as part of the admin section of synaplan
 // We have to set the values and the prompt config correctly.
+//
+// CHAT HISTORY LOADING:
+// The chat history is now loaded dynamically via API calls instead of being
+// rendered server-side on page load. Users see three buttons (10, 20, 30 messages)
+// and can click one to load the desired amount of chat history. This improves
+// page load performance and provides better user control over history loading.
+//
+// API Endpoint: api.php?action=loadChatHistory&amount={10|20|30}
+// Backend Method: Frontend::loadChatHistory($amount)
+// JavaScript: js/chathistory.js - handles the API calls and rendering
+// Dependencies: jQuery, markdown-it, highlight.js, Font Awesome
 ?>
 <link rel="stylesheet" href="fa/css/all.min.css">
 <!-- Add highlight.js CSS -->
 <link rel="stylesheet" href="node_modules/@highlightjs/cdn-assets/styles/googlecode.min.css">
+<style>
+    /* Chat History Loading Buttons Styling */
+    .load-history-btn {
+        transition: all 0.3s ease;
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-weight: 500;
+    }
+    
+    .load-history-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+    }
+    
+    .load-history-btn .badge {
+        font-size: 0.75em;
+        padding: 4px 8px;
+        border-radius: 12px;
+    }
+    
+    #chatHistoryButtons {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        margin: 20px;
+        border: 1px solid #dee2e6;
+    }
+    
+    /* Loading spinner styling */
+    .spinner-border {
+        width: 2rem;
+        height: 2rem;
+    }
+    
+    /* Error alert styling */
+    .alert {
+        border-radius: 8px;
+        border: none;
+    }
+</style>
 <main class="col-md-9 ms-sm-auto col-lg-10 px-1 px-md-3 py-2 py-md-1 content-main-bg" id="contentMain">
     <!-- Chat Page Header (now inside main, above chat-container) -->
     <div class="chat-page-header">
@@ -46,151 +96,30 @@
         <div class="chatbox">
             <div class="chat-messages" id="chatModalBody">
                 <div class="messages-container">
-                    <ul id="chatHistory">
-                        <?php
-                        $historyChatArr = Frontend::getLatestChats(10);
-                        if(count($historyChatArr) > 0) {
-                            foreach($historyChatArr as $chat) {
-                                // Fetch AI service and model information for AI messages
-                                $aiService = '';
-                                $aiModel = '';
-                                if($chat['BDIRECT'] == 'OUT') {
-                                    $serviceSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($chat['BID'])." AND BTOKEN = 'AISERVICE' ORDER BY BID DESC LIMIT 1";
-                                    $serviceRes = db::Query($serviceSQL);
-                                    if($serviceArr = db::FetchArr($serviceRes)) {
-                                        $aiService = $serviceArr['BVALUE'];
-                                    }
-                                    //print "<li>aiService: ".$aiService. $serviceSQL."</li>";
-                                    $modelSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($chat['BID'])." AND BTOKEN = 'AIMODEL' ORDER BY BID DESC LIMIT 1";
-                                    $modelRes = db::Query($modelSQL);
-                                    if($modelArr = db::FetchArr($modelRes)) {
-                                        $aiModel = $modelArr['BVALUE'];
-                                    }
-                                    //print "<li>aiModel: ".$aiModel."</li>";
-                                }
-                                // **************************************************************************************************
-                                // IN OR OUT?
-                                // **************************************************************************************************
-                                if($chat['BDIRECT'] == 'IN') { ?>
-                                    <li class="message-item user-message">
-                                        <div class="message-bubble user-bubble">
-                                            <p><?php echo $chat['BTEXT']; ?></p>
-                                            <?php if(isset($chat['FILECOUNT']) && $chat['FILECOUNT'] > 0) { ?>
-                                                <div class="file-attachment-header" onclick="showMessageFiles(<?php echo $chat['BID']; ?>)">
-                                                    <i class="fas fa-paperclip paperclip-icon"></i>
-                                                    <span><?php echo $chat['FILECOUNT']; ?> file<?php echo $chat['FILECOUNT'] > 1 ? 's' : ''; ?> attached</span>
-                                                    <i class="fas fa-chevron-down chevron-icon"></i>
-                                                </div>
-                                                <div id="files-<?php echo $chat['BID']; ?>" class="message-files" style="display: none;">
-                                                    <!-- File details will be loaded here -->
-                                                </div>
-                                            <?php } ?>
-                                            <span class="message-time user-time"><?php echo Tools::myDateTime($chat['BDATETIME']); ?></span>
-                                        </div>
-                                    </li>
-                                <?php } else { 
-                                    // Process markdown for AI messages, but handle files specially
-                                    $displayText = $chat['BTEXT'];
-                                    if(substr($chat['BTEXT'], 0, 1) == '/') {
-                                        $displayText = "File generated";
-                                    }
-                                    $hasFile = ($chat['BFILE'] > 0 && !empty($chat['BFILETYPE']) && !empty($chat['BFILEPATH']) && strpos($chat['BFILEPATH'], '/') !== false);
-                                    
-                                    // Debug output for localhost
-                                    if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0 AND 1==2) {
-                                        error_log("DEBUG Chat Message BID {$chat['BID']}: BFILE={$chat['BFILE']}, BFILETYPE='{$chat['BFILETYPE']}', BFILEPATH='{$chat['BFILEPATH']}', hasFile=" . ($hasFile ? 'true' : 'false'));
-                                    }
-                                    
-                                    // If the message starts with a tool command but has a file, show a better message
-                                    if ($hasFile && substr($chat['BTEXT'], 0, 1) == '/') {
-                                        if ($chat['BFILETYPE'] == 'mp4' || $chat['BFILETYPE'] == 'webm') {
-                                            $displayText = "Video";
-                                        } elseif (in_array($chat['BFILETYPE'], ['png', 'jpg', 'jpeg', 'gif'])) {
-                                            $displayText = "Image";
-                                        } else {
-                                            $displayText = "File";
-                                        }
-                                    }
-                                    
-                                    $Parsedown = new Parsedown();
-                                    $mdText = $Parsedown->text($displayText);
-                                    ?>
-                                    <li class="message-item ai-message">
-                                        <div class="ai-avatar">
-                                            <i class="fas fa-robot text-white"></i>
-                                        </div>
-                                        <div class="message-content">
-                                            <span id="system<?php echo $chat['BID']; ?>" class="system-message"></span>
-                                            <div class="message-bubble ai-bubble">
-                                                <div id="rep<?php echo $chat['BID']; ?>" class="message-content">
-                                                    <?php 
-                                                    // Debug output for localhost
-                                                    if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0) {
-                                                        echo "<!-- DEBUG: Message {$chat['BID']}, hasFile=" . ($hasFile ? 'true' : 'false') . ", BFILETYPE='{$chat['BFILETYPE']}' -->";
-                                                    }
-                                                    
-                                                    if($hasFile) {
-                                                        // Construct file URL safely
-                                                        $baseUrl = $GLOBALS["baseUrl"];
-                                                        $fileUrl = $baseUrl . "up/" . $chat['BFILEPATH'];
-                                                        
-                                                        // Debug output
-                                                        if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0 AND 1==2) {
-                                                            error_log("DEBUG: Rendering file - URL: $fileUrl, Type: {$chat['BFILETYPE']}");
-                                                        }
-                                                        
-                                                        if($chat['BFILETYPE'] == 'png' OR $chat['BFILETYPE'] == 'jpg' OR $chat['BFILETYPE'] == 'jpeg') {
-                                                            echo "<div class='generated-file-container'>";
-                                                            echo "<img src='".$fileUrl."' class='generated-image' alt='Generated Image' loading='lazy'>";
-                                                            echo "</div>";
-                                                        }
-                                                        if($chat['BFILETYPE'] == 'mp4' OR $chat['BFILETYPE'] == 'webm') {
-                                                            echo "<div class='generated-file-container'>";
-                                                            echo "<video src='".$fileUrl."' class='generated-video' controls preload='metadata'>";
-                                                            echo "Your browser does not support the video tag.";
-                                                            echo "</video>";
-                                                            echo "</div>";
-                                                        }
-                                                        
-                                                        // Debug: Add a small link to check if file exists
-                                                        if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0) {
-                                                            echo "<small><a href='".$fileUrl."' target='_blank' class='generated-file-link'>🔗 " . basename($chat['BFILEPATH']) . "</a></small><br>";
-                                                        }
-                                                    } else {
-                                                        // Debug: Why no file?
-                                                        if (substr_count($_SERVER["SERVER_NAME"], "localhost") > 0 AND 1==2) {
-                                                            error_log("DEBUG: No file for message {$chat['BID']} - BFILE={$chat['BFILE']}, BFILETYPE='{$chat['BFILETYPE']}', BFILEPATH='{$chat['BFILEPATH']}'");
-                                                        }
-                                                    }
-                                                    echo $mdText;
-                                                    ?>
-                                                </div>
-                                                <span class="ai-details ai-time">
-                                                    <span class="message-time"><?php echo $chat['BTOPIC']; ?></span>
-                                                    <?php if(!empty($aiService) || !empty($aiModel)) { ?>
-                                                        <?php if(!empty($aiService)) { ?>
-                                                            <span class="ai-service"><?php echo htmlspecialchars($aiService); ?></span>
-                                                        <?php } ?>
-                                                        <?php if(!empty($aiModel)) { ?>
-                                                            <span class="ai-model"><?php echo htmlspecialchars($aiModel); ?></span>
-                                                        <?php } ?>
-                                                        <span class="message-time"><?php echo Tools::myDateTime($chat['BDATETIME']); ?></span>
-                                                    <?php } else { ?>
-                                                        <span class="message-time"><?php echo Tools::myDateTime($chat['BDATETIME']); ?></span>
-                                                    <?php } ?>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </li>
-                                <?php 
-                                } ?>
-                            <?php 
-                            } 
-                        }
-                        ?>
-                            </ul>
+                    <!-- Chat History Loading Buttons -->
+                    <div id="chatHistoryButtons" class="text-center py-4">
+                        <div class="d-flex justify-content-center gap-3">
+                            <button type="button" class="btn btn-outline-primary btn-sm load-history-btn" data-amount="10">
+                                <i class="fas fa-clock me-1"></i>
+                                <span class="badge bg-primary">10</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm load-history-btn" data-amount="20">
+                                <i class="fas fa-clock me-1"></i>
+                                <span class="badge bg-primary">20</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm load-history-btn" data-amount="30">
+                                <i class="fas fa-clock me-1"></i>
+                                <span class="badge bg-primary">30</span>
+                            </button>
                         </div>
+                        <small class="text-muted mt-2 d-block">Click to load chat history</small>
                     </div>
+                    
+                    <ul id="chatHistory">
+                        <!-- Chat messages will be loaded here via API -->
+                    </ul>
+                </div>
+            </div>
                     <!-- Enhanced Chat Input Area -->
                     <div class="chat-input-container px-2 px-md-3 py-2 py-md-3">
                         <!-- Enhanced File Preview Area (Overlay) -->
@@ -270,6 +199,10 @@
 <script src="node_modules/@highlightjs/cdn-assets/languages/xml.min.js"></script>
 <script src="node_modules/@highlightjs/cdn-assets/languages/sql.min.js"></script>
 <script src="node_modules/@highlightjs/cdn-assets/languages/go.min.js"></script>
+<script src="js/speech.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/chathistory.js"></script>
+
 <script>
     // enable everything
     const md = window.markdownit({
@@ -348,17 +281,12 @@
         return currentPromptConfig;
     }
 </script>
-<script src="js/speech.js"></script>
-<script src="js/chat.js"></script>
 
 <script>
-    // when document is ready, scroll to the bottom of the chat modal
+    // when document is ready, initialize prompt configuration
     $(document).ready(function() {
         onPromptConfigChange();
-        // delay the scroll to the bottom of the chat modal
-        setTimeout(function() {
-            $("#chatModalBody").scrollTop( $("#chatModalBody").prop("scrollHeight") );
-        }, 500);
+        // No need to scroll to bottom since chat history is loaded via buttons now
     });
 </script>
 

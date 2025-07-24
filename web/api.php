@@ -90,6 +90,10 @@ switch($apiAction) {
     case 'getProfile':
         $resArr = Frontend::getProfile();
         break;
+    case 'loadChatHistory':
+        $amount = isset($_REQUEST['amount']) ? intval($_REQUEST['amount']) : 10;
+        $resArr = Frontend::loadChatHistory($amount);
+        break;
     default:
         $resArr = ['error' => 'Invalid action'];
         break;

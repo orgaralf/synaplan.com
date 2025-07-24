@@ -31,9 +31,9 @@
             <?php } ?>
             </li>
             <li class="nav-item">
-            <a class="nav-link<?php ($contentInc=="statistics") ? print " active" : ""; ?>" aria-current="page" href="index.php/statistics">
-                <span data-feather="home"></span>
-                Statistics
+            <a class="nav-link<?php ($contentInc=="filemanager") ? print " active" : ""; ?>" href="index.php/filemanager">
+                <span data-feather="image"></span>
+                Files &amp; RAG
             </a>
             </li>
             <li class="nav-item">
@@ -53,14 +53,14 @@
             <?php } ?>
             </li>
             <li class="nav-item">
-            <a class="nav-link<?php ($contentInc=="filemanager") ? print " active" : ""; ?>" href="index.php/filemanager">
-                <span data-feather="image"></span>
-                Files &amp; RAG
+            <a class="nav-link<?php ($contentInc=="statistics") ? print " active" : ""; ?>" aria-current="page" href="index.php/statistics">
+                <span data-feather="bar-chart-2"></span>
+                Statistics
             </a>
             </li>
             <li class="nav-item">
             <a class="nav-link<?php ($contentInc=="settings") ? print " active" : ""; ?>" href="index.php/settings">
-                <span data-feather="user"></span>
+                <span data-feather="settings"></span>
                 Profile
             </a>
             </li>

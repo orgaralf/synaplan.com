@@ -706,4 +706,99 @@ Class Frontend {
         
         return $files;
     }
+
+    // ****************************************************************************************************** 
+    // Load chat history for API calls
+    // 
+    // This method retrieves chat history with enhanced metadata including AI service and model information.
+    // It processes messages to include file attachments, markdown rendering, and proper formatting
+    // for both user and AI messages. Used by the API to load chat history dynamically.
+    // 
+    // @param int $amount Number of messages to load (10, 20, or 30)
+    // @return array Array containing processed chat messages with all necessary metadata
+    // ****************************************************************************************************** 
+    public static function loadChatHistory($amount = 10): array {
+        $retArr = ["error" => "", "success" => false, "messages" => []];
+        
+        if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            $retArr["error"] = "User not logged in";
+            return $retArr;
+        }
+        
+        // Validate amount parameter
+        $validAmounts = [10, 20, 30];
+        if (!in_array($amount, $validAmounts)) {
+            $amount = 10; // Default to 10 if invalid
+        }
+        
+        $historyChatArr = self::getLatestChats($amount);
+        
+        if(count($historyChatArr) > 0) {
+            foreach($historyChatArr as $chat) {
+                // Fetch AI service and model information for AI messages
+                $aiService = '';
+                $aiModel = '';
+                if($chat['BDIRECT'] == 'OUT') {
+                    $serviceSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($chat['BID'])." AND BTOKEN = 'AISERVICE' ORDER BY BID DESC LIMIT 1";
+                    $serviceRes = DB::Query($serviceSQL);
+                    if($serviceArr = DB::FetchArr($serviceRes)) {
+                        $aiService = $serviceArr['BVALUE'];
+                    }
+                    
+                    $modelSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($chat['BID'])." AND BTOKEN = 'AIMODEL' ORDER BY BID DESC LIMIT 1";
+                    $modelRes = DB::Query($modelSQL);
+                    if($modelArr = DB::FetchArr($modelRes)) {
+                        $aiModel = $modelArr['BVALUE'];
+                    }
+                }
+                
+                // Process message data
+                $messageData = [
+                    'BID' => $chat['BID'],
+                    'BDIRECT' => $chat['BDIRECT'],
+                    'BTEXT' => $chat['BTEXT'],
+                    'BDATETIME' => $chat['BDATETIME'],
+                    'BTOPIC' => $chat['BTOPIC'],
+                    'FILECOUNT' => isset($chat['FILECOUNT']) ? $chat['FILECOUNT'] : 0,
+                    'BFILE' => $chat['BFILE'],
+                    'BFILEPATH' => $chat['BFILEPATH'],
+                    'BFILETYPE' => $chat['BFILETYPE'],
+                    'aiService' => $aiService,
+                    'aiModel' => $aiModel
+                ];
+                
+                // Process display text for AI messages
+                if($chat['BDIRECT'] == 'OUT') {
+                    $displayText = $chat['BTEXT'];
+                    if(substr($chat['BTEXT'], 0, 1) == '/') {
+                        $displayText = "File generated";
+                    }
+                    
+                    $hasFile = ($chat['BFILE'] > 0 && !empty($chat['BFILETYPE']) && !empty($chat['BFILEPATH']) && strpos($chat['BFILEPATH'], '/') !== false);
+                    
+                    // If the message starts with a tool command but has a file, show a better message
+                    if ($hasFile && substr($chat['BTEXT'], 0, 1) == '/') {
+                        if ($chat['BFILETYPE'] == 'mp4' || $chat['BFILETYPE'] == 'webm') {
+                            $displayText = "Video";
+                        } elseif (in_array($chat['BFILETYPE'], ['png', 'jpg', 'jpeg', 'gif'])) {
+                            $displayText = "Image";
+                        } else {
+                            $displayText = "File";
+                        }
+                    }
+                    
+                    $messageData['displayText'] = $displayText;
+                    $messageData['hasFile'] = $hasFile;
+                }
+                
+                $retArr['messages'][] = $messageData;
+            }
+        }
+        
+        $retArr['success'] = true;
+        $retArr['count'] = count($retArr['messages']);
+        $retArr['amount'] = $amount;
+        
+        return $retArr;
+    }
 }	
