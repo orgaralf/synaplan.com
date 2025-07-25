@@ -655,18 +655,11 @@ Class BasicAI {
               The summary should be ".$customLength." characters long.
               The summary should be in the following focus areas: ".implode(", ", $focusAreas).".";
 
-            // get the summarize model details from the table BMODELS
-            $summarizeModel = self::getModelDetails($GLOBALS["AI_SUMMARIZE"]["MODELID"]);
-            $summarizeModelName = $summarizeModel['BNAME'];
-            $summarizeModelService = $summarizeModel['BSERVICE'];
-            $summarizeModelId = $summarizeModel['BID'];
+            // get the summarize service directly from global configuration (like other methods)
+            $AISUMMARIZE = $GLOBALS["AI_SUMMARIZE"]["SERVICE"];
 
             // --- execute the summarize model
-            
-            // For now, return a placeholder response
-            $resArr['success'] = true;
-            $resArr['summary'] = "This is a placeholder summary. Please implement the actual summarization logic in the doDocSum() method.\n\nDocument length: " . strlen($documentText) . " characters\nSummary type: " . $summaryType . "\nLength: " . $summaryLength . "\nLanguage: " . $language;
-
+            $resArr = $AISUMMARIZE::simplePrompt($systemPrompt, $documentText);
             
         } catch (Exception $e) {
             error_log("BasicAI::doDocSum - Error: " . $e->getMessage());

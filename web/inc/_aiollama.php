@@ -457,13 +457,13 @@ class AIOllama {
             
             return [
                 'success' => true,
-                'result' => $result
+                'summary' => $result
             ];
             
         } catch (Exception $err) {
             return [
                 'success' => false,
-                'result' => "*API Simple Prompt Error - Ollama error: * " . $err->getMessage()
+                'summary' => "*API Simple Prompt Error - Ollama error: * " . $err->getMessage()
             ];
         }
     }

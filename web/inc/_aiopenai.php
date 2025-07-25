@@ -1224,13 +1224,13 @@ class AIOpenAI {
             
             return [
                 'success' => true,
-                'result' => $result
+                'summary' => $result
             ];
             
         } catch (Exception $err) {
             return [
                 'success' => false,
-                'result' => "*API Simple Prompt Error - OpenAI error: * " . $err->getMessage()
+                'summary' => "*API Simple Prompt Error - OpenAI error: * " . $err->getMessage()
             ];
         }
     }

@@ -406,13 +406,13 @@ class AIGroq {
             
             return [
                 'success' => true,
-                'result' => $result
+                'summary' => $result
             ];
             
         } catch (GroqException $err) {
             return [
                 'success' => false,
-                'result' => "*API Simple Prompt Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage()
+                'summary' => "*API Simple Prompt Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage()
             ];
         }
     }

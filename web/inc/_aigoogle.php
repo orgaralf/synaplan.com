@@ -1004,7 +1004,7 @@ class AIGoogle {
                 
                 return [
                     'success' => true,
-                    'result' => $result
+                    'summary' => $result
                 ];
             } else {
                 throw new Exception("Invalid response format: " . json_encode($response));
@@ -1013,7 +1013,7 @@ class AIGoogle {
         } catch (Exception $err) {
             return [
                 'success' => false,
-                'result' => "*API Simple Prompt Error - Google Gemini error: * " . $err->getMessage()
+                'summary' => "*API Simple Prompt Error - Google Gemini error: * " . $err->getMessage()
             ];
         }
     }
