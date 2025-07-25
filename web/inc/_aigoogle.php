@@ -917,8 +917,9 @@ class AIGoogle {
 
             // Clean up background progress process if it was started
             if ($progressPid !== null && function_exists('posix_kill')) {
+                $childStatus = 0;
                 posix_kill($progressPid, SIGTERM);
-                pcntl_waitpid($progressPid, $status);
+                pcntl_waitpid($progressPid, $childStatus);
             }
 
             // Extract analysis result
@@ -962,6 +963,59 @@ class AIGoogle {
         }
 
         return $msgArr;
+    }
+
+    /**
+     * Simple prompt execution
+     * 
+     * Executes a simple prompt with system and user messages, returning a structured response.
+     * This provides a clean interface for basic AI interactions.
+     * 
+     * @param string $systemPrompt The system prompt/instruction
+     * @param string $userPrompt The user's input/prompt
+     * @return array Response array with success status and result/error
+     */
+    public static function simplePrompt($systemPrompt, $userPrompt): array {
+        // Prepare the API URL
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-05-06:generateContent?key=" . self::$key;
+        $headers = [
+            'Content-Type: application/json'
+        ];
+        
+        // Build the complete prompt with system context and user input
+        $fullPrompt = $systemPrompt . "\n\n" . $userPrompt;
+        
+        $postData = [
+            "contents" => [
+                [
+                    "role" => "user",
+                    "parts" => [
+                        ["text" => $fullPrompt]
+                    ]
+                ]
+            ]
+        ];
+        
+        try {
+            $response = Curler::callJson($url, $headers, $postData);
+            
+            if (isset($response['candidates'][0]['content']['parts'][0]['text'])) {
+                $result = $response['candidates'][0]['content']['parts'][0]['text'];
+                
+                return [
+                    'success' => true,
+                    'result' => $result
+                ];
+            } else {
+                throw new Exception("Invalid response format: " . json_encode($response));
+            }
+            
+        } catch (Exception $err) {
+            return [
+                'success' => false,
+                'result' => "*API Simple Prompt Error - Google Gemini error: * " . $err->getMessage()
+            ];
+        }
     }
 }
 

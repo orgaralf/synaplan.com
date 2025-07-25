@@ -1192,6 +1192,48 @@ class AIOpenAI {
         $client = self::$client;
 
     }    
+
+    /**
+     * Simple prompt execution
+     * 
+     * Executes a simple prompt with system and user messages, returning a structured response.
+     * This provides a clean interface for basic AI interactions.
+     * 
+     * @param string $systemPrompt The system prompt/instruction
+     * @param string $userPrompt The user's input/prompt
+     * @return array Response array with success status and result/error
+     */
+    public static function simplePrompt($systemPrompt, $userPrompt): array {
+        $client = self::$client;
+        
+        $arrMessages = [
+            ['role' => 'system', 'content' => $systemPrompt],
+            ['role' => 'user', 'content' => $userPrompt]
+        ];
+
+        // which model on OpenAI?
+        $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+        
+        try {
+            $chat = $client->chat()->create([
+                'model' => $myModel,
+                'messages' => $arrMessages
+            ]);
+            
+            $result = $chat['choices'][0]['message']['content'];
+            
+            return [
+                'success' => true,
+                'result' => $result
+            ];
+            
+        } catch (Exception $err) {
+            return [
+                'success' => false,
+                'result' => "*API Simple Prompt Error - OpenAI error: * " . $err->getMessage()
+            ];
+        }
+    }
 }
 
 $test = AIOpenAi::init();

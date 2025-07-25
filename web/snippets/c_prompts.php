@@ -111,8 +111,15 @@
                         ?>
                         <select class="form-select" name="aiModelSelect" id="aiModelSelect">
                             <?php 
-                            foreach($AImodels as $model): ?>
-                                <option value="<?= htmlspecialchars($model['BID']) ?>"><?= htmlspecialchars($model["BTAG"]." - ".$model['BNAME']." on ".$model['BSERVICE']) ?></option>
+                            foreach($AImodels as $model): 
+                                // Only disable if it's a system model AND not the currently selected value
+                                $disabled = ($model['BSELECTABLE'] == 0 && $selectedAIModel != $model['BID']) ? 'disabled' : '';
+                                $modelLabel = htmlspecialchars($model["BTAG"]." - ".$model['BNAME']." on ".$model['BSERVICE']);
+                                if ($model['BSELECTABLE'] == 0) {
+                                    $modelLabel .= ' [System Model]';
+                                }
+                            ?>
+                                <option value="<?= htmlspecialchars($model['BID']) ?>" <?= $disabled ?>><?= $modelLabel ?></option>
                             <?php endforeach; ?>
                         </select>
                         <div class="form-text">Select the AI model to use for this prompt</div>

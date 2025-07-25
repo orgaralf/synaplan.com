@@ -427,6 +427,46 @@ class AIOllama {
         ]);
         return $completions->response;
     }
+
+    /**
+     * Simple prompt execution
+     * 
+     * Executes a simple prompt with system and user messages, returning a structured response.
+     * This provides a clean interface for basic AI interactions.
+     * 
+     * @param string $systemPrompt The system prompt/instruction
+     * @param string $userPrompt The user's input/prompt
+     * @return array Response array with success status and result/error
+     */
+    public static function simplePrompt($systemPrompt, $userPrompt): array {
+        $client = self::$client;
+        
+        // Build the complete prompt with system context and user input
+        $fullPrompt = $systemPrompt . "\n\n" . $userPrompt;
+        
+        // which model on ollama?
+        $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+        
+        try {
+            $completions = $client->completions()->create([
+                'model' => $myModel,
+                'prompt' => $fullPrompt,
+            ]);
+            
+            $result = $completions->response;
+            
+            return [
+                'success' => true,
+                'result' => $result
+            ];
+            
+        } catch (Exception $err) {
+            return [
+                'success' => false,
+                'result' => "*API Simple Prompt Error - Ollama error: * " . $err->getMessage()
+            ];
+        }
+    }
 }
 
 // ****************************************************************************************************** 

@@ -22,7 +22,7 @@
                 }
             }
             echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <strong>Success!</strong> Default model configurations have been updated.
+                    <strong><i class="fas fa-check-circle me-2"></i>Success!</strong> Default model configurations have been updated.
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                   </div>';
         }
@@ -30,8 +30,10 @@
 
     <!-- Config Section -->
     <div class="card mb-4 mt-3">
-        <div class="card-header">
-            <h5 class="card-title mb-0">Default Model Configuration</h5>
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-cog"></i> Default Model Configuration
+            </h5>
         </div>
         <div class="card-body">
             <form method="POST">
@@ -61,9 +63,24 @@
                             $task = $taskROW['BSETTING'];
                             $currentValue = isset($currentConfig[$task]) ? $currentConfig[$task] : '';
                             
-                            echo '<div class="col-md-6 col-lg-4 mb-3">';
-                            echo '<label for="config_' . htmlspecialchars($task) . '" class="form-label">' . htmlspecialchars($task) . '</label>';
-                            echo '<select class="form-select" id="config_' . htmlspecialchars($task) . '" name="config_' . htmlspecialchars($task) . '">';
+                            // Check if the current model is non-selectable
+                            $currentModelSelectable = true;
+                            if (!empty($currentValue)) {
+                                $currentModelSQL = "SELECT BSELECTABLE FROM BMODELS WHERE BID = " . intval($currentValue);
+                                $currentModelRES = DB::query($currentModelSQL);
+                                if ($currentModelROW = DB::FetchArr($currentModelRES)) {
+                                    $currentModelSelectable = ($currentModelROW['BSELECTABLE'] == 1);
+                                }
+                            }
+                            
+                            echo '<div class="col-md-6 col-lg-4 mb-4">';
+                            echo '<div class="card h-100 border-0 shadow-sm">';
+                            echo '<div class="card-header bg-light border-bottom">';
+                            echo '<h6 class="card-title mb-0 text-primary"><i class="fas fa-robot me-2"></i>' . htmlspecialchars($task) . '</h6>';
+                            echo '</div>';
+                            echo '<div class="card-body">';
+                            echo '<label for="config_' . htmlspecialchars($task) . '" class="form-label visually-hidden">' . htmlspecialchars($task) . ' Model Selection</label>';
+                            echo '<select class="form-select form-select-sm" id="config_' . htmlspecialchars($task) . '" name="config_' . htmlspecialchars($task) . '"' . ($currentModelSelectable ? '' : ' disabled') . '>';
                             echo '<option value="">-- Select Model --</option>';
                             
                             // Group models by tag for better organization
@@ -80,7 +97,8 @@
                                 echo '<optgroup label="' . htmlspecialchars(strtoupper($tag)) . '">';
                                 foreach ($models as $model) {
                                     $selected = ($currentValue == $model['BID']) ? 'selected' : '';
-                                    $disabled = ($model['BSELECTABLE'] == 0) ? 'disabled' : '';
+                                    // Only disable if it's a system model AND not the currently selected value
+                                    $disabled = ($model['BSELECTABLE'] == 0 && $currentValue != $model['BID']) ? 'disabled' : '';
                                     $modelLabel = htmlspecialchars($model['BNAME']) . ' (' . htmlspecialchars($model['BSERVICE']) . ')';
                                     if ($model['BSELECTABLE'] == 0) {
                                         $modelLabel .= ' [System Model]';
@@ -93,15 +111,33 @@
                             }
                             
                             echo '</select>';
+                            if (!$currentModelSelectable) {
+                                echo '<div class="alert alert-warning alert-sm mt-2 mb-0 py-2">';
+                                echo '<i class="fas fa-lock me-1"></i><small>System model</small>';
+                                echo '</div>';
+                            }
+                            echo '</div>';
+                            echo '</div>';
                             echo '</div>';
                         }
                     ?>
                 </div>
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <button type="submit" name="update_config" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i>Save Configuration
-                        </button>
+                <div class="row mt-4">
+                    <div class="col-12 text-center">
+                        <div class="btn-group" role="group" aria-label="Configuration actions">
+                            <button type="submit" name="update_config" class="btn btn-success btn-lg">
+                                <i class="fas fa-save me-2"></i>Save Configuration
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-lg" onclick="resetForm()">
+                                <i class="fas fa-refresh me-2"></i>Reset Form
+                            </button>
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                System models are automatically locked and cannot be changed. These are core models required for specific functionality.
+                            </small>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -109,9 +145,11 @@
     </div>
 
     <!-- Filter Section -->
-    <div class="card mb-4 mt-3">
+    <div class="card mb-4">
         <div class="card-header">
-            <h5 class="card-title mb-0">Models &amp; Purposes</h5>
+            <h5 class="card-title mb-0">
+                <i class="fas fa-filter"></i> Models &amp; Purposes
+            </h5>
         </div>
         <div class="card-body">
             <div class="row">
@@ -121,7 +159,7 @@
                         $tagRES = DB::query($tagSQL);
                         while($tagROW = DB::FetchArr($tagRES)) {
                             echo '<a href="index.php/aimodels?tag=' . htmlspecialchars($tagROW["BTAG"]) . '" class="btn btn-outline-primary me-2 mb-2">' . 
-                                 htmlspecialchars($tagROW["BTAG"]) . '</a>';
+                                 '<i class="fas fa-tag me-1"></i>' . htmlspecialchars($tagROW["BTAG"]) . '</a>';
                         }
                     ?>
                 </div>
@@ -132,21 +170,23 @@
     <!-- Models Table Section -->
     <div class="card">
         <div class="card-header">
-            <h5 class="card-title mb-0">Available Models</h5>
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list"></i> Available Models
+            </h5>
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>PURPOSE</th>
-                            <th>SERVICE</th>
-                            <th>NAME</th>
+                <table class="table table-striped table-hover table-sm">
+                    <thead class="table-light">
+                        <tr style="font-size: 0.85rem;">
+                            <th style="width: 80px;">ID</th>
+                            <th style="width: 120px;">PURPOSE</th>
+                            <th style="width: 100px;">SERVICE</th>
+                            <th style="width: 200px;">NAME</th>
                             <th>DESCRIPTION</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody style="font-size: 0.9rem;">
                         <?php
                             $whereClause = "";
                             if (isset($_GET['tag']) && !empty($_GET['tag'])) {
@@ -155,22 +195,22 @@
                             if(isset($_REQUEST["tag"])) {
                                 $whereClause = "WHERE BTAG like '".DB::EscString($_REQUEST["tag"])."'";
                             }
-                            $modelsSQL = "SELECT * FROM BMODELS $whereClause ORDER BY BSERVICE,BID";
+                            $modelsSQL = "SELECT * FROM BMODELS $whereClause ORDER BY BTAG,BSERVICE";
                             $modelsRES = db::Query($modelsSQL);
                             
                             if (db::CountRows($modelsRES) > 0) {
                                 while($modelROW = db::FetchArr($modelsRES)) {
                                     $detailArr = json_decode($modelROW["BJSON"], true);
                                     echo "<tr>";
-                                    echo "<td>" . htmlspecialchars($modelROW["BID"]) . "</td>";
-                                    echo "<td><B>" . htmlspecialchars($modelROW["BTAG"]) . "</B></td>";
-                                    echo "<td>" . htmlspecialchars($modelROW["BSERVICE"]) . "</td>";
-                                    echo "<td><B>" . htmlspecialchars($modelROW["BNAME"]) . "</B></td>";
-                                    echo "<td>" . htmlspecialchars($detailArr["description"]) . "</td>";
+                                    echo "<td><span class='badge bg-secondary'>" . htmlspecialchars($modelROW["BID"]) . "</span></td>";
+                                    echo "<td><span class='badge bg-primary'>" . htmlspecialchars($modelROW["BTAG"]) . "</span></td>";
+                                    echo "<td><span class='badge bg-info'>" . htmlspecialchars($modelROW["BSERVICE"]) . "</span></td>";
+                                    echo "<td><strong>" . htmlspecialchars($modelROW["BNAME"]) . "</strong></td>";
+                                    echo "<td><small>" . htmlspecialchars($detailArr["description"]) . "</small></td>";
                                     echo "</tr>";
                                 }
                             } else {
-                                echo "<tr><td colspan='5' class='text-center'>No models found</td></tr>";
+                                echo "<tr><td colspan='5' class='text-center text-muted'>No models found</td></tr>";
                             }
                         ?>
                     </tbody>
@@ -179,3 +219,11 @@
         </div>
     </div>
 </main>
+
+<script>
+function resetForm() {
+    if (confirm('Are you sure you want to reset the form? All changes will be lost.')) {
+        window.location.reload();
+    }
+}
+</script>

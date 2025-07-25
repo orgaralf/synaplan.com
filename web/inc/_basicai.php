@@ -318,7 +318,7 @@ Class BasicAI {
         $models = [];
         $userId = $_SESSION['USERPROFILE']['BID'];
 
-        $dynaSQL = "select * from BMODELS where (BSELECTABLE>0) ORDER BY BTAG ASC";
+        $dynaSQL = "select * from BMODELS ORDER BY BTAG ASC";
         $dynaRes = DB::Query($dynaSQL);
         while($dynaLine = DB::FetchArr($dynaRes)) {
             $models[] = $dynaLine;
@@ -606,27 +606,67 @@ Class BasicAI {
                 return $resArr;
             }
 
-            $documentText = trim($_REQUEST['BFILETEXT']);
+            $documentText = db::EscString(trim($_REQUEST['BFILETEXT']));
             if (strlen($documentText) < 100) {
                 $resArr['error'] = 'Document text is too short (minimum 100 characters)';
                 return $resArr;
             }
 
-            // Get configuration parameters
-            $summaryType = $_REQUEST['summaryType'] ?? 'abstractive';
-            $summaryLength = $_REQUEST['summaryLength'] ?? 'medium';
-            $language = $_REQUEST['language'] ?? 'en';
-            $customLength = $_REQUEST['customLength'] ?? null;
+            // Get configuration parameters to build the system prompt
+            $summaryType = db::EscString($_REQUEST['summaryType'] ?? 'abstractive');
+            $summaryLength = db::EscString($_REQUEST['summaryLength'] ?? 'medium');
+            $length = 500;
+            switch($summaryLength) {
+                case 'short':
+                    $length = 200;
+                    break;
+                case 'medium':
+                    $length = 400;
+                    break;
+                case 'long':
+                    $length = 1000;
+                    break;
+            }
+            $language = db::EscString($_REQUEST['language'] ?? 'en');
+            $customLength = db::EscString($_REQUEST['customLength'] ?? $length);
+            if(intval($customLength) < 200) {
+                $customLength = $length;
+            }
+            if(intval($customLength) > 2000) {
+                $customLength = 2000;
+            }
             $focusAreas = $_REQUEST['focusAreas'] ?? ['main_ideas', 'key_facts'];
 
-            // TODO: Implement the actual summarization logic here
-            // This is where you will add your summarization implementation
+            /*
+            error_log("********** REQUEST DOCSUM: ");
+            error_log("** summaryType: " . $summaryType)    ;
+            error_log("** summaryLength: " . $summaryLength);
+            error_log("** language: " . $language);
+            error_log("** customLength: " . $customLength);
+            error_log("** focusAreas: " . print_r($focusAreas, true));
+            error_log("** documentText: " . strlen($documentText) . " characters");
+            error_log("*********************************************************** ");
+            */
+            // System prompt
+
+            $systemPrompt = "You are a helpful assistant that summarizes documents in various languages. 
+              You will be given a document text and you will need to summarize it.
+              Please create a ".$summaryType." summary with ca. ".$summaryLength." length in language: '".$language."'.
+              The summary should be ".$customLength." characters long.
+              The summary should be in the following focus areas: ".implode(", ", $focusAreas).".";
+
+            // get the summarize model details from the table BMODELS
+            $summarizeModel = self::getModelDetails($GLOBALS["AI_SUMMARIZE"]["MODELID"]);
+            $summarizeModelName = $summarizeModel['BNAME'];
+            $summarizeModelService = $summarizeModel['BSERVICE'];
+            $summarizeModelId = $summarizeModel['BID'];
+
+            // --- execute the summarize model
             
             // For now, return a placeholder response
             $resArr['success'] = true;
             $resArr['summary'] = "This is a placeholder summary. Please implement the actual summarization logic in the doDocSum() method.\n\nDocument length: " . strlen($documentText) . " characters\nSummary type: " . $summaryType . "\nLength: " . $summaryLength . "\nLanguage: " . $language;
-            
-            error_log("BasicAI::doDocSum - Placeholder response generated for document of " . strlen($documentText) . " characters");
+
             
         } catch (Exception $e) {
             error_log("BasicAI::doDocSum - Error: " . $e->getMessage());

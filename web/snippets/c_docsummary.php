@@ -66,24 +66,29 @@
                 </div>
 
                 <div class="row mb-3">
-                    <label for="focusAreas" class="col-sm-2 col-form-label"><strong>Focus Areas:</strong></label>
+                    <div class="col-sm-2">
+                        <label class="col-form-label"><strong>Focus Areas:</strong></label>
+                    </div>
                     <div class="col-sm-10">
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" name="focusAreas[]" id="focusMain" value="main_ideas" checked>
-                            <label class="form-check-label" for="focusMain">Main Ideas</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" name="focusAreas[]" id="focusKey" value="key_facts" checked>
-                            <label class="form-check-label" for="focusKey">Key Facts</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" name="focusAreas[]" id="focusConclusions" value="conclusions">
-                            <label class="form-check-label" for="focusConclusions">Conclusions</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" name="focusAreas[]" id="focusActions" value="action_items">
-                            <label class="form-check-label" for="focusActions">Action Items</label>
-                        </div>
+                        <fieldset>
+                            <legend class="visually-hidden">Focus Areas</legend>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="focusAreas[]" id="focusMain" value="main_ideas" checked>
+                                <label class="form-check-label" for="focusMain">Main Ideas</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="focusAreas[]" id="focusKey" value="key_facts" checked>
+                                <label class="form-check-label" for="focusKey">Key Facts</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="focusAreas[]" id="focusConclusions" value="conclusions">
+                                <label class="form-check-label" for="focusConclusions">Conclusions</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="focusAreas[]" id="focusActions" value="action_items">
+                                <label class="form-check-label" for="focusActions">Action Items</label>
+                            </div>
+                        </fieldset>
                         <div class="form-text">Select what to focus on in the summary</div>
                     </div>
                 </div>
@@ -97,25 +102,30 @@
             </div>
             <div class="card-body">
                 <div class="row mb-3">
-                    <label for="inputMethod" class="col-sm-2 col-form-label"><strong>Input Method:</strong></label>
+                    <div class="col-sm-2">
+                        <label class="col-form-label"><strong>Input Method:</strong></label>
+                    </div>
                     <div class="col-sm-10">
-                        <div class="btn-group" role="group" aria-label="Input method">
-                            <input type="radio" class="btn-check" name="inputMethod" id="textInput" value="text" checked>
-                            <label class="btn btn-outline-primary" for="textInput">
-                                <i class="fas fa-keyboard"></i> Text Input
-                            </label>
-                            <!--
-                            <input type="radio" class="btn-check" name="inputMethod" id="fileUpload" value="file">
-                            <label class="btn btn-outline-primary" for="fileUpload">
-                                <i class="fas fa-upload"></i> File Upload
-                            </label>
-                            
-                            <input type="radio" class="btn-check" name="inputMethod" id="urlInput" value="url">
-                            <label class="btn btn-outline-primary" for="urlInput">
-                                <i class="fas fa-link"></i> URL
-                            </label>
-                            -->
-                        </div>
+                        <fieldset>
+                            <legend class="visually-hidden">Input Method</legend>
+                            <div class="btn-group" role="group" aria-label="Input method">
+                                <input type="radio" class="btn-check" name="inputMethod" id="textInput" value="text" checked>
+                                <label class="btn btn-outline-primary" for="textInput">
+                                    <i class="fas fa-keyboard"></i> Text Input
+                                </label>
+                                <!--
+                                <input type="radio" class="btn-check" name="inputMethod" id="fileUpload" value="file">
+                                <label class="btn btn-outline-primary" for="fileUpload">
+                                    <i class="fas fa-upload"></i> File Upload
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="inputMethod" id="urlInput" value="url">
+                                <label class="btn btn-outline-primary" for="urlInput">
+                                    <i class="fas fa-link"></i> URL
+                                </label>
+                                -->
+                            </div>
+                        </fieldset>
                     </div>
                 </div>
 
