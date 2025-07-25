@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # PHP Application
+  app:
+    build:
+      context: ..
+      dockerfile: dockerdev/Dockerfile
+    container_name: synaplan-app
+    ports:
+      - "8080:80"
+    volumes:
+      - ../web:/var/www/html
+      - ./logs:/var/log/apache2
+    environment:
+      - APP_ENV=development
+      - APP_DEBUG=true
+      - DB_HOST=db
+      - DB_NAME=synaplan
+      - DB_USER=synaplan_user
+      - DB_PASSWORD=synaplan_password
+      - OLLAMA_SERVER=ollama:11434
+    depends_on:
+      - db
+      - ollama
+    networks:
+      - synaplan-network
+
+  # MariaDB Database
+  db:
+    image: mariadb:11.8.2
+    container_name: synaplan-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: synaplan
+      MYSQL_USER: synaplan_user
+      MYSQL_PASSWORD: synaplan_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../synaplan.sql:/docker-entrypoint-initdb.d/synaplan.sql
+      - ../synaplan_structure.sql:/docker-entrypoint-initdb.d/synaplan_structure.sql
+      - ../BMODELS.sql:/docker-entrypoint-initdb.d/BMODELS.sql
+      - ../BCONFIG.sql:/docker-entrypoint-initdb.d/BCONFIG.sql
+      - ../BUSER.sql:/docker-entrypoint-initdb.d/BUSER.sql
+    networks:
+      - synaplan-network
+
+  # Ollama for local AI models
+  ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    container_name: synaplan-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - synaplan-network
+
+  # phpMyAdmin for database management
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: synaplan-phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: synaplan_user
+      PMA_PASSWORD: synaplan_password
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+    networks:
+      - synaplan-network
+
+volumes:
+  mysql_data:
+  ollama_data:
+
+networks:
+  synaplan-network:
+    driver: bridge 

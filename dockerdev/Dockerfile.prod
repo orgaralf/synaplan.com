@@ -1,0 +1,113 @@
+# Multi-stage build for production
+FROM php:8.2-apache AS base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Development stage
+FROM base AS development
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy composer files
+COPY web/composer.json web/composer.lock ./
+
+# Install dependencies (including dev dependencies)
+RUN composer install --optimize-autoloader
+
+# Copy application code
+COPY . .
+
+# Copy web directory contents
+RUN cp -r web/* ./
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html
+
+# Enable Apache modules
+RUN a2enmod rewrite
+
+# Configure Apache
+RUN echo '<Directory /var/www/html>\n\
+    AllowOverride All\n\
+    Require all granted\n\
+</Directory>' > /etc/apache2/conf-available/docker-php.conf \
+    && a2enconf docker-php
+
+# Production stage
+FROM base AS production
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy composer files
+COPY web/composer.json web/composer.lock ./
+
+# Install only production dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Copy application code
+COPY . .
+
+# Copy web directory contents
+RUN cp -r web/* ./
+
+# Remove development files
+RUN rm -rf devtests/ \
+    && rm -f *.sql \
+    && rm -rf .git/ \
+    && rm -f .env.example \
+    && rm -f .cursorignore
+
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html \
+    && chmod -R 644 /var/www/html/.env
+
+# Enable Apache modules
+RUN a2enmod rewrite
+
+# Configure Apache for production
+RUN echo '<Directory /var/www/html>\n\
+    AllowOverride All\n\
+    Require all granted\n\
+    # Security headers\n\
+    Header always set X-Content-Type-Options nosniff\n\
+    Header always set X-Frame-Options DENY\n\
+    Header always set X-XSS-Protection "1; mode=block"\n\
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"\n\
+</Directory>' > /etc/apache2/conf-available/docker-php.conf \
+    && a2enconf docker-php
+
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser \
+    && chown -R appuser:appuser /var/www/html
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
+
+# Start Apache
+CMD ["apache2-foreground"] 

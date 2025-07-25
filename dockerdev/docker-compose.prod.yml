@@ -1,0 +1,136 @@
+version: '3.8'
+
+services:
+  # PHP Application (Production)
+  app:
+    build:
+      context: ..
+      dockerfile: dockerdev/Dockerfile.prod
+      target: production
+    container_name: synaplan-app-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_HOST=db
+      - DB_NAME=synaplan
+      - DB_USER=synaplan_user
+      - DB_PASSWORD=${DB_PASSWORD}
+      - OLLAMA_SERVER=ollama:11434
+    depends_on:
+      - db
+      - ollama
+    networks:
+      - synaplan-network
+    volumes:
+      - app_logs:/var/log/apache2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MySQL Database (Production)
+  db:
+    image: mysql:8.0
+    container_name: synaplan-db-prod
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: synaplan
+      MYSQL_USER: synaplan_user
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../synaplan.sql:/docker-entrypoint-initdb.d/synaplan.sql
+      - ../synaplan_structure.sql:/docker-entrypoint-initdb.d/synaplan_structure.sql
+      - ../BMODELS.sql:/docker-entrypoint-initdb.d/BMODELS.sql
+      - ../BCONFIG.sql:/docker-entrypoint-initdb.d/BCONFIG.sql
+      - ../BUSER.sql:/docker-entrypoint-initdb.d/BUSER.sql
+    networks:
+      - synaplan-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Ollama for AI models (Production)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: synaplan-ollama-prod
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - synaplan-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    container_name: synaplan-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - synaplan-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching (Production)
+  redis:
+    image: redis:7-alpine
+    container_name: synaplan-redis-prod
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - synaplan-network
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mysql_data:
+    driver: local
+  ollama_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_logs:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  synaplan-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 
