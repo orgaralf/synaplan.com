@@ -40,8 +40,31 @@ $baseUrl = "";
 
 // ----------------------------------------------------- set right url
 // ----------------------------------------------------- storage path
-if (substr_count($server, "localhost") > 0) {
-    $GLOBALS["baseUrl"] = $devUrl;
+
+// Check if we're running in Docker environment
+$isDocker = false;
+if (file_exists('/.dockerenv') || 
+    (isset($_SERVER['HOSTNAME']) && strpos($_SERVER['HOSTNAME'], 'synaplan-') === 0) ||
+    (isset($_ENV['APP_ENV']) && $_ENV['APP_ENV'] === 'development')) {
+    $isDocker = true;
+}
+
+// Check if we're on localhost (including with port)
+$isLocalhost = (substr_count($server, "localhost") > 0) || 
+               (substr_count($server, "127.0.0.1") > 0) ||
+               (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false);
+
+if ($isLocalhost || $isDocker) {
+    // If running in Docker or localhost, use the current host and port
+    if ($isDocker) {
+        // In Docker, use the mapped port from HTTP_HOST
+        $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost:8080';
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+        $GLOBALS["baseUrl"] = $protocol . "://" . $host . "/";
+    } else {
+        // Regular localhost development
+        $GLOBALS["baseUrl"] = $devUrl;
+    }
 } else {
     $GLOBALS["baseUrl"] = $liveUrl;
 }
