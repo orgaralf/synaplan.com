@@ -38,11 +38,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ../synaplan.sql:/docker-entrypoint-initdb.d/synaplan.sql
-      - ../synaplan_structure.sql:/docker-entrypoint-initdb.d/synaplan_structure.sql
-      - ../BMODELS.sql:/docker-entrypoint-initdb.d/BMODELS.sql
-      - ../BCONFIG.sql:/docker-entrypoint-initdb.d/BCONFIG.sql
-      - ../BUSER.sql:/docker-entrypoint-initdb.d/BUSER.sql
+      - ../db-loadfiles:/docker-entrypoint-initdb.d
     networks:
       - synaplan-network
 

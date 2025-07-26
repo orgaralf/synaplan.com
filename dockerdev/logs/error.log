@@ -1,0 +1,5 @@
+[Sat Jul 26 11:36:49.502966 2025] [authz_core:error] [pid 21:tid 21] [client 172.19.0.1:46448] AH01630: client denied by server configuration: /var/www/html/.well-known
+[Sat Jul 26 11:38:19.902313 2025] [authz_core:error] [pid 29:tid 29] [client 172.19.0.1:39942] AH01630: client denied by server configuration: /var/www/html/.well-known
+[Sat Jul 26 11:38:22.682129 2025] [authz_core:error] [pid 27:tid 27] [client 172.19.0.1:39886] AH01630: client denied by server configuration: /var/www/html/.well-known
+[Sat Jul 26 11:38:25.446055 2025] [authz_core:error] [pid 17:tid 17] [client 172.19.0.1:39874] AH01630: client denied by server configuration: /var/www/html/.well-known
+[Sat Jul 26 11:38:50.971707 2025] [mpm_prefork:notice] [pid 1:tid 1] AH00170: caught SIGWINCH, shutting down gracefully
