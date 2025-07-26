@@ -95,22 +95,11 @@ RUN composer install --no-dev --optimize-autoloader
 # Copy web directory contents to the document root
 COPY web/ ./
 
-# Create whispermodels directory
-RUN mkdir -p /var/www/html/inc/whispermodels && \
-    chown -R www-data:www-data /var/www/html/inc/whispermodels
+# Set proper permissions for whispermodels
+RUN chown -R www-data:www-data /var/www/html/whispermodels \
+    && chmod -R 755 /var/www/html/whispermodels
 
-# Download whisper.cpp models
-RUN cd /var/www/html/inc/whispermodels && \
-    echo "Downloading whisper.cpp medium model..." && \
-    curl -L -o medium.bin "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin" && \
-    echo "Downloading whisper.cpp base model..." && \
-    curl -L -o base.bin "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin" && \
-    echo "Models downloaded successfully!" && \
-    ls -lh *.bin && \
-    chown -R www-data:www-data /var/www/html/inc/whispermodels && \
-    chmod -R 755 /var/www/html/inc/whispermodels
-
-# Set proper permissions
+# Set proper permissions for the rest of web
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
 

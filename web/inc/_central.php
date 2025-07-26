@@ -472,7 +472,7 @@ class Central {
                     if(file_exists($saveTo) && filesize($saveTo) > 0) {
                         try {
                             // converted, now whisper transcribe it
-                            $whisper = Whisper::fromPretrained('medium', baseDir: __DIR__.'/models');
+                            $whisper = Whisper::fromPretrained('medium', baseDir: __DIR__.'/../whispermodels');
                             $audio = readAudio($saveTo);
                             $segments = $whisper->transcribe($audio, 4);
                             $fullText = "";
