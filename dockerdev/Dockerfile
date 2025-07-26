@@ -4,7 +4,7 @@ FROM php:8.3-apache
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies including FFmpeg
+# Install system dependencies including FFmpeg and whisper.cpp dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -21,6 +21,10 @@ RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
     libffi-dev \
+    # Build tools for whisper.cpp
+    build-essential \
+    cmake \
+    pkg-config \
     # FFmpeg and multimedia dependencies
     ffmpeg \
     libavcodec-extra \
@@ -43,6 +47,16 @@ RUN apt-get update && apt-get install -y \
     libfribidi-dev \
     libharfbuzz-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Install whisper.cpp
+RUN cd /tmp && \
+    git clone https://github.com/ggerganov/whisper.cpp.git && \
+    cd whisper.cpp && \
+    make && \
+    cp main /usr/local/bin/whisper && \
+    cp quantize /usr/local/bin/whisper-quantize && \
+    chmod +x /usr/local/bin/whisper /usr/local/bin/whisper-quantize && \
+    cd / && rm -rf /tmp/whisper.cpp
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
@@ -69,6 +83,21 @@ RUN composer install --no-dev --optimize-autoloader
 
 # Copy web directory contents to the document root
 COPY web/ ./
+
+# Create whispermodels directory
+RUN mkdir -p /var/www/html/inc/whispermodels && \
+    chown -R www-data:www-data /var/www/html/inc/whispermodels
+
+# Download whisper.cpp models
+RUN cd /var/www/html/inc/whispermodels && \
+    echo "Downloading whisper.cpp medium model..." && \
+    curl -L -o medium.bin "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin" && \
+    echo "Downloading whisper.cpp base model..." && \
+    curl -L -o base.bin "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin" && \
+    echo "Models downloaded successfully!" && \
+    ls -lh *.bin && \
+    chown -R www-data:www-data /var/www/html/inc/whispermodels && \
+    chmod -R 755 /var/www/html/inc/whispermodels
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html \
