@@ -14,3 +14,4 @@ web/inc/models
 client_secret_222517592163-eotadpkna5tda1vf9jfopc0madv4fqb0.apps.googleusercontent.com.json
 dockerdev/logs/access.log
 dockerdev/logs/error.log
+dockerdev/logs/other_vhosts_access.log
