@@ -25,6 +25,11 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
     pkg-config \
+    # Additional whisper.cpp dependencies
+    libopenblas-dev \
+    liblapack-dev \
+    libatlas-base-dev \
+    gfortran \
     # FFmpeg and multimedia dependencies
     ffmpeg \
     libavcodec-extra \
@@ -48,11 +53,17 @@ RUN apt-get update && apt-get install -y \
     libharfbuzz-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install whisper.cpp
+# Install whisper.cpp with proper error handling and dependencies
 RUN cd /tmp && \
     git clone https://github.com/ggerganov/whisper.cpp.git && \
     cd whisper.cpp && \
-    make && \
+    # Checkout a stable version to avoid build issues
+    git checkout v1.5.4 && \
+    # Try building with different options if the default fails
+    (make clean && make -j$(nproc) || \
+     (make clean && make -j$(nproc) WHISPER_NO_AVX=1 WHISPER_NO_AVX2=1) || \
+     (make clean && make -j$(nproc) WHISPER_NO_AVX=1 WHISPER_NO_AVX2=1 WHISPER_NO_F16C=1) || \
+     (make clean && make -j1)) && \
     cp main /usr/local/bin/whisper && \
     cp quantize /usr/local/bin/whisper-quantize && \
     chmod +x /usr/local/bin/whisper /usr/local/bin/whisper-quantize && \
