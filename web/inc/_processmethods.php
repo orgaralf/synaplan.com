@@ -378,7 +378,63 @@ class ProcessMethods {
             $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, [], false);
             $previousCall = true;
 
-            //error_log('answerSorted MEDIAMAKER *************************** : '.print_r($answerSorted, true));
+            // DEBUG: Log the raw response for troubleshooting
+            error_log('MEDIAMAKER DEBUG - Raw response: ' . json_encode($answerSorted));
+            
+            // Validate the response structure
+            if (!is_array($answerSorted)) {
+                error_log('MEDIAMAKER ERROR - Response is not an array: ' . gettype($answerSorted));
+                
+                // Fallback: Try to parse as JSON string if it's a string
+                if (is_string($answerSorted)) {
+                    error_log('MEDIAMAKER DEBUG - Attempting to parse response as JSON string');
+                    $parsedResponse = json_decode($answerSorted, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($parsedResponse)) {
+                        $answerSorted = $parsedResponse;
+                        error_log('MEDIAMAKER DEBUG - Successfully parsed JSON string');
+                    } else {
+                        error_log('MEDIAMAKER ERROR - Failed to parse JSON string: ' . json_last_error_msg());
+                        if(self::$stream) {
+                            Frontend::statusToStream(self::$msgId, 'ai', 'Error: Invalid response format from media generation service.');
+                        }
+                        return;
+                    }
+                } else {
+                    if(self::$stream) {
+                        Frontend::statusToStream(self::$msgId, 'ai', 'Error: Invalid response format from media generation service.');
+                    }
+                    return;
+                }
+            }
+            
+            // Check if BMEDIA field exists
+            if (!isset($answerSorted['BMEDIA']) || empty($answerSorted['BMEDIA'])) {
+                error_log('MEDIAMAKER ERROR - BMEDIA field missing or empty: ' . json_encode($answerSorted));
+                if(self::$stream) {
+                    Frontend::statusToStream(self::$msgId, 'ai', 'Error: Could not determine media type (image/video/audio).');
+                }
+                return;
+            }
+            
+            // Validate BMEDIA value
+            $validMediaTypes = ['image', 'video', 'audio'];
+            if (!in_array($answerSorted['BMEDIA'], $validMediaTypes)) {
+                error_log('MEDIAMAKER ERROR - Invalid BMEDIA value: ' . $answerSorted['BMEDIA']);
+                if(self::$stream) {
+                    Frontend::statusToStream(self::$msgId, 'ai', 'Error: Invalid media type specified.');
+                }
+                return;
+            }
+            
+            // Check if BTEXT field exists
+            if (!isset($answerSorted['BTEXT']) || empty($answerSorted['BTEXT'])) {
+                error_log('MEDIAMAKER ERROR - BTEXT field missing or empty: ' . json_encode($answerSorted));
+                if(self::$stream) {
+                    Frontend::statusToStream(self::$msgId, 'ai', 'Error: No prompt text generated for media creation.');
+                }
+                return;
+            }
+
             $task = $answerSorted['BMEDIA'];
             $answerText = '';
             if($previousCall) {
@@ -386,6 +442,9 @@ class ProcessMethods {
             }           
             $answerSorted = Tools::migrateArray(self::$msgArr, $answerSorted);
             $answerSorted['BTEXT'] = $answerText.$answerSorted['BTEXT'];
+
+            // DEBUG: Log the task and processed text
+            error_log('MEDIAMAKER DEBUG - Task: ' . $task . ', Text: ' . substr($answerSorted['BTEXT'], 0, 100) . '...');
 
             if($task == 'image') {
                 $answerSorted['BTEXT'] = "/pic ".$answerSorted['BTEXT'];
