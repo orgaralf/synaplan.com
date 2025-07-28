@@ -21,11 +21,12 @@
                 Tools
             </a>
             <?php if($contentInc == "tools" || $contentInc == "webwidget" || $contentInc == "docsummary" 
-                || $contentInc == "soundstream") { ?>
+                || $contentInc == "soundstream" || $contentInc == "mailhandler") { ?>
                 <ul class="nav flex-column" style="margin-left: 18px;">
                     <li class="subitem"><a href="index.php/webwidget" id="toolMenu1">Chat Widget</a></li>
                     <li class="subitem"><a href="index.php/docsummary" id="toolMenu2">Doc Summary</a></li>
                     <li class="subitem"><a href="index.php/soundstream" id="toolMenu3">Sound2Text</a></li>
+                    <li class="subitem"><a href="index.php/mailhandler" id="toolMenu4">Mail Handler</a></li>
                     <!-- li class="subitem"><a href="index.php/outprocessor">Outbound</a></li -->
                 </ul>
             <?php } ?>
