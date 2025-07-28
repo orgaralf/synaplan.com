@@ -67,3 +67,8 @@
 172.19.0.1 - - [26/Jul/2025:11:38:25 +0000] "GET /node_modules/bootstrap/dist/css/bootstrap.min.css HTTP/1.1" 200 31560 "http://localhost:8080/index.php/filemanager" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
 172.19.0.1 - - [26/Jul/2025:11:38:25 +0000] "GET /node_modules/bootstrap/dist/css/bootstrap.min.css.map HTTP/1.1" 200 92802 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
 127.0.0.1 - - [26/Jul/2025:11:38:30 +0000] "OPTIONS * HTTP/1.0" 200 126 "-" "Apache/2.4.62 (Debian) PHP/8.3.23 (internal dummy connection)"
+172.19.0.1 - - [26/Jul/2025:11:54:36 +0000] "GET / HTTP/1.1" 200 668 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+172.19.0.1 - - [26/Jul/2025:11:54:37 +0000] "GET /favicon.ico HTTP/1.1" 200 15708 "http://localhost:8080/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+172.19.0.1 - - [26/Jul/2025:11:55:28 +0000] "-" 408 0 "-" "-"
+172.19.0.1 - - [26/Jul/2025:11:56:08 +0000] "GET / HTTP/1.1" 200 1587 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+172.19.0.1 - - [26/Jul/2025:11:56:59 +0000] "-" 408 0 "-" "-"
