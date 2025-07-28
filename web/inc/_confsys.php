@@ -65,6 +65,8 @@ if ($isLocalhost || $isDocker) {
         // Regular localhost development
         $GLOBALS["baseUrl"] = $devUrl;
     }
+    $GLOBALS["debug"] = true;
 } else {
     $GLOBALS["baseUrl"] = $liveUrl;
+    $GLOBALS["debug"] = false;
 }

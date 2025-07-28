@@ -25,7 +25,7 @@ class AIOpenAI {
     public static function init() {
         self::$key = ApiKeys::getOpenAI();
         if (!self::$key) {
-            error_log("OpenAI API key not configured");
+            if($GLOBALS["debug"]) error_log("OpenAI API key not configured");
             return false;
         }
         self::$client = OpenAI::client(self::$key);
@@ -205,13 +205,13 @@ class AIOpenAI {
                             $textChunk = $repArr['data']['delta'];
                             // Debug: log the response structure on localhost
                             if (isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1']) && 1==2) {
-                                error_log("DEBUG: Response structure: " . print_r($response->toArray(), true));
+                                if($GLOBALS["debug"]) error_log("DEBUG: Response structure: " . print_r($response->toArray(), true));
                             }
                         }
                         
                         // Only stream non-empty chunks
                         if (!empty($textChunk)) {
-                            error_log("DEBUG: Streaming chunk: " . $textChunk);
+                            if($GLOBALS["debug"]) error_log("DEBUG: Streaming chunk: " . $textChunk);
                             $answer .= $textChunk;
                             // Stream the chunk to frontend
                             Frontend::statusToStream($msgArr["BID"], 'ai', $textChunk);
@@ -222,8 +222,8 @@ class AIOpenAI {
                     if ($response->event === 'response.output_text.done') {
                         // Debug: log the response structure on localhost
                         if (isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1']) && 1==2) {
-                            error_log("DEBUG: Response event: " . $response->event);
-                            error_log("DEBUG: Response structure: " . print_r($response->toArray(), true));
+                            if($GLOBALS["debug"]) error_log("DEBUG: Response event: " . $response->event);
+                            if($GLOBALS["debug"]) error_log("DEBUG: Response structure: " . print_r($response->toArray(), true));
                         }
                         // Try to access final text
                         if (isset($response->text)) {
@@ -667,14 +667,14 @@ class AIOpenAI {
                       (isset($_SERVER['SERVER_NAME']) && in_array($_SERVER['SERVER_NAME'], ['localhost', '127.0.0.1', '::1']));
 
         if ($isLocalhost) {
-            error_log("DEBUG createOfficeFile: Starting with prompt: " . substr($creatorPrompt, 0, 100) . "...");
+            if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Starting with prompt: " . substr($creatorPrompt, 0, 100) . "...");
         }
 
         // Initialize OpenAI client
         if (!self::init()) {
             $result['error'] = 'Failed to initialize OpenAI client';
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Failed to initialize OpenAI client");
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Failed to initialize OpenAI client");
             }
             return $result;
         }
@@ -683,13 +683,13 @@ class AIOpenAI {
         if (!$apiKey) {
             $result['error'] = 'OpenAI API key not found';
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: OpenAI API key not found");
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: OpenAI API key not found");
             }
             return $result;
         }
 
         if ($isLocalhost) {
-            error_log("DEBUG createOfficeFile: API key found, length: " . strlen($apiKey));
+            if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: API key found, length: " . strlen($apiKey));
         }
 
         if ($stream) {
@@ -723,7 +723,7 @@ class AIOpenAI {
             ];
 
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Request data prepared: " . json_encode($responseData,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Request data prepared: " . json_encode($responseData,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             }
 
             $headers = [
@@ -741,7 +741,7 @@ class AIOpenAI {
             }
 
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Making initial request to OpenAI API...");
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Making initial request to OpenAI API...");
             }
 
             // Make the initial request using Curler
@@ -752,13 +752,13 @@ class AIOpenAI {
             );
 
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Initial response received: " . json_encode($responseJson));
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Initial response received: " . json_encode($responseJson));
             }
 
             if (!isset($responseJson['id'])) {
                 $result['error'] = 'Failed to create response: ' . json_encode($responseJson);
                 if ($isLocalhost) {
-                    error_log("DEBUG createOfficeFile: No response ID in response: " . json_encode($responseJson));
+                    if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: No response ID in response: " . json_encode($responseJson));
                 }
                 return $result;
             }
@@ -766,7 +766,7 @@ class AIOpenAI {
             $responseId = $responseJson['id'];
 
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Response ID obtained: " . $responseId);
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Response ID obtained: " . $responseId);
             }
 
             if ($stream) {
@@ -784,7 +784,7 @@ class AIOpenAI {
             
             while ($attempts < $maxAttempts) {
                 if ($isLocalhost) {
-                    error_log("DEBUG createOfficeFile: Polling attempt " . ($attempts + 1) . " for response ID: " . $responseId);
+                    if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Polling attempt " . ($attempts + 1) . " for response ID: " . $responseId);
                 }
 
                 $statusResponse = Curler::callJson(
@@ -793,13 +793,13 @@ class AIOpenAI {
                 );
 
                 if ($isLocalhost) {
-                    error_log("DEBUG createOfficeFile: Status response: " . json_encode($statusResponse));
+                    if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Status response: " . json_encode($statusResponse));
                 }
 
                 if (!isset($statusResponse['status'])) {
                     $result['error'] = 'Failed to get response status';
                     if ($isLocalhost) {
-                        error_log("DEBUG createOfficeFile: No status in response: " . json_encode($statusResponse));
+                        if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: No status in response: " . json_encode($statusResponse));
                     }
                     return $result;
                 }
@@ -807,7 +807,7 @@ class AIOpenAI {
                 $status = $statusResponse['status'];
 
                 if ($isLocalhost) {
-                    error_log("DEBUG createOfficeFile: Current status: " . $status);
+                    if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Current status: " . $status);
                 }
 
                 if ($stream) {
@@ -821,7 +821,7 @@ class AIOpenAI {
 
                 if ($status === 'completed') {
                     if ($isLocalhost) {
-                        error_log("DEBUG createOfficeFile: Response completed successfully");
+                        if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Response completed successfully");
                     }
                     break;
                 }
@@ -829,7 +829,7 @@ class AIOpenAI {
                 if ($status === 'failed' || $status === 'cancelled') {
                     $result['error'] = 'Generation failed with status: ' . $status . ' ';
                     if ($isLocalhost) {
-                        error_log("DEBUG createOfficeFile: Generation failed with status: " . $status);
+                        if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Generation failed with status: " . $status);
                     }
                     return $result;
                 }
@@ -841,7 +841,7 @@ class AIOpenAI {
             if ($attempts >= $maxAttempts) {
                 $result['error'] = 'Generation timed out after 5 minutes ';
                 if ($isLocalhost) {
-                    error_log("DEBUG createOfficeFile: Generation timed out after " . $maxAttempts . " attempts");
+                    if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Generation timed out after " . $maxAttempts . " attempts");
                 }
                 return $result;
             }
@@ -861,27 +861,27 @@ class AIOpenAI {
             $textContent = null;
 
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Extracting file IDs from completed response");
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Extracting file IDs from completed response");
             }
 
             // Search for container_file_citation in the response
             self::extractFileIds($statusResponse, $containerId, $fileId);
 
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Extracted containerId: " . ($containerId ?? 'null') . ", fileId: " . ($fileId ?? 'null'));
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Extracted containerId: " . ($containerId ?? 'null') . ", fileId: " . ($fileId ?? 'null'));
             }
 
             // If no file found, try to extract text content
             if (!$containerId || !$fileId) {
                 if ($isLocalhost) {
-                    error_log("DEBUG createOfficeFile: No file found, checking for text content");
+                    if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: No file found, checking for text content");
                 }
                 
                 $textContent = self::extractTextContent($statusResponse);
                 
                 if ($textContent) {
                     if ($isLocalhost) {
-                        error_log("DEBUG createOfficeFile: Found text content, length: " . strlen($textContent));
+                        if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Found text content, length: " . strlen($textContent));
                     }
                     
                     // Return the text content instead of a file
@@ -892,14 +892,14 @@ class AIOpenAI {
                     $result['fileType'] = 'text';
                     
                     if ($isLocalhost) {
-                        error_log("DEBUG createOfficeFile: Returning text content instead of file");
+                        if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Returning text content instead of file");
                     }
                     
                     return $result;
                 } else {
                     $result['error'] = 'No file or text content found in the response';
                     if ($isLocalhost) {
-                        error_log("DEBUG createOfficeFile: No file or text content found in response");
+                        if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: No file or text content found in response");
                     }
                     return $result;
                 }
@@ -918,7 +918,7 @@ class AIOpenAI {
             $downloadUrl = 'https://api.openai.com/v1/containers/' . $containerId . '/files/' . $fileId . '/content';
             
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Downloading file from URL: " . $downloadUrl);
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Downloading file from URL: " . $downloadUrl);
             }
 
             $downloadHeaders = [
@@ -931,20 +931,20 @@ class AIOpenAI {
             if ($fileContent === false) {
                 $result['error'] = 'Failed to download file ';
                 if ($isLocalhost) {
-                    error_log("DEBUG createOfficeFile: Failed to download file from URL: " . $downloadUrl);
+                    if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Failed to download file from URL: " . $downloadUrl);
                 }
                 return $result;
             }
 
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: File downloaded successfully, size: " . strlen($fileContent) . " bytes");
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: File downloaded successfully, size: " . strlen($fileContent) . " bytes");
             }
 
             // Step 5: Save the file with dynamic path structure
             $fileExtension = self::determineFileExtension($creatorPrompt);
             
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Determined file extension: " . $fileExtension);
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Determined file extension: " . $fileExtension);
             }
 
             // Create dynamic file path similar to picPrompt method
@@ -953,13 +953,13 @@ class AIOpenAI {
             $filePath = $fileOutput . '/' . $fileName;
             
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: File path: up/" . $filePath);
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: File path: up/" . $filePath);
             }
 
             // Create the directory if it doesn't exist
             if(!is_dir('up/'.$fileOutput)) {
                 if ($isLocalhost) {
-                    error_log("DEBUG createOfficeFile: Creating directory: up/" . $fileOutput);
+                    if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Creating directory: up/" . $fileOutput);
                 }
                 mkdir('up/'.$fileOutput, 0777, true);
             }
@@ -967,13 +967,13 @@ class AIOpenAI {
             if (file_put_contents('up/'.$filePath, $fileContent) === false) {
                 $result['error'] = 'Failed to save file ';
                 if ($isLocalhost) {
-                    error_log("DEBUG createOfficeFile: Failed to save file to: up/" . $filePath);
+                    if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Failed to save file to: up/" . $filePath);
                 }
                 return $result;
             }
 
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: File saved successfully to: up/" . $filePath);
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: File saved successfully to: up/" . $filePath);
             }
 
             if ($stream) {
@@ -991,7 +991,7 @@ class AIOpenAI {
             $result['fileType'] = $fileExtension;
 
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Method completed successfully");
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Method completed successfully");
             }
 
             return $result;
@@ -999,8 +999,8 @@ class AIOpenAI {
         } catch (Exception $e) {
             $result['error'] = 'Exception: ' . $e->getMessage();
             if ($isLocalhost) {
-                error_log("DEBUG createOfficeFile: Exception caught: " . $e->getMessage());
-                error_log("DEBUG createOfficeFile: Exception trace: " . $e->getTraceAsString());
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Exception caught: " . $e->getMessage());
+                if($GLOBALS["debug"]) error_log("DEBUG createOfficeFile: Exception trace: " . $e->getTraceAsString());
             }
             return $result;
         }
@@ -1107,7 +1107,7 @@ class AIOpenAI {
                       (isset($_SERVER['SERVER_NAME']) && in_array($_SERVER['SERVER_NAME'], ['localhost', '127.0.0.1', '::1']));
 
         if ($isLocalhost) {
-            error_log("DEBUG extractTextContent: Starting extraction from response");
+            if($GLOBALS["debug"]) error_log("DEBUG extractTextContent: Starting extraction from response");
         }
 
         // Try to extract from the output array structure
@@ -1121,7 +1121,7 @@ class AIOpenAI {
                             isset($content['text'])) {
                             
                             if ($isLocalhost) {
-                                error_log("DEBUG extractTextContent: Found text content in output_text");
+                                if($GLOBALS["debug"]) error_log("DEBUG extractTextContent: Found text content in output_text");
                             }
                             
                             return $content['text'];
@@ -1134,13 +1134,13 @@ class AIOpenAI {
         // Fallback: try to extract from choices structure (older API format)
         if (isset($response['choices'][0]['message']['content'])) {
             if ($isLocalhost) {
-                error_log("DEBUG extractTextContent: Found text content in choices structure");
+                if($GLOBALS["debug"]) error_log("DEBUG extractTextContent: Found text content in choices structure");
             }
             return $response['choices'][0]['message']['content'];
         }
 
         if ($isLocalhost) {
-            error_log("DEBUG extractTextContent: No text content found in response");
+            if($GLOBALS["debug"]) error_log("DEBUG extractTextContent: No text content found in response");
         }
         
         return false;
@@ -1176,7 +1176,7 @@ class AIOpenAI {
         }
 
         if ($errorStop != '') {
-            error_log($errorStop);
+            if($GLOBALS["debug"]) error_log($errorStop);
             if ($stream) {
                 $update = [
                     'msgId' => $msgArr['BID'],
@@ -1187,7 +1187,7 @@ class AIOpenAI {
             }
             return $errorStop;
         }
-        error_log($absolutePath);
+        if($GLOBALS["debug"]) error_log($absolutePath);
 
         $client = self::$client;
 

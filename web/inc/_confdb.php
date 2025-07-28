@@ -21,7 +21,7 @@ try {
         define('DB_COLLATE', getenv('DB_COLLATE') ?: 'utf8_general_ci');
     }
 } catch (Exception $e) {
-    error_log('Database configuration error: ' . $e->getMessage());
+    if($GLOBALS["debug"]) error_log('Database configuration error: ' . $e->getMessage());
     echo 'Database configuration error: ', $e->getMessage(), "\n";
 }
 

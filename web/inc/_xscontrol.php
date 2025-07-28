@@ -116,6 +116,12 @@ class XSControl {
     // therefore: always check if the values are set and ADD to them. Start at 0, if there is no value.
     // 
     public static function countBytes($msgArr, $FILEORTEXT='ALL', $stream = false): void {
+        // Safety check: ensure BID exists before proceeding
+        if (!isset($msgArr['BID']) || empty($msgArr['BID'])) {
+            if($GLOBALS["debug"]) error_log("Warning: Attempted to count bytes without BID. Message array: " . json_encode($msgArr));
+            return;
+        }
+        
         // check if the message is a file
         if($msgArr['BFILE'] == 1 AND ($FILEORTEXT == 'ALL' OR $FILEORTEXT == 'FILE')) {
             // get the file size
@@ -177,6 +183,12 @@ class XSControl {
     // store the AI details per message
     // AI models used and how fast they answer! Use the BMESSAGEMETA table
     public static function storeAIDetails($msgArr, $modelKey, $modelValue, $stream = false): bool {
+        // Safety check: ensure BID exists before proceeding
+        if (!isset($msgArr['BID']) || empty($msgArr['BID'])) {
+            if($GLOBALS["debug"]) error_log("Warning: Attempted to store AI details without BID. Message array: " . json_encode($msgArr));
+            return false;
+        }
+        
         // save the AI details to the database
         $aiDetailsSQL = "INSERT INTO BMESSAGEMETA (BID, BMESSID, BTOKEN, BVALUE) VALUES (DEFAULT, ".intval($msgArr['BID']).", '{$modelKey}', '{$modelValue}')";
         db::Query($aiDetailsSQL);

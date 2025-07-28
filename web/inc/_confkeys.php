@@ -99,7 +99,7 @@ class ApiKeys {
         }
 
         // 2. Return null if not found
-        error_log("Warning: API key '$envKey' not found in environment");
+        if($GLOBALS["debug"]) error_log("Warning: API key '$envKey' not found in environment");
         return null;
     }
 

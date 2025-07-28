@@ -86,9 +86,9 @@ switch($apiAction) {
     case 'changeGroupOfFile':
         $fileId = intval($_REQUEST['fileId']);
         $newGroup = isset($_REQUEST['newGroup']) ? trim($_REQUEST['newGroup']) : '';
-        error_log("API changeGroupOfFile called with fileId: $fileId, newGroup: '$newGroup'");
+        if($GLOBALS["debug"]) error_log("API changeGroupOfFile called with fileId: $fileId, newGroup: '$newGroup'");
         $resArr = BasicAI::changeGroupOfFile($fileId, $newGroup);
-        error_log("API changeGroupOfFile result: " . json_encode($resArr));
+        if($GLOBALS["debug"]) error_log("API changeGroupOfFile result: " . json_encode($resArr));
         break;
     case 'getProfile':
         $resArr = Frontend::getProfile();

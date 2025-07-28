@@ -197,7 +197,7 @@ Class BasicAI {
         // Validate and sanitize the keyword to prevent SQL issues
         if (empty($keyword) || !is_string($keyword)) {
             $keyword = 'chat'; // Default fallback
-            error_log('Warning: getAprompt received empty or invalid keyword, defaulting to "general"');
+            if($GLOBALS["debug"]) error_log('Warning: getAprompt received empty or invalid keyword, defaulting to "general"');
         }
         $keyword = db::EscString($keyword);
 
@@ -211,7 +211,7 @@ Class BasicAI {
             $arrPrompt = $pArr;
         } else {
             // No prompt found - create a default one to prevent errors
-            error_log('Warning: No prompt found for keyword: ' . $keyword . ', creating default');
+            if($GLOBALS["debug"]) error_log('Warning: No prompt found for keyword: ' . $keyword . ', creating default');
             $arrPrompt = [
                 'BID' => 0,
                 'BTOPIC' => $keyword,
@@ -483,7 +483,7 @@ Class BasicAI {
                 $arrPrompt['SETTINGS'][] = $toolArr;
             }
         } else {
-            error_log('Warning: getPromptDetails could not find prompt for key: ' . $promptKey);
+            if($GLOBALS["debug"]) error_log('Warning: getPromptDetails could not find prompt for key: ' . $promptKey);
         }
         
         return $arrPrompt;
@@ -552,7 +552,7 @@ Class BasicAI {
         $resArr = ['success' => false, 'error' => ''];
         $userId = $_SESSION["USERPROFILE"]["BID"];
         
-        error_log("BasicAI::changeGroupOfFile called with fileId: $fileId, newGroup: '$newGroup', userId: $userId");
+        if($GLOBALS["debug"]) error_log("BasicAI::changeGroupOfFile called with fileId: $fileId, newGroup: '$newGroup', userId: $userId");
         
         // Validate file ownership
         $fileSQL = "SELECT * FROM BMESSAGES WHERE BID = " . intval($fileId) . " AND BUSERID = " . intval($userId) . " AND BFILE > 0";
@@ -561,11 +561,11 @@ Class BasicAI {
         
         if (!$fileArr) {
             $resArr['error'] = 'File not found or access denied';
-            error_log("BasicAI::changeGroupOfFile - File not found: $fileId for user: $userId");
+            if($GLOBALS["debug"]) error_log("BasicAI::changeGroupOfFile - File not found: $fileId for user: $userId");
             return $resArr;
         }
         
-        error_log("BasicAI::changeGroupOfFile - File found: " . json_encode($fileArr));
+        if($GLOBALS["debug"]) error_log("BasicAI::changeGroupOfFile - File found: " . json_encode($fileArr));
         
         // Update existing BRAG records for this file
         if (empty($newGroup)) {
@@ -576,7 +576,7 @@ Class BasicAI {
             $updateSQL = "UPDATE BRAG SET BGROUPKEY = '" . db::EscString($newGroup) . "' WHERE BMID = " . intval($fileId);
         }
         
-        error_log("BasicAI::changeGroupOfFile - SQL: $updateSQL");
+        if($GLOBALS["debug"]) error_log("BasicAI::changeGroupOfFile - SQL: $updateSQL");
         
         // Execute the update query
         $result = db::Query($updateSQL);
@@ -584,10 +584,10 @@ Class BasicAI {
         if ($result) {
             $resArr['success'] = true;
             $resArr['message'] = 'File group updated successfully';
-            error_log("BasicAI::changeGroupOfFile - Success");
+            if($GLOBALS["debug"]) error_log("BasicAI::changeGroupOfFile - Success");
         } else {
             $resArr['error'] = 'Database error occurred while updating file group';
-            error_log("BasicAI::changeGroupOfFile - Database error");
+            if($GLOBALS["debug"]) error_log("BasicAI::changeGroupOfFile - Database error");
         }
         
         return $resArr;
@@ -662,7 +662,7 @@ Class BasicAI {
             $resArr = $AISUMMARIZE::simplePrompt($systemPrompt, $documentText);
             
         } catch (Exception $e) {
-            error_log("BasicAI::doDocSum - Error: " . $e->getMessage());
+            if($GLOBALS["debug"]) error_log("BasicAI::doDocSum - Error: " . $e->getMessage());
             $resArr['error'] = 'An error occurred while processing the document: ' . $e->getMessage();
         }
         

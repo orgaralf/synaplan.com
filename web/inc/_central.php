@@ -880,7 +880,7 @@ class Central {
         elseif ($arrMessage['BFILETYPE'] == "docx" || $arrMessage['BFILETYPE'] == "doc") {
             $fileType = 4;
             $text = '';
-            error_log("******************** DEBUG: DOCX file: " . $arrMessage['BFILEPATH']);
+            if($GLOBALS["debug"]) error_log("******************** DEBUG: DOCX file: " . $arrMessage['BFILEPATH']);
             try {
                 $phpWord = WordIOFactory::load('./up/' . $arrMessage['BFILEPATH']);
                 

@@ -443,7 +443,7 @@ Class Frontend {
         }
 
         // Process files through RAG system
-        error_log("* * * * * * ************** _________ PROCESSING RAG FILES: ".print_r($filesArr, true));
+        if($GLOBALS["debug"]) error_log("* * * * * * ************** _________ PROCESSING RAG FILES: ".print_r($filesArr, true));
         $ragResult = Central::processRAGFiles($filesArr, $userId, $groupKey, false);
         
         $retArr['success'] = $ragResult['success'];

@@ -62,7 +62,7 @@ function _mymail($strFrom, $strTo, $subject, $htmltext, $plaintext, $strReplyTo=
         return true;
     }
     else {
-        error_log($mail->ErrorInfo);
+        if($GLOBALS["debug"]) error_log($mail->ErrorInfo);
         // error, fall back on SENDMAIL on the Linux OS
         //echo $mail->ErrorInfo;
         //print_r($arrSmtpSrvs[$strUseProvider]);

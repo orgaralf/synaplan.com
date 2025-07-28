@@ -28,7 +28,7 @@ class AIGroq {
     public static function init() {
         self::$key = ApiKeys::getGroq();
         if(!self::$key) {
-            error_log("Groq API key not configured");
+            if($GLOBALS["debug"]) error_log("Groq API key not configured");
             return false;
         }
         self::$client = new Groq(self::$key);
@@ -113,7 +113,7 @@ class AIGroq {
             }
             */
         } catch (GroqException $err) {
-            error_log("GROQ API ERROR: " . $err->getMessage());
+            if($GLOBALS["debug"]) error_log("GROQ API ERROR: " . $err->getMessage());
             return "*API sorting Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
         }
         // ------------------------------------------------
@@ -336,7 +336,7 @@ class AIGroq {
         $client = self::$client;
 
         $tPrompt = BasicAI::getAprompt('tools:lang');
-        error_log("tPrompt: ".$tPrompt);
+        if($GLOBALS["debug"]) error_log("tPrompt: ".$tPrompt);
         $arrMessages = [
             ['role' => 'system', 'content' => $tPrompt]
         ];

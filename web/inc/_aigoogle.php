@@ -23,7 +23,7 @@ class AIGoogle {
     public static function init() {
         self::$key = ApiKeys::getGoogleGemini();
         if (!self::$key) {
-            error_log("Google Gemini API key not configured");
+            if($GLOBALS["debug"]) error_log("Google Gemini API key not configured");
             return false;
         }
         return true;
@@ -696,7 +696,7 @@ class AIGoogle {
         }
 
         if ($errorStop != '') {
-            error_log($errorStop);
+            if($GLOBALS["debug"]) error_log($errorStop);
             if ($stream) {
                 $update = [
                     'msgId' => $msgArr['BID'],
@@ -786,7 +786,7 @@ class AIGoogle {
         }
 
         if ($errorStop != '') {
-            error_log($errorStop);
+            if($GLOBALS["debug"]) error_log($errorStop);
             if ($stream) {
                 $update = [
                     'msgId' => $msgArr['BID'],
@@ -902,7 +902,7 @@ class AIGoogle {
                 $analyzeResponse = Curler::callJson($url, $headers, $postData);
             } catch (Exception $err) {
                 $errorMessage = "File analysis error: " . $err->getMessage();
-                error_log($errorMessage);
+                if($GLOBALS["debug"]) error_log($errorMessage);
                 $msgArr['BFILETEXT'] = $errorMessage;
                 $msgArr['BTEXT'] = "Error analyzing file: " . $fileName;
                 if ($stream) {
@@ -947,7 +947,7 @@ class AIGoogle {
 
         } catch (Exception $err) {
             $errorMessage = "File analysis error: " . $err->getMessage();
-            error_log($errorMessage);
+            if($GLOBALS["debug"]) error_log($errorMessage);
             
             $msgArr['BFILETEXT'] = $errorMessage;
             $msgArr['BTEXT'] = "Error analyzing file: " . $fileName;

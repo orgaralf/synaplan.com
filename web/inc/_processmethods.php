@@ -162,7 +162,7 @@ class ProcessMethods {
                 try {
                     $answerJson = $AIGENERAL::sortingPrompt($sortingArr, self::$threadArr);
                 } catch (Exception $err) {
-                    error_log($err->getMessage());
+                    if($GLOBALS["debug"]) error_log($err->getMessage());
                     $answerJson = 'Error: '.$err->getMessage();
                     if(self::$stream) {
                         Frontend::statusToStream(self::$msgId, 'ai', $answerJson);
@@ -216,7 +216,7 @@ class ProcessMethods {
             $originalDirect = self::$msgArr['BDIRECT'] ?? 'IN';
             */
 
-            self::$msgArr = self::$toolAnswer;
+            self::$msgArr = self::preserveEssentialFields(self::$toolAnswer);
             
             // Restore essential fields if they're missing in the tool answer            
             // For tool responses, ensure BTOPIC is not a tools: prefixed value to prevent duplication
@@ -356,8 +356,8 @@ class ProcessMethods {
                 Frontend::statusToStream(self::$msgId, 'pre', 'Calling standard '.$AIGENERAL.'. ');
             }
             $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, self::$threadArr, self::$stream);
-            XSControl::storeAIDetails($answerSorted, 'AISERVICE', $AIGENERAL, self::$stream);
-            XSControl::storeAIDetails($answerSorted, 'AIMODEL', $GLOBALS["AI_CHAT"]["MODEL"], self::$stream);
+            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $AIGENERAL, self::$stream);
+            XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $GLOBALS["AI_CHAT"]["MODEL"], self::$stream);
             $previousCall = true;
         } else {
             if(self::$stream) {
@@ -373,27 +373,27 @@ class ProcessMethods {
             if(self::$stream) {
                 Frontend::statusToStream(self::$msgId, 'pre', 'Modifying prompt with '.$AIGENERAL.'. ');
             }
-            XSControl::storeAIDetails($answerSorted, 'AISERVICE', $AIGENERAL, self::$stream);
+            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $AIGENERAL, self::$stream);
 
             $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, [], false);
             $previousCall = true;
 
             // DEBUG: Log the raw response for troubleshooting
-            error_log('MEDIAMAKER DEBUG - Raw response: ' . json_encode($answerSorted));
+            if($GLOBALS["debug"]) error_log('MEDIAMAKER DEBUG - Raw response: ' . json_encode($answerSorted));
             
             // Validate the response structure
             if (!is_array($answerSorted)) {
-                error_log('MEDIAMAKER ERROR - Response is not an array: ' . gettype($answerSorted));
+                if($GLOBALS["debug"]) error_log('MEDIAMAKER ERROR - Response is not an array: ' . gettype($answerSorted));
                 
                 // Fallback: Try to parse as JSON string if it's a string
                 if (is_string($answerSorted)) {
-                    error_log('MEDIAMAKER DEBUG - Attempting to parse response as JSON string');
+                    if($GLOBALS["debug"]) error_log('MEDIAMAKER DEBUG - Attempting to parse response as JSON string');
                     $parsedResponse = json_decode($answerSorted, true);
                     if (json_last_error() === JSON_ERROR_NONE && is_array($parsedResponse)) {
                         $answerSorted = $parsedResponse;
-                        error_log('MEDIAMAKER DEBUG - Successfully parsed JSON string');
+                        if($GLOBALS["debug"]) error_log('MEDIAMAKER DEBUG - Successfully parsed JSON string');
                     } else {
-                        error_log('MEDIAMAKER ERROR - Failed to parse JSON string: ' . json_last_error_msg());
+                        if($GLOBALS["debug"]) error_log('MEDIAMAKER ERROR - Failed to parse JSON string: ' . json_last_error_msg());
                         if(self::$stream) {
                             Frontend::statusToStream(self::$msgId, 'ai', 'Error: Invalid response format from media generation service.');
                         }
@@ -409,7 +409,7 @@ class ProcessMethods {
             
             // Check if BMEDIA field exists
             if (!isset($answerSorted['BMEDIA']) || empty($answerSorted['BMEDIA'])) {
-                error_log('MEDIAMAKER ERROR - BMEDIA field missing or empty: ' . json_encode($answerSorted));
+                if($GLOBALS["debug"]) error_log('MEDIAMAKER ERROR - BMEDIA field missing or empty: ' . json_encode($answerSorted));
                 if(self::$stream) {
                     Frontend::statusToStream(self::$msgId, 'ai', 'Error: Could not determine media type (image/video/audio).');
                 }
@@ -419,7 +419,7 @@ class ProcessMethods {
             // Validate BMEDIA value
             $validMediaTypes = ['image', 'video', 'audio'];
             if (!in_array($answerSorted['BMEDIA'], $validMediaTypes)) {
-                error_log('MEDIAMAKER ERROR - Invalid BMEDIA value: ' . $answerSorted['BMEDIA']);
+                if($GLOBALS["debug"]) error_log('MEDIAMAKER ERROR - Invalid BMEDIA value: ' . $answerSorted['BMEDIA']);
                 if(self::$stream) {
                     Frontend::statusToStream(self::$msgId, 'ai', 'Error: Invalid media type specified.');
                 }
@@ -428,7 +428,7 @@ class ProcessMethods {
             
             // Check if BTEXT field exists
             if (!isset($answerSorted['BTEXT']) || empty($answerSorted['BTEXT'])) {
-                error_log('MEDIAMAKER ERROR - BTEXT field missing or empty: ' . json_encode($answerSorted));
+                if($GLOBALS["debug"]) error_log('MEDIAMAKER ERROR - BTEXT field missing or empty: ' . json_encode($answerSorted));
                 if(self::$stream) {
                     Frontend::statusToStream(self::$msgId, 'ai', 'Error: No prompt text generated for media creation.');
                 }
@@ -444,7 +444,7 @@ class ProcessMethods {
             $answerSorted['BTEXT'] = $answerText.$answerSorted['BTEXT'];
 
             // DEBUG: Log the task and processed text
-            error_log('MEDIAMAKER DEBUG - Task: ' . $task . ', Text: ' . substr($answerSorted['BTEXT'], 0, 100) . '...');
+            if($GLOBALS["debug"]) error_log('MEDIAMAKER DEBUG - Task: ' . $task . ', Text: ' . substr($answerSorted['BTEXT'], 0, 100) . '...');
 
             if($task == 'image') {
                 $answerSorted['BTEXT'] = "/pic ".$answerSorted['BTEXT'];
@@ -459,9 +459,9 @@ class ProcessMethods {
                 $answerSorted = BasicAI::toolPrompt($answerSorted, self::$threadArr);
             }
             if(substr($answerSorted['BTEXT'], 0, 1) == '/') {
-                XSControl::storeAIDetails($answerSorted, 'AIMODEL', $task, self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $task, self::$stream);
 
-                self::$msgArr = $answerSorted;
+                self::$msgArr = self::preserveEssentialFields($answerSorted);
                 self::sortMessage();
                 return;
             }
@@ -529,7 +529,7 @@ class ProcessMethods {
             $answerSorted['BTEXT'] = $answerText.$answerSorted['BTEXT'];
 
             if(is_string($answerSorted)) {
-                error_log($answerSorted);
+                if($GLOBALS["debug"]) error_log($answerSorted);
                 $answerSorted['BTEXT'] = $answerSorted;
             }
             $answerSorted['BFILE'] = 0;
@@ -582,7 +582,7 @@ class ProcessMethods {
         // ----------------------------------------------------- DONE
         // **************************************************************************************************
 
-        self::$msgArr = $answerSorted;
+        self::$msgArr = self::preserveEssentialFields($answerSorted);
         
         $outText = Tools::addMediaToText($answerSorted);
         // print to stream
@@ -636,9 +636,11 @@ class ProcessMethods {
         $aiAnswer['BSTATUS'] = '';
 
         // Process complex HTML in BTEXT before saving
+        /*
         if (isset($aiAnswer['BTEXT'])) {
             $aiAnswer['BTEXT'] = $aiAnswer['BTEXT'];
         }
+        */
 
         // Define valid BMESSAGES table columns
         $validColumns = [
@@ -702,6 +704,27 @@ class ProcessMethods {
         // **************************************************************************************************
 
         return $aiLastId;
+    }
+
+    /**
+     * Preserve essential fields when replacing message array
+     * 
+     * Ensures that critical fields like BID are not lost when replacing the message array
+     * 
+     * @param array $newMsgArr The new message array to use
+     * @return array The new message array with essential fields preserved
+     */
+    private static function preserveEssentialFields($newMsgArr): array {
+        // Essential fields that should be preserved from the original message
+        $essentialFields = ['BID', 'BUSERID', 'BTRACKID', 'BMESSTYPE', 'BDIRECT'];
+        
+        foreach ($essentialFields as $field) {
+            if (isset(self::$msgArr[$field]) && !isset($newMsgArr[$field])) {
+                $newMsgArr[$field] = self::$msgArr[$field];
+            }
+        }
+        
+        return $newMsgArr;
     }
 }
 
