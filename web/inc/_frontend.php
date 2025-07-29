@@ -801,4 +801,173 @@ Class Frontend {
         
         return $retArr;
     }
+
+    // ****************************************************************************************************** 
+    // Widget Management Methods
+    // ****************************************************************************************************** 
+    
+    /**
+     * Get all widgets for the current user
+     * 
+     * @return array Array containing widget configurations
+     */
+    public static function getWidgets(): array {
+        $retArr = ["error" => "", "success" => false, "widgets" => []];
+        
+        if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            $retArr["error"] = "User not logged in";
+            return $retArr;
+        }
+        
+        $userId = intval($_SESSION["USERPROFILE"]["BID"]);
+        
+        // Get all widget configurations for this user
+        $sql = "SELECT BGROUP, BSETTING, BVALUE FROM BCONFIG WHERE BOWNERID = " . $userId . " AND BGROUP LIKE 'widget_%' ORDER BY BGROUP, BSETTING";
+        $res = DB::Query($sql);
+        
+        $widgets = [];
+        while($row = DB::FetchArr($res)) {
+            $group = $row['BGROUP'];
+            $setting = $row['BSETTING'];
+            $value = $row['BVALUE'];
+            
+            // Extract widget ID from group (e.g., "widget_1" -> 1)
+            if (preg_match('/^widget_(\d+)$/', $group, $matches)) {
+                $widgetId = intval($matches[1]);
+                
+                if (!isset($widgets[$widgetId])) {
+                    $widgets[$widgetId] = [
+                        'widgetId' => $widgetId,
+                        'color' => '#007bff',
+                        'position' => 'bottom-right',
+                        'autoMessage' => '',
+                        'prompt' => 'general'
+                    ];
+                }
+                
+                // Map settings to widget properties
+                switch($setting) {
+                    case 'color':
+                        $widgets[$widgetId]['color'] = $value;
+                        break;
+                    case 'position':
+                        $widgets[$widgetId]['position'] = $value;
+                        break;
+                    case 'autoMessage':
+                        $widgets[$widgetId]['autoMessage'] = $value;
+                        break;
+                    case 'prompt':
+                        $widgets[$widgetId]['prompt'] = $value;
+                        break;
+                }
+            }
+        }
+        
+        $retArr["success"] = true;
+        $retArr["widgets"] = array_values($widgets);
+        return $retArr;
+    }
+    
+    /**
+     * Save widget configuration
+     * 
+     * @return array Result of the save operation
+     */
+    public static function saveWidget(): array {
+        $retArr = ["error" => "", "success" => false];
+        
+        if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            $retArr["error"] = "User not logged in";
+            return $retArr;
+        }
+        
+        $userId = intval($_SESSION["USERPROFILE"]["BID"]);
+        $widgetId = intval($_REQUEST['widgetId'] ?? 0);
+        
+        if ($widgetId < 1 || $widgetId > 9) {
+            $retArr["error"] = "Invalid widget ID. Must be between 1 and 9.";
+            return $retArr;
+        }
+        
+        // Validate and sanitize input
+        $color = db::EscString($_REQUEST['widgetColor'] ?? '#007bff');
+        $position = db::EscString($_REQUEST['widgetPosition'] ?? 'bottom-right');
+        $autoMessage = db::EscString($_REQUEST['autoMessage'] ?? '');
+        $prompt = db::EscString($_REQUEST['widgetPrompt'] ?? 'general');
+        
+        // Validate position
+        $validPositions = ['bottom-right', 'bottom-left', 'bottom-center'];
+        if (!in_array($position, $validPositions)) {
+            $retArr["error"] = "Invalid position value";
+            return $retArr;
+        }
+        
+        // Validate color format
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
+            $retArr["error"] = "Invalid color format";
+            return $retArr;
+        }
+        
+        $group = "widget_" . $widgetId;
+        
+        // Save widget settings
+        $settings = [
+            'color' => $color,
+            'position' => $position,
+            'autoMessage' => $autoMessage,
+            'prompt' => $prompt
+        ];
+        
+        foreach ($settings as $setting => $value) {
+            // Check if setting already exists
+            $checkSQL = "SELECT BID FROM BCONFIG WHERE BOWNERID = " . $userId . " AND BGROUP = '" . db::EscString($group) . "' AND BSETTING = '" . db::EscString($setting) . "'";
+            $checkRes = DB::Query($checkSQL);
+            
+            if (DB::CountRows($checkRes) > 0) {
+                // Update existing setting
+                $updateSQL = "UPDATE BCONFIG SET BVALUE = '" . $value . "' WHERE BOWNERID = " . $userId . " AND BGROUP = '" . db::EscString($group) . "' AND BSETTING = '" . db::EscString($setting) . "'";
+                DB::Query($updateSQL);
+            } else {
+                // Insert new setting
+                $insertSQL = "INSERT INTO BCONFIG (BOWNERID, BGROUP, BSETTING, BVALUE) VALUES (" . $userId . ", '" . db::EscString($group) . "', '" . db::EscString($setting) . "', '" . $value . "')";
+                DB::Query($insertSQL);
+            }
+        }
+        
+        $retArr["success"] = true;
+        $retArr["message"] = "Widget saved successfully";
+        return $retArr;
+    }
+    
+    /**
+     * Delete widget configuration
+     * 
+     * @return array Result of the delete operation
+     */
+    public static function deleteWidget(): array {
+        $retArr = ["error" => "", "success" => false];
+        
+        if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            $retArr["error"] = "User not logged in";
+            return $retArr;
+        }
+        
+        $userId = intval($_SESSION["USERPROFILE"]["BID"]);
+        $widgetId = intval($_REQUEST['widgetId'] ?? 0);
+        
+        if ($widgetId < 1 || $widgetId > 9) {
+            $retArr["error"] = "Invalid widget ID. Must be between 1 and 9.";
+            return $retArr;
+        }
+        
+        $group = "widget_" . $widgetId;
+        
+        // Delete all settings for this widget
+        $deleteSQL = "DELETE FROM BCONFIG WHERE BOWNERID = " . $userId . " AND BGROUP = '" . db::EscString($group) . "'";
+        DB::Query($deleteSQL);
+        
+        $retArr["success"] = true;
+        $retArr["message"] = "Widget deleted successfully";
+        return $retArr;
+    }
 }	

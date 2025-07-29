@@ -13,12 +13,18 @@
 // Backend Method: Frontend::loadChatHistory($amount)
 // JavaScript: js/chathistory.js - handles the API calls and rendering
 // Dependencies: jQuery, markdown-it, highlight.js, Font Awesome
+
+// Check if this is widget mode
+$isWidgetMode = isset($_SESSION['WIDGET_PROMPT']);
+$widgetPrompt = $_SESSION['WIDGET_PROMPT'] ?? 'general';
+$widgetAutoMessage = $_SESSION['WIDGET_AUTO_MESSAGE'] ?? '';
 ?>
 <link rel="stylesheet" href="fa/css/all.min.css">
 <!-- Add highlight.js CSS -->
 <link rel="stylesheet" href="node_modules/@highlightjs/cdn-assets/styles/googlecode.min.css">
 <main class="col-md-9 ms-sm-auto col-lg-10 px-1 px-md-3 py-2 py-md-1 content-main-bg" id="contentMain">
     <!-- Chat Page Header (now inside main, above chat-container) -->
+    <?php if (!$isWidgetMode): ?>
     <div class="chat-page-header">
         <div style="flex: 1; min-width: 280px;">
             <div class="dropdown custom-prompt-dropdown">
@@ -51,6 +57,7 @@
             </div>
         </div>
     </div>
+    <?php endif; ?>
     <!-- Modern Chat Interface -->
     <div class="chat-container">
         <!-- Enhanced chatbox with shadow and modern styling -->
@@ -246,6 +253,33 @@
     function getCurrentPromptConfig() {
         return currentPromptConfig;
     }
+
+    // Widget-specific functionality
+    <?php if ($isWidgetMode): ?>
+    // Set the widget prompt as the current prompt configuration
+    currentPromptConfig = {
+        BTOPIC: '<?php echo htmlspecialchars($widgetPrompt); ?>',
+        BPROMPT: '<?php echo htmlspecialchars(BasicAI::getAprompt($widgetPrompt, "en", [], false)["BPROMPT"] ?? ""); ?>',
+        BSHORTDESC: 'Widget Prompt',
+        SETTINGS: []
+    };
+
+    // Send auto message if configured
+    <?php if (!empty($widgetAutoMessage)): ?>
+    $(document).ready(function() {
+        setTimeout(function() {
+            // Send the auto message
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            
+            if (messageInput && sendButton) {
+                messageInput.value = '<?php echo htmlspecialchars($widgetAutoMessage); ?>';
+                sendButton.click();
+            }
+        }, 1000); // Wait 1 second after page load
+    });
+    <?php endif; ?>
+    <?php endif; ?>
 </script>
 
 <script>

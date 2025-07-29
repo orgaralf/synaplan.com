@@ -97,6 +97,15 @@ switch($apiAction) {
         $amount = isset($_REQUEST['amount']) ? intval($_REQUEST['amount']) : 10;
         $resArr = Frontend::loadChatHistory($amount);
         break;
+    case 'getWidgets':
+        $resArr = Frontend::getWidgets();
+        break;
+    case 'saveWidget':
+        $resArr = Frontend::saveWidget();
+        break;
+    case 'deleteWidget':
+        $resArr = Frontend::deleteWidget();
+        break;
     default:
         $resArr = ['error' => 'Invalid action'];
         break;

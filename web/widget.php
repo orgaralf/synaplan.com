@@ -1,37 +1,56 @@
 <?php
 // Set content type to JavaScript
 require_once('inc/_confsys.php');
+require_once('inc/_confdb.php');
 
 header('Content-Type: application/javascript');
 
-// Get the current domain for security checks
-$currentDomain = $_SERVER['HTTP_HOST'];
+// Get parameters
+$uid = isset($_REQUEST['uid']) ? intval($_REQUEST['uid']) : 0;
+$widgetId = isset($_REQUEST['widgetid']) ? intval($_REQUEST['widgetid']) : 1;
 
-// Get widget ID from URL parameters
-$widgetId = isset($_REQUEST['widgetid']) ? $_REQUEST['widgetid'] : '';
+// Validate parameters
+if ($uid <= 0 || $widgetId < 1 || $widgetId > 9) {
+    echo "console.error('Invalid widget parameters: uid=$uid, widgetid=$widgetId');";
+    exit;
+}
+
+// Get widget configuration from database
+$group = "widget_" . $widgetId;
+$sql = "SELECT BSETTING, BVALUE FROM BCONFIG WHERE BOWNERID = " . $uid . " AND BGROUP = '" . db::EscString($group) . "'";
+$res = db::Query($sql);
+
+$config = [
+    'color' => '#007bff',
+    'position' => 'bottom-right',
+    'autoMessage' => '',
+    'prompt' => 'general'
+];
+
+while ($row = db::FetchArr($res)) {
+    $config[$row['BSETTING']] = $row['BVALUE'];
+}
 
 // Get the base URL for the widget
 $baseUrl = $GLOBALS["baseUrl"];
-$widgetUrl = $baseUrl . "widgetloader.php" . ($widgetId ? "?widgetid=" . urlencode($widgetId) : "");
+$widgetUrl = $baseUrl . "widgetloader.php?uid=" . $uid . "&widgetid=" . $widgetId;
 
-// Widget Configuration
-$config = [
-    // Button gradient colors (CSS color values)
-    'button_gradient_from' => '#FF6B6B',
-    'button_gradient_to' => '#4ECDC4',
-    
-    // Button position ('left' or 'right')
-    'button_position' => 'right',
-    
-    // Button icon (Font Awesome class, e.g. 'fa-robot', 'fa-comments', 'fa-headset')
-    'button_icon' => 'fa-comments',
-    
-    // Icon size in pixels
-    'icon_size' => '24px'
-];
+// Determine position CSS
+$positionCSS = '';
+switch ($config['position']) {
+    case 'bottom-left':
+        $positionCSS = 'left: 20px;';
+        break;
+    case 'bottom-center':
+        $positionCSS = 'left: 50%; transform: translateX(-50%);';
+        break;
+    default: // bottom-right
+        $positionCSS = 'right: 20px;';
+        break;
+}
+
 // Output the widget JavaScript
 ?>
-//alert('<?php echo $widgetUrl; ?>');
 (function() {
     // Create widget container
     const widgetContainer = document.createElement('div');
@@ -39,7 +58,7 @@ $config = [
     widgetContainer.style.cssText = `
         position: fixed;
         bottom: 20px;
-        <?php echo $config['button_position']; ?>: 20px;
+        <?php echo $positionCSS; ?>
         z-index: 999999;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     `;
@@ -51,7 +70,7 @@ $config = [
         width: 60px;
         height: 60px;
         border-radius: 50%;
-        background: linear-gradient(135deg, <?php echo $config['button_gradient_from']; ?>, <?php echo $config['button_gradient_to']; ?>);
+        background: <?php echo $config['color']; ?>;
         border: none;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         cursor: pointer;
@@ -62,7 +81,7 @@ $config = [
         color: white;
         z-index: 999999;
     `;
-    chatButton.innerHTML = '<i class="fas <?php echo $config['button_icon']; ?>" style="font-size: <?php echo $config['icon_size']; ?>;"></i>';
+    chatButton.innerHTML = '<i class="fas fa-comments" style="font-size: 24px;"></i>';
 
     // Create overlay container
     const overlay = document.createElement('div');
@@ -197,4 +216,11 @@ $config = [
         chatButton.style.transform = 'scale(1)';
         chatButton.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
     };
+
+    // Auto-open functionality (if auto message is configured)
+    <?php if (!empty($config['autoMessage'])): ?>
+    setTimeout(() => {
+        chatButton.click();
+    }, 3000); // Auto-open after 3 seconds
+    <?php endif; ?>
 })(); 
