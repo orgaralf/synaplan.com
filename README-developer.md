@@ -1,107 +1,186 @@
-# synaplan meta AI framework
+# Synaplan Meta AI Framework
 
-This project is a layer above various AI models to offer users a different kind to
-interact with AI models and handle the data.
+A communication layer above various AI models that offers users a different way to interact with AI models and handle data.
 
-Synaplan is created with the following core technologies:
+## 🎯 Core Tasks
 
-* PHP 8.2 or higher
-* various PHP modules and libraries with `composer install XY` - see composer.json
-* MariaDB 11.7 (or higher, to support vector tables)
-* NodeJS for some testing and data handling
-* Javascript modules in node_modules, see package.json
-* Apache 2.4 with php-fpm
-* Ollama to run local AI models
-* Various AI model API accounts like OpenAI, Anthropic, Gemini, Groq, etc.
+- **Log all messages** (incoming and outgoing)
+- **Track usage** of different AI models
+- **Enable integration** of processes with different models
+- **Provide open and flexible** connections
 
-## Database model
-The model of the database is in file synaplan_structure.sql in the main directory.
-Current backups of the database are always in synaplan.sql, also in the main directory.
+Synaplan is Open Source and constantly improving. Join us on the geek side or the business side - there's so much work to do!
 
-## Talking to synaplan
+## 🛠️ Technology Stack
 
-The application has 4 ways to interact with:
+- **PHP 8.3+** with various modules (see `composer.json`)
+- **MariaDB 11.7+** (supports vector tables)
+- **NodeJS** for testing and data handling
+- **Apache 2.4** with php_mod
+- **Ollama** for local AI models
+- **Docker** for enterprise integrations (including Kubernetes)
+- **Various AI APIs**: OpenAI, Anthropic, Gemini, Groq, etc.
 
-1. WhatsApp webhook: You need a business WhatsApp number and register your number with synaplan to send messages to /webhookwa.php
-2. GMail mail pickup: We offer the registration of a code word for your configuration on `smart+yourcode@synaplan.com` where we look for mails every 30 seconds.
-3. API Gateway: we have a simple API and MCP server for your development pleasure. Part of the API is a divider for MCP calls, which are based on JSONRPC methods.
-4. Web interface: When you login via /index.php, you will find a Chat option and configuration settings.
+## 🚀 Quick Start
 
-## Code structure
+### 1. Environment Configuration
+
+Copy the example environment file and configure your settings:
+
+```bash
+cp web/.env.example web/.env
+```
+
+Edit `web/.env` with your actual values:
+- Database credentials
+- AI service API keys
+- OAuth configurations
+- Application settings
+
+**Important**: Never commit your `.env` file to version control!
+
+### 2. Database Setup
+
+The database structure is defined in `synaplan_structure.sql`. Current backups are in `synaplan.sql`.
+
+### 3. Dependencies
+
+Install PHP dependencies:
+```bash
+cd web
+composer install
+```
+
+Install Node.js dependencies:
+```bash
+npm install
+```
+
+## 🏗️ Application Architecture
+
+### Interface Loading Flow
+
+The web interface uses a director pattern for routing:
+
+1. **Entry Point**: `/index.php` loads the application
+2. **Director**: `snippets/director.php` handles routing logic
+3. **Authentication**: Checks user login status and session
+4. **Content Loading**: Directs to appropriate snippet based on:
+   - Login status
+   - URL parameters
+   - User permissions
+
+The director determines which content snippet to load (e.g., `c_chat.php`, `c_settings.php`, `c_login.php`).
+
+### Database Structure
+
+The `db-loadfiles/` directory contains essential database components:
+
+#### User Management (`BUSER.sql`)
+- User identification and authentication
+- Integration types (WhatsApp, Email, Web)
+- User profiles with JSON details
+- Provider IDs for external services
+
+#### AI Model Configuration (`BMODELS.sql`)
+- Pre-configured AI models from various providers
+- Pricing information and quality ratings
+- Model capabilities (chat, image generation, etc.)
+- Service-specific parameters
+
+#### Message System (`BMESSAGES.sql`)
+- Complete message history storage
+- Message metadata and tracking
+- File attachments and processing
+- Direction tracking (IN/OUT)
+- Language detection and topics
+
+#### Additional Core Tables
+- `BMESSAGEMETA.sql`: Extended message metadata
+- `BPROMPTS.sql`: Stored prompts and templates
+- `BCONFIG.sql`: System configuration
+- `BCAPABILITIES.sql`: Feature capabilities
+
+## 🔌 Integration Methods
+
+Synaplan supports 4 ways to interact:
+
+### 1. WhatsApp Webhook
+- Business WhatsApp number required
+- Register your number with synaplan
+- Send messages to `/webhookwa.php`
+- Example: See Ralfs.AI implementation
+
+### 2. Gmail Integration
+- Register a code word for your configuration
+- Send emails to `smart+yourcode@synaplan.com`
+- Automatic mail pickup every 30 seconds
+- **Status**: Coming soon!
+
+### 3. API Gateway
+- Simple REST API for development
+- MCP (Model Context Protocol) server
+- JSONRPC-based method calls
+- **Status**: Ready for use
+
+### 4. Web Interface
+- Login via `/index.php`
+- Chat interface and configuration settings
+- User management and model selection
+- **Status**: Ready for use
+
+## 📁 Code Structure
 
 ```
-# web/
-[Jun 13 15:26]  web/
-├── .env holds all keys and passwords
-├── .env.example shows you how
-├── [May 31 11:47]  aiprocessor.php
-├── [Jun 13 11:40]  api.php
-├── [Jun  3 09:22]  composer.json
-├── [Jun  3 09:22]  composer.lock
-├── [Apr 24 10:21]  confirm.php
-├── [Jun 10 15:35]  css
-├── [Jun 12 12:36]  favicon.ico
-├── [Jun 13 11:01]  gmail_callback2oauth.php
-├── [Apr 24 10:21]  gmail_cron.sh
-├── [May 31 11:47]  gmailrefresh.php
-├── [Jun 13 11:01]  gmail_start.php
-├── [Jun  6 10:37]  img
-├── [Jun 13 11:00]  inc
-    ├── [May 31 11:25]  _aianthropic.php
-    ├── [Jun 13 10:17]  _aigoogle.php
-    ├── [Jun 13 11:45]  _aigroq.php
-    ├── [Jun 11 10:39]  _aiollama.php
-    ├── [Jun 13 14:35]  _aiopenai.php
-    ├── [Jun 13 10:17]  _aithehive.php
-    ├── [Jun 11 12:03]  _basicai.php
-    ├── [Jun 11 10:55]  _central.php
-    ├── [Jun 13 15:36]  _confdb.php
-    ├── [Jun  5 16:37]  _confdefaults.php
-    ├── [Jun 13 14:36]  _confkeys.php
-    ├── [Jun 13 11:38]  _confsys.php
-    ├── [Apr 24 10:21]  _curler.php
-    ├── [Jun 11 08:48]  _frontend.php
-    ├── [Apr 24 10:21]  _inboundconf.php
-    ├── [Apr 24 10:21]  _jsontools.php
-    ├── [Apr 24 10:21]  _listtools.php
-    ├── [Apr 24 10:21]  _mail.php
-    ├── [Jun 13 11:01]  _myGMail.php
-    ├── [Jun 13 11:00]  _oauth.php
-    ├── [Jun 11 12:02]  _processmethods.php
-    ├── [Jun 13 10:17]  _tools.php
-    ├── [Apr 24 10:21]  _wasender.php
-    └── [Apr 24 10:21]  _xscontrol.php
-├── [May 31 11:48]  index.php
-├── [Jun 10 15:35]  js
-├── [May 23 08:44]  mcp.php
-├── [Jun 13 15:08]  node_modules
-├── [Apr 24 10:21]  outprocessor.php
-├── [Jun 13 15:08]  package.json
-├── [Jun 13 15:08]  package-lock.json
-├── [May 31 11:47]  preprocessor.php
-├── [Jun 13 15:26]  research
-├── [Jun 11 08:48]  snippets
-    ├── [Jun 10 11:32]  c_aimodels.php
-    ├── [Jun  6 14:09]  c_ais.php
-    ├── [Jun 13 11:53]  c_chat.php
-    ├── [Jun 11 08:48]  c_filemanager.php
-    ├── [May 24 12:25]  c_inbound.php
-    ├── [Jun  1 16:24]  c_login.php
-    ├── [Jun 10 10:35]  c_menu.php
-    ├── [Apr 24 10:21]  c_outprocessor.php
-    ├── [Jun 11 10:17]  c_preprocessor.php
-    ├── [Jun  5 17:51]  c_prompts.php
-    ├── [Jun 11 08:48]  c_settings.php
-    ├── [Apr 24 10:21]  c_tools.php
-    ├── [Apr 24 10:21]  c_unknown.php
-    ├── [Jun  1 16:32]  c_welcome.php
-    ├── [Jun 13 14:41]  director.php
-    └── [Apr 24 10:21]  _fileform.php
-├── [Apr 24 10:21]  sysmon.php
-├── [Jun 12 15:00]  up
-    ├── ALL USER UPLOADS LAND HERE
-├── [Jun  3 09:22]  vendor
-└── [May 31 11:47]  webhookwa.php
+web/
+├── .env                    # Environment configuration
+├── .env.example           # Configuration template
+├── index.php              # Main entry point
+├── api.php                # API gateway
+├── mcp.php                # MCP server
+├── webhookwa.php          # WhatsApp webhook
+├── inc/                   # Core libraries
+│   ├── _ai*.php          # AI provider integrations
+│   ├── _central.php      # Central processing
+│   ├── _frontend.php     # Frontend utilities
+│   └── _*.php            # Other utilities
+├── snippets/              # UI components
+│   ├── director.php      # Routing logic
+│   ├── c_*.php           # Content snippets
+│   └── _fileform.php     # File upload forms
+├── css/                   # Stylesheets
+├── js/                    # JavaScript files
+├── up/                    # User uploads
+└── vendor/                # Composer dependencies
 ```
+
+## 🔧 Development Guidelines
+
+### For Junior Developers
+
+1. **Start with the web interface** - it's the easiest to understand
+2. **Check the director.php** - understand how routing works
+3. **Examine the database structure** - know your data models
+4. **Use the .env.example** - always start with the template
+5. **Test with local models** - Ollama integration is great for development
+
+### Common Development Tasks
+
+- **Adding new AI providers**: Create new `_ai*.php` files in `inc/`
+- **Creating new UI sections**: Add `c_*.php` files in `snippets/`
+- **Database changes**: Update structure files and load files
+- **API endpoints**: Extend `api.php` with new methods
+
+## 📚 Additional Resources
+
+- Database schema: `synaplan_structure.sql`
+- Current backup: `synaplan.sql`
+- Environment template: `web/.env.example`
+- Composer dependencies: `web/composer.json`
+- Node.js dependencies: `web/package.json`
+
+## 🤝 Contributing
+
+Synaplan is open source! We welcome contributions from both technical and business perspectives. Check the code structure, understand the architecture, and start building!
 
 
