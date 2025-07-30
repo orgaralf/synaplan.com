@@ -39,11 +39,56 @@ Edit `web/.env` with your actual values:
 
 **Important**: Never commit your `.env` file to version control!
 
-### 2. Database Setup
+### 2. Security Configuration
+
+#### .env File Security
+
+Your `.env` file contains sensitive information. Follow these security best practices:
+
+- **Never commit `.env` to version control** - it's already in `.gitignore`
+- **Use strong, unique passwords** for database and API keys
+- **Rotate API keys regularly** for production environments
+- **Restrict file permissions**: `chmod 600 web/.env`
+- **Backup securely** - encrypt any backups containing `.env` files
+
+#### Apache Configuration
+
+Create a `.htaccess` file in your `web/` directory to prevent serving sensitive files:
+
+```apache
+# Prevent access to sensitive files
+<Files ".env">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files ".env.example">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Prevent access to other sensitive files
+<FilesMatch "\.(env|log|sql|bak|backup)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Prevent directory listing
+Options -Indexes
+
+# Additional security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
+```
+
+### 3. Database Setup
 
 The database structure is defined in `synaplan_structure.sql`. Current backups are in `synaplan.sql`.
 
-### 3. Dependencies
+### 4. Dependencies
 
 Install PHP dependencies:
 ```bash
