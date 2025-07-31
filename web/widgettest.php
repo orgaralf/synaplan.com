@@ -1,6 +1,17 @@
 <?php
+// Simple test script to verify widget functionality
+session_start();
+// Authentication check - disallow anonymous users
+if(!isset($_SESSION['USERPROFILE']) || count($_SESSION['USERPROFILE']) == 0) {
+    // Redirect to login page
+    header("Location: index.php");
+    exit;
+}
+require_once('inc/_confsys.php');
+require_once('inc/_confdb.php');
+
 $widgetId = $_REQUEST['widgetid'] ?? 1;
-$uid = $_REQUEST['uid'] ?? 1; // Default to user ID 1 if not provided
+$uid = $_REQUEST['uid'] ?? 2; // Default to user ID 1 if not provided
 ?>
 <html>
     <head>
@@ -65,7 +76,15 @@ $uid = $_REQUEST['uid'] ?? 1; // Default to user ID 1 if not provided
             </ul>
         </div>
         
-        <script src="web/widget.php?uid=<?php echo htmlspecialchars($uid); ?>&widgetid=<?php echo htmlspecialchars($widgetId); ?>"></script>
+        <!-- Synaplan Chat Widget -->
+        <script>
+        (function() {
+            var script = document.createElement('script');
+            script.src = window.location.protocol + '//' + window.location.host + '/synaplan.com'+'/web/widget.php?uid=2&widgetid=1';
+            script.async = true;
+            document.head.appendChild(script);
+        })();
+        </script>
     </body>
 </html>
 

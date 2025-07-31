@@ -95,7 +95,7 @@
 <script>
 (function() {
     var script = document.createElement('script');
-    script.src = window.location.protocol + '//' + window.location.host + '/web/widget.php?uid=<?php echo $_SESSION["USERPROFILE"]["BID"]; ?>&widgetid=${widgetId}';
+    script.src = window.location.protocol + '//' + window.location.host + '/web/widget.php?uid=${userId}&widgetid=${widgetId}';
     script.async = true;
     document.head.appendChild(script);
 })();
@@ -262,6 +262,7 @@
                             <h6 class="card-title">Widget ${widget.widgetId}</h6>
                             <p class="card-text">
                                 <small class="text-muted">
+                                    <strong>User ID:</strong> ${widget.userId}<br>
                                     <strong>Color:</strong> <span style="color: ${widget.color};">${widget.color}</span><br>
                                     <strong>Position:</strong> ${widget.position}<br>
                                     <strong>Prompt:</strong> ${widget.prompt}<br>
@@ -391,11 +392,21 @@
     // Function to update integration code
     function updateIntegrationCode() {
         const widgetId = document.getElementById('widgetId').value;
+        let userId = <?php echo $_SESSION["USERPROFILE"]["BID"]; ?>; // Default to current user ID
+        
+        // If editing an existing widget, use the widget's user ID
+        if (currentWidgetId) {
+            const widget = widgets.find(w => w.widgetId === parseInt(widgetId));
+            if (widget && widget.userId) {
+                userId = widget.userId;
+            }
+        }
+        
         const code = '<!-- Synaplan Chat Widget -->\n' +
             '<script>\n' +
             '(function() {\n' +
             '    var script = document.createElement(\'script\');\n' +
-            '    script.src = window.location.protocol + \'//\' + window.location.host + \'/web/widget.php?uid=<?php echo $_SESSION["USERPROFILE"]["BID"]; ?>&widgetid=' + widgetId + '\';\n' +
+            '    script.src = window.location.protocol + \'//\' + window.location.host + \'/web/widget.php?uid=' + userId + '&widgetid=' + widgetId + '\';\n' +
             '    script.async = true;\n' +
             '    document.head.appendChild(script);\n' +
             '})();\n' +

@@ -838,6 +838,7 @@ Class Frontend {
                 if (!isset($widgets[$widgetId])) {
                     $widgets[$widgetId] = [
                         'widgetId' => $widgetId,
+                        'userId' => $userId, // Add user ID to widget data
                         'color' => '#007bff',
                         'position' => 'bottom-right',
                         'autoMessage' => '',
