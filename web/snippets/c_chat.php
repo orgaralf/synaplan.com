@@ -218,7 +218,12 @@ $isAnonymousWidget = isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] ===
 
     // Called when prompt configuration dropdown changes
     function onPromptConfigChange() {
-        const selected = document.getElementById('promptConfigSelect').value;
+        const promptSelect = document.getElementById('promptConfigSelect');
+        if (!promptSelect) {
+            console.log("Prompt config select not found (widget mode)");
+            return;
+        }
+        const selected = promptSelect.value;
         console.log("Selected prompt config:", selected);
         
         // Fetch prompt configuration details including tools and AI model
@@ -261,32 +266,41 @@ $isAnonymousWidget = isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] ===
         return currentPromptConfig;
     }
 
-    // Anonymous widget mode detection
-    const isAnonymousWidget = <?php echo $isAnonymousWidget ? 'true' : 'false'; ?>;
+    // Anonymous widget mode detection - define this globally before other scripts
+    window.isAnonymousWidget = <?php echo $isAnonymousWidget ? 'true' : 'false'; ?>;
 
     // Widget-specific functionality
     <?php if ($isWidgetMode): ?>
     // Set the widget prompt as the current prompt configuration
+    // Only need the topic/ID - the backend handles the actual prompt text
     currentPromptConfig = {
         BTOPIC: '<?php echo htmlspecialchars($widgetPrompt); ?>',
-        BPROMPT: '<?php echo htmlspecialchars(BasicAI::getAprompt($widgetPrompt, "en", [], false)["BPROMPT"] ?? ""); ?>',
+        BPROMPT: '', // Not needed - backend uses session
         BSHORTDESC: 'Widget Prompt',
         SETTINGS: []
     };
 
-    // Send auto message if configured
+    // Display auto message as static welcome message if configured
     <?php if (!empty($widgetAutoMessage)): ?>
     $(document).ready(function() {
         setTimeout(function() {
-            // Send the auto message
-            const messageInput = document.getElementById('messageInput');
-            const sendButton = document.getElementById('sendButton');
-            
-            if (messageInput && sendButton) {
-                messageInput.value = '<?php echo htmlspecialchars($widgetAutoMessage); ?>';
-                sendButton.click();
-            }
-        }, 1000); // Wait 1 second after page load
+            // Add the auto message as a static AI message (not sent via API)
+            $("#chatHistory").append(`
+                <li class="message-item ai-message">
+                    <div class="ai-avatar">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-bubble ai-bubble">
+                            <div class="message-content"><?php echo htmlspecialchars($widgetAutoMessage); ?></div>
+                            <span class="message-time ai-time">${new Date().toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                </li>
+            `);
+            // Scroll to show the welcome message
+            $("#chatModalBody").scrollTop($("#chatModalBody").prop("scrollHeight"));
+        }, 500); // Wait 0.5 seconds after page load
     });
     <?php endif; ?>
     <?php endif; ?>
@@ -295,25 +309,38 @@ $isAnonymousWidget = isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] ===
 <script>
     // when document is ready, initialize prompt configuration
     $(document).ready(function() {
-        onPromptConfigChange();
+        // Only call onPromptConfigChange if it exists (for non-widget mode)
+        if (typeof onPromptConfigChange === 'function') {
+            onPromptConfigChange();
+        }
         // No need to scroll to bottom since chat history is loaded via buttons now
     });
 </script>
 
 <script>
-document.querySelectorAll('.custom-prompt-dropdown .dropdown-item').forEach(function(item) {
-  item.addEventListener('click', function(e) {
-    e.preventDefault();
-    // Update button text
-    var main = this.querySelector('.dropdown-main').textContent;
-    var desc = this.querySelector('.dropdown-desc').textContent;
-    document.getElementById('promptDropdownBtn').innerHTML =
-      '<span class="dropdown-main">' + main + '</span>' +
-      '<span class="dropdown-desc">' + desc + '</span>';
-    // Update hidden input
-    document.getElementById('promptConfigSelect').value = this.getAttribute('data-value');
-    // Optionally, trigger your config change logic
-    if (typeof onPromptConfigChange === 'function') onPromptConfigChange();
-  });
-});
+// Only add dropdown event listeners if the dropdown exists (not in widget mode)
+const dropdownItems = document.querySelectorAll('.custom-prompt-dropdown .dropdown-item');
+if (dropdownItems.length > 0) {
+    dropdownItems.forEach(function(item) {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Update button text
+            var main = this.querySelector('.dropdown-main').textContent;
+            var desc = this.querySelector('.dropdown-desc').textContent;
+            const dropdownBtn = document.getElementById('promptDropdownBtn');
+            if (dropdownBtn) {
+                dropdownBtn.innerHTML =
+                    '<span class="dropdown-main">' + main + '</span>' +
+                    '<span class="dropdown-desc">' + desc + '</span>';
+            }
+            // Update hidden input
+            const promptSelect = document.getElementById('promptConfigSelect');
+            if (promptSelect) {
+                promptSelect.value = this.getAttribute('data-value');
+                // Optionally, trigger your config change logic
+                if (typeof onPromptConfigChange === 'function') onPromptConfigChange();
+            }
+        });
+    });
+}
 </script>

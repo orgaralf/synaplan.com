@@ -94,6 +94,18 @@ function checkRateLimit($key, $window, $maxRequests) {
 // Check if this is an anonymous widget session
 $isAnonymousWidget = isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true;
 
+// Debug logging for session state
+if ($GLOBALS["debug"]) {
+    error_log("API Debug - Session state:");
+    error_log("  is_widget: " . (isset($_SESSION["is_widget"]) ? $_SESSION["is_widget"] : "NOT SET"));
+    error_log("  USERPROFILE: " . (isset($_SESSION["USERPROFILE"]) ? "SET" : "NOT SET"));
+    error_log("  widget_owner_id: " . (isset($_SESSION["widget_owner_id"]) ? $_SESSION["widget_owner_id"] : "NOT SET"));
+    error_log("  widget_id: " . (isset($_SESSION["widget_id"]) ? $_SESSION["widget_id"] : "NOT SET"));
+    error_log("  anonymous_session_id: " . (isset($_SESSION["anonymous_session_id"]) ? $_SESSION["anonymous_session_id"] : "NOT SET"));
+    error_log("  isAnonymousWidget: " . ($isAnonymousWidget ? "TRUE" : "FALSE"));
+    error_log("  API Action: " . $apiAction);
+}
+
 // Define which endpoints are allowed for anonymous widget users
 $anonymousAllowedEndpoints = [
     'messageNew',
@@ -127,21 +139,33 @@ if (in_array($apiAction, $authenticatedOnlyEndpoints)) {
         exit;
     }
 } elseif (in_array($apiAction, $anonymousAllowedEndpoints)) {
-    // These endpoints allow anonymous widget sessions
-    if ($isAnonymousWidget) {
-            // Validate anonymous widget session
-    if (!isset($_SESSION["widget_owner_id"]) || !isset($_SESSION["widget_id"]) || !isset($_SESSION["anonymous_session_id"])) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Invalid anonymous widget session']);
-        exit;
-    }
+    // These endpoints allow both anonymous widget sessions and authenticated user sessions
     
-    // Check session timeout
-    if (!Frontend::validateAnonymousSession()) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Anonymous session expired. Please refresh the page.']);
-        exit;
-    }
+    // Check if this is an anonymous widget session
+    if ($isAnonymousWidget) {
+        if ($GLOBALS["debug"]) {
+            error_log("API Debug - Processing as anonymous widget session");
+        }
+        
+        // Validate anonymous widget session
+        if (!isset($_SESSION["widget_owner_id"]) || !isset($_SESSION["widget_id"]) || !isset($_SESSION["anonymous_session_id"])) {
+            if ($GLOBALS["debug"]) {
+                error_log("API Debug - Missing required session variables for anonymous widget");
+            }
+            http_response_code(401);
+            echo json_encode(['error' => 'Invalid anonymous widget session']);
+            exit;
+        }
+        
+        // Check session timeout
+        if (!Frontend::validateAnonymousSession()) {
+            if ($GLOBALS["debug"]) {
+                error_log("API Debug - Anonymous session validation failed");
+            }
+            http_response_code(401);
+            echo json_encode(['error' => 'Anonymous session expired. Please refresh the page.']);
+            exit;
+        }
         
         // Implement rate limiting for anonymous users
         $rateLimitKey = 'anonymous_widget_' . $_SESSION["widget_owner_id"] . '_' . $_SESSION["widget_id"];
@@ -156,8 +180,15 @@ if (in_array($apiAction, $authenticatedOnlyEndpoints)) {
             exit;
         }
     } else {
-        // Regular authenticated user session required
+        if ($GLOBALS["debug"]) {
+            error_log("API Debug - Processing as authenticated user session");
+        }
+        
+        // Check for regular authenticated user session
         if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            if ($GLOBALS["debug"]) {
+                error_log("API Debug - Missing USERPROFILE for authenticated user");
+            }
             http_response_code(401);
             echo json_encode(['error' => 'Authentication required']);
             exit;

@@ -189,21 +189,30 @@ function formatDateTime(dateTimeStr) {
 
 // Initialize chat history functionality when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-    // Add event listeners to history loading buttons
-    document.querySelectorAll('.load-history-btn').forEach(function(button) {
-        button.addEventListener('click', function() {
-            const amount = parseInt(this.getAttribute('data-amount'));
-            loadChatHistory(amount);
-        });
-    });
-    
-    // Add event listener to hide history button
-    document.querySelectorAll('.hide-history-btn').forEach(function(button) {
-        button.addEventListener('click', function() {
-            const buttonsContainer = document.getElementById('chatHistoryButtons');
-            if (buttonsContainer) {
-                buttonsContainer.remove();
-            }
-        });
-    });
+    // Only initialize if not in anonymous widget mode and elements exist
+    if (typeof window.isAnonymousWidget === 'undefined' || !window.isAnonymousWidget) {
+        // Add event listeners to history loading buttons
+        const historyButtons = document.querySelectorAll('.load-history-btn');
+        if (historyButtons.length > 0) {
+            historyButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    const amount = parseInt(this.getAttribute('data-amount'));
+                    loadChatHistory(amount);
+                });
+            });
+        }
+        
+        // Add event listener to hide history button
+        const hideButtons = document.querySelectorAll('.hide-history-btn');
+        if (hideButtons.length > 0) {
+            hideButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    const buttonsContainer = document.getElementById('chatHistoryButtons');
+                    if (buttonsContainer) {
+                        buttonsContainer.remove();
+                    }
+                });
+            });
+        }
+    }
 }); 

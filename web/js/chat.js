@@ -4,7 +4,7 @@
 // - Microphone functionality disabled
 // - Chat history loading disabled
 // - Rate limiting applied
-const isAnonymousWidget = typeof isAnonymousWidget !== 'undefined' ? isAnonymousWidget : false;
+const isAnonymousWidget = typeof window.isAnonymousWidget !== 'undefined' ? window.isAnonymousWidget : false;
 
 // Keep track of user-attached files (pasted or manually selected).
 let attachedFiles = [];
@@ -89,113 +89,165 @@ function resetFileUploadSection() {
     // Hide the files div
     if (filesDiv) {
         filesDiv.style.display = 'none';
+        filesDiv.classList.remove('active');
     }
     
     // Stop any loading indicators
     stopLoading();
 }
 
-// Show/hide the attach area
-attachButton.addEventListener('click', () => {
-  filesDiv.style.display = 'block';
-  startLoading();
-  fileInput.click();
-});
-closeFilesDiv.addEventListener('click', () => {
-  filesDiv.style.display = 'none';
-});
-
-// Clicking "Select Files" triggers the hidden file input
-manualFileSelect.addEventListener('click', () => {
-  fileInput.click();
-});
-
-// 1) Manually selected files
-fileInput.addEventListener('change', () => {
-  for (const file of fileInput.files) {
-    if (isFileTypeAllowed(file)) {
-      attachedFiles.push(file);
-    } else {
-      // Show error for disallowed file types
-      if (isAnonymousWidget) {
-        alert('Anonymous users can only upload JPG, GIF, PNG, and PDF files.');
-      }
+// Initialize event listeners only if elements exist
+function initializeEventListeners() {
+    // Show/hide the attach area
+    if (attachButton) {
+        attachButton.addEventListener('click', () => {
+            if (filesDiv) {
+                filesDiv.style.display = 'block';
+                filesDiv.classList.add('active');
+                startLoading();
+                if (fileInput) fileInput.click();
+            }
+        });
     }
-  }
-  updateFilePreview();
-});
-
-// 2) Pasting images/documents into the contenteditable
-messageInput.addEventListener('paste', (event) => {
-  const items = event.clipboardData?.items || [];
-  let didPasteFile = false;
-
-  for (const item of items) {
-    if (item.kind === 'file') {
-      const file = item.getAsFile();
-      if (file) {
-        if (isFileTypeAllowed(file)) {
-          attachedFiles.push(file);
-          didPasteFile = true;
-        } else {
-          // Show error for disallowed file types
-          if (isAnonymousWidget) {
-            alert('Anonymous users can only upload JPG, GIF, PNG, and PDF files.');
-          }
-        }
-      }
-    }
-  }
-  
-  // If we got any files, prevent them from appearing as raw text
-  // and update the file preview UI.
-  if (didPasteFile) {
-    event.preventDefault();
-    updateFilePreview();
-  } else {
-    // Handle text paste - strip color styling
-    event.preventDefault();
     
-    // Get plain text from clipboard
-    const text = event.clipboardData.getData('text/plain');
-    
-    // Insert text at cursor position
-    const selection = window.getSelection();
-    if (selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      range.deleteContents();
-      range.insertNode(document.createTextNode(text));
-      
-      // Move cursor to end of inserted text
-      range.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    } else {
-      // Fallback: append to end
-      messageInput.textContent += text;
+    if (closeFilesDiv) {
+        closeFilesDiv.addEventListener('click', () => {
+            if (filesDiv) {
+                filesDiv.style.display = 'none';
+                filesDiv.classList.remove('active');
+            }
+        });
     }
-  }
-});
-messageInput.addEventListener('keydown', function(e) {
-  // Check if Enter is pressed along with either CTRL or ALT key
-  if (e.key === 'Enter' && (e.ctrlKey || e.altKey)) {
-    e.preventDefault();
-    handleSendMessage();
-  }
-});
+
+    // Clicking "Select Files" triggers the hidden file input
+    if (manualFileSelect) {
+        manualFileSelect.addEventListener('click', () => {
+            if (fileInput) fileInput.click();
+        });
+    }
+
+    // 1) Manually selected files
+    if (fileInput) {
+        fileInput.addEventListener('change', () => {
+            for (const file of fileInput.files) {
+                if (isFileTypeAllowed(file)) {
+                    attachedFiles.push(file);
+                } else {
+                    // Show error for disallowed file types
+                    if (isAnonymousWidget) {
+                        alert('Anonymous users can only upload JPG, GIF, PNG, and PDF files.');
+                    }
+                }
+            }
+            updateFilePreview();
+        });
+    }
+
+    // 2) Pasting images/documents into the contenteditable
+    if (messageInput) {
+        messageInput.addEventListener('paste', (event) => {
+            const items = event.clipboardData?.items || [];
+            let didPasteFile = false;
+
+            for (const item of items) {
+                if (item.kind === 'file') {
+                    const file = item.getAsFile();
+                    if (file) {
+                        if (isFileTypeAllowed(file)) {
+                            attachedFiles.push(file);
+                            didPasteFile = true;
+                        } else {
+                            // Show error for disallowed file types
+                            if (isAnonymousWidget) {
+                                alert('Anonymous users can only upload JPG, GIF, PNG, and PDF files.');
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // If we got any files, prevent them from appearing as raw text
+            // and update the file preview UI.
+            if (didPasteFile) {
+                event.preventDefault();
+                updateFilePreview();
+            } else {
+                // Handle text paste - strip color styling
+                event.preventDefault();
+                
+                // Get plain text from clipboard
+                const text = event.clipboardData.getData('text/plain');
+                
+                // Insert text at cursor position
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    range.deleteContents();
+                    range.insertNode(document.createTextNode(text));
+                    
+                    // Move cursor to end of inserted text
+                    range.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                } else {
+                    // Fallback: append to end
+                    messageInput.textContent += text;
+                }
+            }
+        });
+        
+        messageInput.addEventListener('keydown', function(e) {
+            // Check if Enter is pressed along with either CTRL or ALT key
+            if (e.key === 'Enter' && (e.ctrlKey || e.altKey)) {
+                e.preventDefault();
+                handleSendMessage();
+            }
+        });
+        
+        // Arrow key handling for message history
+        messageInput.addEventListener("keydown", function (e) {
+            if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (messageHistory.length > 0) {
+                    if (historyIndex === -1) {
+                        historyIndex = messageHistory.length - 1;
+                    } else if (historyIndex > 0) {
+                        historyIndex--;
+                    }
+                    setMessageInput(messageHistory[historyIndex]);
+                }
+            } else if (e.key === "ArrowDown") {
+                e.preventDefault();
+                if (historyIndex >= 0 && historyIndex < messageHistory.length - 1) {
+                    historyIndex++;
+                    setMessageInput(messageHistory[historyIndex]);
+                } else {
+                    historyIndex = -1;
+                    setMessageInput('');
+                }
+            }
+        });
+    }
+}
 
 
 const loader = document.getElementById('loader');
 
 function startLoading() {
-  loader.classList.remove('hidden');
+  if (loader) {
+    loader.classList.remove('hidden');
+  }
 }
 
 function stopLoading() {
-  loader.classList.add('hidden');
+  if (loader) {
+    loader.classList.add('hidden');
+  }
 }
 // Enhanced file preview with modern grid layout
 function updateFilePreview() {
+  if (!filePreview) return;
+  
   filePreview.innerHTML = '';
 
   if (attachedFiles.length > 0) {
@@ -242,9 +294,12 @@ function updateFilePreview() {
       removeBtn.onclick = () => {
         attachedFiles.splice(index, 1);
         updateFilePreview();
-        if (attachedFiles.length === 0) {
-          filesDiv.style.display = 'none';
+              if (attachedFiles.length === 0) {
+        if (filesDiv) {
+            filesDiv.style.display = 'none';
+            filesDiv.classList.remove('active');
         }
+      }
       };
 
       // File info
@@ -269,10 +324,16 @@ function updateFilePreview() {
       filePreview.appendChild(fileCard);
     });
     
-    filesDiv.style.display = 'block';
+    if (filesDiv) {
+        filesDiv.style.display = 'block';
+        filesDiv.classList.add('active');
+    }
     stopLoading();
   } else {
-    filesDiv.style.display = 'none';
+    if (filesDiv) {
+        filesDiv.style.display = 'none';
+        filesDiv.classList.remove('active');
+    }
   }
 }
 // history handling in the input
@@ -281,6 +342,7 @@ const messageHistory = [];
 let historyIndex = -1;
 
 function setMessageInput(text) {
+    if (!messageInput) return;
     messageInput.textContent = text;
     placeCaretAtEnd(messageInput);
 }
@@ -294,33 +356,12 @@ function placeCaretAtEnd(el) {
     sel.addRange(range);
 }
 
-// Arrow key handling
-messageInput.addEventListener("keydown", function (e) {
-    if (e.key === "ArrowUp") {
-        e.preventDefault();
-        if (messageHistory.length > 0) {
-            if (historyIndex === -1) {
-                historyIndex = messageHistory.length - 1;
-            } else if (historyIndex > 0) {
-                historyIndex--;
-            }
-            setMessageInput(messageHistory[historyIndex]);
-        }
-    } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        if (historyIndex >= 0 && historyIndex < messageHistory.length - 1) {
-            historyIndex++;
-            setMessageInput(messageHistory[historyIndex]);
-        } else {
-            historyIndex = -1;
-            setMessageInput('');
-        }
-    }
-});
+
 
 // 3) Sending logic (front-end demonstration)
 function handleSendMessage() {
     // Grab the user's text - use textContent instead of innerText to preserve actual newlines
+    if (!messageInput) return;
     const userMessage = messageInput.textContent.trim();
     const actionMessage = 'messageNew';
     
@@ -480,10 +521,15 @@ function handleSendMessage() {
 }
 
 // Add event listeners for both send buttons
-sendButton.addEventListener('click', handleSendMessage);
+if (sendButton) {
+    sendButton.addEventListener('click', handleSendMessage);
+}
 if (sendButtonMobile) {
     sendButtonMobile.addEventListener('click', handleSendMessage);
 }
+
+// Initialize all event listeners
+initializeEventListeners();
 
 // ------------------------------------------------------------
 function sseStream(data, outputObject) {

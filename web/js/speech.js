@@ -1,7 +1,19 @@
 // -----------------------------
 function initSpeechButton(buttonId) {
+    // Check if the button exists FIRST (it won't in widget mode)
     var startButton = document.getElementById(buttonId);
+    if (!startButton) {
+        console.log('Speech button not found, skipping speech initialization');
+        return;
+    }
+
     var resultDiv = document.getElementById('speechHints');
+
+    // Check if speech recognition is available
+    if (typeof webkitSpeechRecognition === 'undefined') {
+        console.log('Speech recognition not available, skipping initialization');
+        return;
+    }
 
     // Create a new instance of webkitSpeechRecognition
     var recognition = new webkitSpeechRecognition();
@@ -72,7 +84,11 @@ function speech(myText) {
 // -----------------------------
 $(document).ready(function() {
     // button inits - only for authenticated users
-    if (typeof isAnonymousWidget === 'undefined' || !isAnonymousWidget) {
-        initSpeechButton("speakButton");
+    if (typeof window.isAnonymousWidget === 'undefined' || !window.isAnonymousWidget) {
+        // Check if the speech button actually exists before trying to initialize it
+        const speakButton = document.getElementById("speakButton");
+        if (speakButton) {
+            initSpeechButton("speakButton");
+        }
     }
 });

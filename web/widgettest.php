@@ -1,17 +1,21 @@
 <?php
 // Simple test script to verify widget functionality
 session_start();
-// Authentication check - disallow anonymous users
-if(!isset($_SESSION['USERPROFILE']) || count($_SESSION['USERPROFILE']) == 0) {
-    // Redirect to login page
-    header("Location: index.php");
-    exit;
+
+// Log out the user to test widget anonymously
+if(isset($_SESSION['USERPROFILE'])) {
+    // Store user info for later login reminder
+    $loggedOutUser = $_SESSION['USERPROFILE'];
+    // Clear the session to simulate anonymous access
+    session_destroy();
+    session_start();
 }
+
 require_once('inc/_confsys.php');
 require_once('inc/_confdb.php');
 
 $widgetId = $_REQUEST['widgetid'] ?? 1;
-$uid = $_REQUEST['uid'] ?? 2; // Default to user ID 1 if not provided
+$uid = $_REQUEST['uid'] ?? 2; // Default to user ID 2 if not provided
 ?>
 <html>
     <head>
@@ -49,11 +53,54 @@ $uid = $_REQUEST['uid'] ?? 2; // Default to user ID 1 if not provided
                 margin: 10px 0;
                 border: 1px solid #dee2e6;
             }
+            .alert {
+                border-radius: 8px;
+                border: none;
+            }
+            .alert-warning {
+                background-color: #fff3cd;
+                border-left: 4px solid #ffc107;
+            }
+            .alert-info {
+                background-color: #d1ecf1;
+                border-left: 4px solid #17a2b8;
+            }
+            .btn {
+                border-radius: 6px;
+                padding: 8px 16px;
+                text-decoration: none;
+                display: inline-block;
+                margin: 5px 0;
+            }
+            .btn-primary {
+                background-color: #007bff;
+                color: white;
+                border: 1px solid #007bff;
+            }
+            .btn-primary:hover {
+                background-color: #0056b3;
+                border-color: #0056b3;
+            }
         </style>
     </head>
     <body>
         <div class="container">
             <h1>Widget Test Page</h1>
+            
+            <?php if(isset($loggedOutUser)): ?>
+            <div class="alert alert-warning" role="alert">
+                <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> You have been logged out!</h4>
+                <p><strong>Important:</strong> You have been automatically logged out of your Synaplan session to test the widget anonymously.</p>
+                <p>This simulates how anonymous visitors will experience the chat widget on your website.</p>
+                <hr>
+                <p class="mb-0">
+                    <strong>To log back in after testing:</strong><br>
+                    <a href="index.php" class="btn btn-primary btn-sm">
+                        <i class="fas fa-sign-in-alt"></i> Return to Login
+                    </a>
+                </p>
+            </div>
+            <?php endif; ?>
             
             <div class="info">
                 <strong>Widget Configuration:</strong><br>
@@ -61,7 +108,7 @@ $uid = $_REQUEST['uid'] ?? 2; // Default to user ID 1 if not provided
                 Widget ID: <?php echo htmlspecialchars($widgetId); ?>
             </div>
             
-            <p>This page demonstrates the chat widget integration. The widget should appear on this page.</p>
+            <p>This page demonstrates the chat widget integration. The widget should appear on this page and function as an anonymous user would experience it.</p>
             
             <div class="code">
                 <strong>Integration Code Used:</strong><br>
@@ -74,6 +121,17 @@ $uid = $_REQUEST['uid'] ?? 2; // Default to user ID 1 if not provided
                 <li>The widget.php file is accessible</li>
                 <li>No JavaScript errors in the browser console</li>
             </ul>
+            
+            <div class="alert alert-info" role="alert">
+                <h5><i class="fas fa-info-circle"></i> Testing Notes:</h5>
+                <ul class="mb-0">
+                    <li>You are now testing as an <strong>anonymous user</strong></li>
+                    <li>Chat history loading buttons should be hidden</li>
+                    <li>Microphone functionality should be disabled</li>
+                    <li>File uploads are limited to JPG, GIF, PNG, and PDF files</li>
+                    <li>Rate limiting applies to prevent abuse</li>
+                </ul>
+            </div>
         </div>
         
         <!-- Synaplan Chat Widget -->
