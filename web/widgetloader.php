@@ -14,6 +14,33 @@ if ($uid <= 0 || $widgetId < 1 || $widgetId > 9) {
     exit;
 }
 
+// Set anonymous widget session variables
+$_SESSION["is_widget"] = true;
+$_SESSION["widget_owner_id"] = $uid;
+$_SESSION["widget_id"] = $widgetId;
+$_SESSION["anonymous_session_created"] = time(); // Add creation timestamp for timeout validation
+
+// Validate session timeout for existing sessions
+if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+    $sessionTimeout = 86400; // 24 hours
+    $sessionCreated = $_SESSION["anonymous_session_created"] ?? 0;
+    
+    if ((time() - $sessionCreated) > $sessionTimeout) {
+        // Session expired, clear and recreate
+        unset($_SESSION["is_widget"]);
+        unset($_SESSION["widget_owner_id"]);
+        unset($_SESSION["widget_id"]);
+        unset($_SESSION["anonymous_session_id"]);
+        unset($_SESSION["anonymous_session_created"]);
+        
+        // Recreate session
+        $_SESSION["is_widget"] = true;
+        $_SESSION["widget_owner_id"] = $uid;
+        $_SESSION["widget_id"] = $widgetId;
+        $_SESSION["anonymous_session_created"] = time();
+    }
+}
+
 // Get widget configuration from database
 $group = "widget_" . $widgetId;
 $sql = "SELECT BSETTING, BVALUE FROM BCONFIG WHERE BOWNERID = " . $uid . " AND BGROUP = '" . db::EscString($group) . "'";
@@ -36,7 +63,7 @@ $_SESSION['WIDGET_AUTO_MESSAGE'] = $config['autoMessage'];
 
 // Set headers to prevent caching and allow iframe embedding
 header('Content-Type: text/html; charset=utf-8');
-header('X-Frame-Options: SAMEORIGIN');
+header('X-Frame-Options: ALLOWALL'); // Allow cross-origin iframe embedding
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 ?>
@@ -46,6 +73,7 @@ header('Pragma: no-cache');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Widget</title>
+    <base href="<?php echo 'https://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['REQUEST_URI']) . '/'; ?>">
     <style>
         body {
             margin: 0;

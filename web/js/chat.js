@@ -1,3 +1,11 @@
+// Anonymous widget mode detection (set in c_chat.php)
+// When true, restricts functionality for anonymous widget users:
+// - File uploads limited to JPG, GIF, PNG, PDF
+// - Microphone functionality disabled
+// - Chat history loading disabled
+// - Rate limiting applied
+const isAnonymousWidget = typeof isAnonymousWidget !== 'undefined' ? isAnonymousWidget : false;
+
 // Keep track of user-attached files (pasted or manually selected).
 let attachedFiles = [];
 
@@ -14,6 +22,33 @@ const sendButtonMobile = document.getElementById('sendButtonMobile');
 let aiTextBuffer = [];
 // ------------------------------------------------------------
 const loaders = new Map();
+
+// File type validation for anonymous users
+function isFileTypeAllowed(file) {
+    if (!isAnonymousWidget) {
+        return true; // All file types allowed for authenticated users
+    }
+    
+    // Anonymous users can only upload: JPG, GIF, PNG, PDF
+    const allowedTypes = [
+        'image/jpeg',
+        'image/jpg', 
+        'image/gif',
+        'image/png',
+        'application/pdf'
+    ];
+    
+    const allowedExtensions = ['.jpg', '.jpeg', '.gif', '.png', '.pdf'];
+    
+    // Check MIME type
+    if (allowedTypes.includes(file.type)) {
+        return true;
+    }
+    
+    // Check file extension as fallback
+    const fileName = file.name.toLowerCase();
+    return allowedExtensions.some(ext => fileName.endsWith(ext));
+}
 
 function startWaitingLoader(parentId) {
     //console.log('startWaitingLoader', parentId);
@@ -78,7 +113,14 @@ manualFileSelect.addEventListener('click', () => {
 // 1) Manually selected files
 fileInput.addEventListener('change', () => {
   for (const file of fileInput.files) {
-    attachedFiles.push(file);
+    if (isFileTypeAllowed(file)) {
+      attachedFiles.push(file);
+    } else {
+      // Show error for disallowed file types
+      if (isAnonymousWidget) {
+        alert('Anonymous users can only upload JPG, GIF, PNG, and PDF files.');
+      }
+    }
   }
   updateFilePreview();
 });
@@ -92,8 +134,15 @@ messageInput.addEventListener('paste', (event) => {
     if (item.kind === 'file') {
       const file = item.getAsFile();
       if (file) {
-        attachedFiles.push(file);
-        didPasteFile = true;
+        if (isFileTypeAllowed(file)) {
+          attachedFiles.push(file);
+          didPasteFile = true;
+        } else {
+          // Show error for disallowed file types
+          if (isAnonymousWidget) {
+            alert('Anonymous users can only upload JPG, GIF, PNG, and PDF files.');
+          }
+        }
       }
     }
   }
@@ -306,11 +355,30 @@ function handleSendMessage() {
       body: formData
     })
     .then(res => {
-      if (!res.ok) throw new Error('Network response was not ok');
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error('Authentication required. Please refresh the page.');
+        } else if (res.status === 429) {
+          throw new Error('Rate limit exceeded. Please wait a moment before sending another message.');
+        } else {
+          throw new Error('Network response was not ok');
+        }
+      }
       return res.json();
     })
     .then(data => {
       console.log('Server response:', data);
+      if (data.error) {
+        // Handle API errors
+        if (data.error.includes('Rate limit exceeded')) {
+          alert('Rate limit exceeded. Please wait a moment before sending another message.');
+        } else if (data.error.includes('Invalid anonymous widget session')) {
+          alert('Session expired. Please refresh the page.');
+        } else {
+          alert('Error: ' + data.error);
+        }
+        return;
+      }
       if (data.success) {
         // Clear out the form for demonstration
         data.message = data.message.replace(/\\\"/g, '"');
@@ -391,6 +459,18 @@ function handleSendMessage() {
     })
     .catch(err => {
       console.error(err);
+      // Handle specific error messages for anonymous users
+      if (isAnonymousWidget) {
+        if (err.message.includes('Authentication required')) {
+          alert('Session expired. Please refresh the page to continue.');
+        } else if (err.message.includes('Rate limit exceeded')) {
+          alert('Rate limit exceeded. Please wait a moment before sending another message.');
+        } else {
+          alert('Connection error. Please try again.');
+        }
+      } else {
+        alert('Error: ' + err.message);
+      }
       // Don't reset file upload section on error - let user retry with same files
     });
     

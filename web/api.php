@@ -45,6 +45,131 @@ if ($isJsonRpc) {
 header('Content-Type: application/json; charset=UTF-8');
 $apiAction = $_REQUEST['action'];
 
+// ------------------------------------------------------ RATE LIMITING FUNCTION --------------------
+/**
+ * Check rate limit for API requests
+ * 
+ * @param string $key Rate limit key (usually user ID or session ID)
+ * @param int $window Time window in seconds
+ * @param int $maxRequests Maximum requests allowed in the time window
+ * @return array Array with 'allowed' boolean and 'retry_after' seconds
+ */
+function checkRateLimit($key, $window, $maxRequests) {
+    $currentTime = time();
+    $rateLimitKey = 'rate_limit_' . $key;
+    
+    // Get current rate limit data from session
+    if (!isset($_SESSION[$rateLimitKey])) {
+        $_SESSION[$rateLimitKey] = [
+            'count' => 0,
+            'window_start' => $currentTime
+        ];
+    }
+    
+    $rateData = $_SESSION[$rateLimitKey];
+    
+    // Check if we're in a new time window
+    if ($currentTime - $rateData['window_start'] >= $window) {
+        // Reset for new window
+        $_SESSION[$rateLimitKey] = [
+            'count' => 1,
+            'window_start' => $currentTime
+        ];
+        return ['allowed' => true, 'retry_after' => 0];
+    }
+    
+    // Check if we're within limits
+    if ($rateData['count'] < $maxRequests) {
+        // Increment count
+        $_SESSION[$rateLimitKey]['count']++;
+        return ['allowed' => true, 'retry_after' => 0];
+    }
+    
+    // Rate limit exceeded
+    $retryAfter = $window - ($currentTime - $rateData['window_start']);
+    return ['allowed' => false, 'retry_after' => $retryAfter];
+}
+
+// ------------------------------------------------------ API AUTHENTICATION & RATE LIMITING --------------------
+// Check if this is an anonymous widget session
+$isAnonymousWidget = isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true;
+
+// Define which endpoints are allowed for anonymous widget users
+$anonymousAllowedEndpoints = [
+    'messageNew',
+    'chatStream',
+    'getMessageFiles'
+];
+
+// Define which endpoints require authenticated user sessions
+$authenticatedOnlyEndpoints = [
+    'ragUpload',
+    'docSum',
+    'promptLoad',
+    'promptUpdate',
+    'deletePrompt',
+    'getPromptDetails',
+    'getFileGroups',
+    'changeGroupOfFile',
+    'getProfile',
+    'loadChatHistory',
+    'getWidgets',
+    'saveWidget',
+    'deleteWidget'
+];
+
+// Check authentication for the requested action
+if (in_array($apiAction, $authenticatedOnlyEndpoints)) {
+    // These endpoints require authenticated user sessions
+    if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Authentication required for this endpoint']);
+        exit;
+    }
+} elseif (in_array($apiAction, $anonymousAllowedEndpoints)) {
+    // These endpoints allow anonymous widget sessions
+    if ($isAnonymousWidget) {
+            // Validate anonymous widget session
+    if (!isset($_SESSION["widget_owner_id"]) || !isset($_SESSION["widget_id"]) || !isset($_SESSION["anonymous_session_id"])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Invalid anonymous widget session']);
+        exit;
+    }
+    
+    // Check session timeout
+    if (!Frontend::validateAnonymousSession()) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Anonymous session expired. Please refresh the page.']);
+        exit;
+    }
+        
+        // Implement rate limiting for anonymous users
+        $rateLimitKey = 'anonymous_widget_' . $_SESSION["widget_owner_id"] . '_' . $_SESSION["widget_id"];
+        $rateLimitResult = checkRateLimit($rateLimitKey, 60, 30); // 30 requests per minute
+        
+        if (!$rateLimitResult['allowed']) {
+            http_response_code(429);
+            echo json_encode([
+                'error' => 'Rate limit exceeded',
+                'retry_after' => $rateLimitResult['retry_after']
+            ]);
+            exit;
+        }
+    } else {
+        // Regular authenticated user session required
+        if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Authentication required']);
+            exit;
+        }
+    }
+} else {
+    // Unknown endpoint
+    http_response_code(404);
+    echo json_encode(['error' => 'Endpoint not found']);
+    exit;
+}
+
 // ------------------------------------------------------ API OPTIONS --------------------
 // Take form post of user message and files and save to database
 // give back tracking ID of the message

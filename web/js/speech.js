@@ -71,6 +71,8 @@ function speech(myText) {
 }
 // -----------------------------
 $(document).ready(function() {
-    // button inits
-    initSpeechButton("speakButton");
+    // button inits - only for authenticated users
+    if (typeof isAnonymousWidget === 'undefined' || !isAnonymousWidget) {
+        initSpeechButton("speakButton");
+    }
 });

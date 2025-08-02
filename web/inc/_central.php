@@ -271,6 +271,27 @@ class Central {
         }
         return false;
     }
+
+    /**
+     * Check MIME types for anonymous widget users (restricted file types)
+     * 
+     * @param string $extension File extension
+     * @param string $mimeType MIME type
+     * @return bool True if file type is allowed for anonymous users
+     */
+    public static function checkMimeTypesForAnonymous($extension, $mimeType): bool {
+        $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'gif'];
+        $allowedMimeTypes = [
+            'application/pdf',
+            'image/jpeg',
+            'image/png',
+            'image/gif'
+        ];
+        if(in_array($extension, $allowedExtensions) OR in_array($mimeType, $allowedMimeTypes)) {
+            return true;
+        }
+        return false;
+    }
     // language by the browser settings
     public static function getLanguageByBrowser(): string {
         if (!isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
@@ -696,7 +717,24 @@ class Central {
     // get the message thread up to 15 messages back
     public static function getThread($arrMsg, $timeSeconds = 86400): array|string|bool {
         $arrThread = [];
-        $getSQL = "select * from BMESSAGES where BUSERID = ".$arrMsg['BUSERID']." and BUNIXTIMES < ".$arrMsg['BUNIXTIMES']." and BUNIXTIMES > ".($arrMsg['BUNIXTIMES']-$timeSeconds)." order by BID desc limit 5";
+        
+        // Handle anonymous widget sessions
+        if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+            // For anonymous widget sessions, use BTRACKID to get messages from the same session
+            if (isset($_SESSION["anonymous_session_id"])) {
+                $trackingHash = $_SESSION["anonymous_session_id"];
+                $numericTrackId = crc32($trackingHash);
+                
+                $getSQL = "select * from BMESSAGES where BUSERID = ".$arrMsg['BUSERID']." and BTRACKID = ".$numericTrackId." and BUNIXTIMES < ".$arrMsg['BUNIXTIMES']." and BUNIXTIMES > ".($arrMsg['BUNIXTIMES']-$timeSeconds)." order by BID desc limit 5";
+            } else {
+                // Fallback to regular query if no session ID
+                $getSQL = "select * from BMESSAGES where BUSERID = ".$arrMsg['BUSERID']." and BUNIXTIMES < ".$arrMsg['BUNIXTIMES']." and BUNIXTIMES > ".($arrMsg['BUNIXTIMES']-$timeSeconds)." order by BID desc limit 5";
+            }
+        } else {
+            // Regular user sessions
+            $getSQL = "select * from BMESSAGES where BUSERID = ".$arrMsg['BUSERID']." and BUNIXTIMES < ".$arrMsg['BUNIXTIMES']." and BUNIXTIMES > ".($arrMsg['BUNIXTIMES']-$timeSeconds)." order by BID desc limit 5";
+        }
+        
         $res = db::Query($getSQL);
 
         while($oneMsg = db::FetchArr($res)) {

@@ -18,6 +18,9 @@
 $isWidgetMode = isset($_SESSION['WIDGET_PROMPT']);
 $widgetPrompt = $_SESSION['WIDGET_PROMPT'] ?? 'general';
 $widgetAutoMessage = $_SESSION['WIDGET_AUTO_MESSAGE'] ?? '';
+
+// Check if this is anonymous widget mode
+$isAnonymousWidget = isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true;
 ?>
 <link rel="stylesheet" href="fa/css/all.min.css">
 <!-- Add highlight.js CSS -->
@@ -65,6 +68,7 @@ $widgetAutoMessage = $_SESSION['WIDGET_AUTO_MESSAGE'] ?? '';
             <div class="chat-messages" id="chatModalBody">
                 <div class="messages-container">
                     <!-- Chat History Loading Buttons -->
+                    <?php if (!$isAnonymousWidget): ?>
                     <div id="chatHistoryButtons" class="py-4">
                         <div class="d-flex justify-content-between">
                             <div class="d-flex gap-3">
@@ -87,6 +91,7 @@ $widgetAutoMessage = $_SESSION['WIDGET_AUTO_MESSAGE'] ?? '';
                         </div>
                         <small class="text-muted m-2">Click to load chat history</small>
                     </div>
+                    <?php endif; ?>
                     
                     <ul id="chatHistory">
                         <!-- Chat messages will be loaded here via API -->
@@ -132,9 +137,11 @@ $widgetAutoMessage = $_SESSION['WIDGET_AUTO_MESSAGE'] ?? '';
                                     <button type="button" id="attachButton" class="btn btn-light attach-btn">
                                         <i class="fas fa-paperclip text-primary"></i>
                                     </button>
+                                    <?php if (!$isAnonymousWidget): ?>
                                     <button type="button" id="speakButton" class="btn btn-light d-none d-md-flex speak-btn" title="Hold and speak">
                                         <i class="fas fa-microphone text-success"></i>
                                     </button>
+                                    <?php endif; ?>
                                 </div>
 
                                 <!-- Message Input -->
@@ -253,6 +260,9 @@ $widgetAutoMessage = $_SESSION['WIDGET_AUTO_MESSAGE'] ?? '';
     function getCurrentPromptConfig() {
         return currentPromptConfig;
     }
+
+    // Anonymous widget mode detection
+    const isAnonymousWidget = <?php echo $isAnonymousWidget ? 'true' : 'false'; ?>;
 
     // Widget-specific functionality
     <?php if ($isWidgetMode): ?>

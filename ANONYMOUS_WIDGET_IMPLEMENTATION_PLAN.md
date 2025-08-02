@@ -3,6 +3,11 @@
 ## Overview
 This document outlines the implementation steps to enable anonymous usage of the chat widget from external domains, where users can interact with the chat without being logged into the synaplan system.
 
+## Process
+
+I have various steps for you. I will post them here, step by step and push you forward. Do not try to be faster than my prompts.
+There are 7 steps following. Do 1 step and then ask for instructions to the next, please.
+
 ## Current System Analysis
 
 ### Current Widget Flow
@@ -14,16 +19,16 @@ This document outlines the implementation steps to enable anonymous usage of the
 
 ### Key Issues for Anonymous Usage
 1. No session management for anonymous users
-2. All database operations require `BUSERID` from `$_SESSION["USERPROFILE"]["BID"]`
+2. All database operations require a user id to store the message in BMESSAGES (BUSERID) set from `$_SESSION["USERPROFILE"]["BID"]`
 3. File uploads are stored in user-specific directories
 4. Chat history and message processing require authenticated user context
 5. No mechanism to distinguish between authenticated and anonymous sessions
 
 ## Implementation Steps
 
-### Phase 1: Session Management for Anonymous Users
+## Step 1: Session Management for Anonymous Users
 
-#### Step 1.1: Modify widgetloader.php
+### Step 1.1: Modify widgetloader.php
 - **File**: `web/widgetloader.php`
 - **Changes**:
   - Add session variable `$_SESSION["is_widget"] = true` when widget is loaded
@@ -32,7 +37,7 @@ This document outlines the implementation steps to enable anonymous usage of the
   - Set base href correctly for CSS/JS resources in iframe context
   - Ensure proper headers for cross-origin iframe embedding
 
-#### Step 1.2: Create Anonymous User Session Handler
+### Step 1.2: Create Anonymous User Session Handler
 - **File**: `web/inc/_frontend.php` (new method)
 - **Method**: `setAnonymousWidgetSession($ownerId, $widgetId)`
 - **Purpose**: Create temporary session for anonymous widget users
@@ -42,41 +47,33 @@ This document outlines the implementation steps to enable anonymous usage of the
   - Set `$_SESSION["is_widget"] = true`
   - Set `$_SESSION["anonymous_session_id"] = unique_id`
   - Do NOT set `$_SESSION["USERPROFILE"]` to prevent login access
+  - Save the messages as the widget owner
 
-### Phase 2: Database Schema Updates
+### Step 2: Database Schema Updates
 
-#### Step 2.1: Create Anonymous User Records
+#### Step 2.1: Do not create temporary users
 - **Table**: `BUSER`
-- **Approach**: Create system-level anonymous user records
+- **Approach**: Implement an anonymous posting of support requests
 - **Implementation**:
-  - Create special user records with `BINTYPE = 'ANON'` for anonymous users
-  - Use `BUSERDETAILS` JSON to store widget owner ID and session info
-  - Generate unique anonymous user IDs (e.g., negative numbers or special prefix)
-  - Store widget configuration reference in user details
+  - Prepend "WEBWIDGET: " in the ProcessMethods::saveAnswwerToDB() method before BTEXT
+  - Set a unique tracking ID in BTRACKID for that session for that user to avoid cross-loading of parallel chats
+  - Set the tracking ID for the session and reference it, if the anonymous user continues to chat in the Thread loading: Central::getThread(), use a switch by is_widget session setting. Check in @BUSER.sql file in db-loadfiles, if the tracking ID column is allowing 32 chars
 
-#### Step 2.2: Update Message Storage for Anonymous Users
-- **Table**: `BMESSAGES`
-- **Changes**:
-  - Allow `BUSERID` to reference anonymous user records
-  - Add metadata to track widget owner in `BMESSAGEMETA` table
-  - Store widget session information for message grouping
-
-### Phase 3: API and Backend Modifications
+### Step 3: API and Backend Modifications
 
 #### Step 3.1: Update Frontend::saveWebMessages()
 - **File**: `web/inc/_frontend.php`
 - **Changes**:
   - Check for `$_SESSION["is_widget"]` flag
   - If widget mode and no `$_SESSION["USERPROFILE"]`, use anonymous user ID
-  - Create anonymous user record if needed
-  - Store messages with anonymous user ID but link to widget owner
-  - Limit file uploads to JPG, GIF, PNG, PDF only for anonymous users
-  - Store files in anonymous-specific directory structure
+  - Store messages with anonymous settings but link to widget owner in BUSERID
+  - Limit file uploads to JPG, GIF, PNG, PDF only for anonymous users, use the session switch
+  - Store the files in the user directory, but set the grouping default to "WIDGET" in the BRAG table (vectorization)
 
 #### Step 3.2: Update Frontend::getLatestChats()
 - **File**: `web/inc/_frontend.php`
 - **Changes**:
-  - Handle anonymous user chat history retrieval
+  - Handle anonymous user chat history retrieval, use the tracking ID mentioned earlier (BTRACKID)
   - Filter messages by anonymous session ID
   - Group messages by widget session rather than user session
 
@@ -90,7 +87,7 @@ This document outlines the implementation steps to enable anonymous usage of the
 #### Step 3.4: Update API Authentication
 - **File**: `web/api.php`
 - **Changes**:
-  - Add anonymous session validation
+  - Add anonymous session validation (webwidget calls with ID and owner reference)
   - Allow API calls for anonymous widget users
   - Implement session-based rate limiting for anonymous users
   - Prevent anonymous users from accessing authenticated-only endpoints
@@ -102,7 +99,7 @@ This document outlines the implementation steps to enable anonymous usage of the
 - **Changes**:
   - Detect anonymous widget mode using `$_SESSION["is_widget"]`
   - Hide authenticated-only features (microphone, prompt dropdown)
-  - Simplify interface for anonymous users
+  - Simplify interface for anonymous users with simple if/then blocks to hide complex features
   - Use widget-specific prompt configuration
   - Ensure proper base href for resources
 
@@ -210,13 +207,6 @@ This document outlines the implementation steps to enable anonymous usage of the
 
 ## Database Changes Required
 
-### New Anonymous User Records
-```sql
--- Create anonymous user template
-INSERT INTO BUSER (BID, BCREATED, BINTYPE, BMAIL, BPW, BPROVIDERID, BUSERLEVEL, BUSERDETAILS)
-VALUES (-1, NOW(), 'ANON', 'anonymous@widget', '', 'WIDGET', 'ANON', '{"widget_owner_id": 0, "session_type": "anonymous"}');
-```
-
 ### Message Metadata for Widget Tracking
 ```sql
 -- Add widget tracking to message metadata
@@ -229,7 +219,7 @@ VALUES (message_id, 'WIDGET_OWNER', owner_id);
 ### Widget Owner Configuration
 - Widget owners must have valid user accounts
 - Widget configuration stored in `BCONFIG` table
-- Prompt configuration must be accessible to anonymous users
+- Prompt configuration must be loadable to anonymous users
 - File upload limits and restrictions configurable per widget
 
 ### System Configuration

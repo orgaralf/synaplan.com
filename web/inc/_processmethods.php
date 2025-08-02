@@ -635,6 +635,25 @@ class ProcessMethods {
         $aiAnswer['BDIRECT'] = 'OUT';
         $aiAnswer['BSTATUS'] = '';
 
+        // Handle anonymous widget messages
+        if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+            // Prepend "WEBWIDGET: " to BTEXT for anonymous widget messages
+            if (isset($aiAnswer['BTEXT'])) {
+                $aiAnswer['BTEXT'] = "WEBWIDGET: " . $aiAnswer['BTEXT'];
+            }
+            
+            // Use widget owner ID as BUSERID
+            $aiAnswer['BUSERID'] = $_SESSION["widget_owner_id"];
+            
+            // Create unique tracking ID for anonymous session
+            if (isset($_SESSION["anonymous_session_id"])) {
+                // Convert MD5 hash to numeric value for BTRACKID (bigint)
+                $trackingHash = $_SESSION["anonymous_session_id"];
+                $numericTrackId = crc32($trackingHash); // Convert to 32-bit integer
+                $aiAnswer['BTRACKID'] = $numericTrackId;
+            }
+        }
+
         // Process complex HTML in BTEXT before saving
         /*
         if (isset($aiAnswer['BTEXT'])) {

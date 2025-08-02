@@ -85,10 +85,29 @@ Class Frontend {
      */
     public static function getLatestChats($myLimit = 10, $myOrder = "DESC") {
         $chatArr = [];
-        $userId = $_SESSION["USERPROFILE"]["BID"];
         
-        // Get messages with a larger limit to account for potential grouping
-        $cSQL = "SELECT * FROM BMESSAGES WHERE BUSERID = ".$userId." ORDER BY BID DESC LIMIT ".($myLimit);
+        // Handle anonymous widget sessions
+        if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+            // Use widget owner ID for anonymous sessions
+            $userId = $_SESSION["widget_owner_id"];
+            
+            // For anonymous widget sessions, filter by BTRACKID to get only messages from this session
+            if (isset($_SESSION["anonymous_session_id"])) {
+                $trackingHash = $_SESSION["anonymous_session_id"];
+                $numericTrackId = crc32($trackingHash);
+                
+                $cSQL = "SELECT * FROM BMESSAGES WHERE BUSERID = ".$userId." AND BTRACKID = ".$numericTrackId." ORDER BY BID DESC LIMIT ".($myLimit);
+            } else {
+                // Fallback to regular query if no session ID
+                $cSQL = "SELECT * FROM BMESSAGES WHERE BUSERID = ".$userId." ORDER BY BID DESC LIMIT ".($myLimit);
+            }
+        } else {
+            // Regular authenticated user sessions
+            $userId = $_SESSION["USERPROFILE"]["BID"];
+            
+            // Get messages with a larger limit to account for potential grouping
+            $cSQL = "SELECT * FROM BMESSAGES WHERE BUSERID = ".$userId." ORDER BY BID DESC LIMIT ".($myLimit);
+        }
         $cRes = DB::Query($cSQL);
         $allMessages = [];
         while($cArr = DB::FetchArr($cRes)) {
@@ -173,7 +192,15 @@ Class Frontend {
     // ****************************************************************************************************** 
     public static function getMessageFiles($messageId) {
         $files = [];
-        $userId = $_SESSION["USERPROFILE"]["BID"];
+        
+        // Handle anonymous widget sessions
+        if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+            // Use widget owner ID for anonymous sessions
+            $userId = $_SESSION["widget_owner_id"];
+        } else {
+            // Regular authenticated user sessions
+            $userId = $_SESSION["USERPROFILE"]["BID"];
+        }
         
         // First get the original message to find its track ID and timestamp
         $msgSQL = "SELECT * FROM BMESSAGES WHERE BUSERID = ".$userId." AND BID = ".intval($messageId);
@@ -216,14 +243,32 @@ Class Frontend {
         $retArr = ["error" => "", "lastIds" => [], "success" => false];
         $lastInsertsId = [];
         $inMessageArr = [];
-        $userId = $_SESSION["USERPROFILE"]["BID"];
+        
+        // Handle anonymous widget sessions
+        if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+            // Use widget owner ID for anonymous sessions
+            $userId = $_SESSION["widget_owner_id"];
+            
+            // Create unique tracking ID for anonymous session
+            if (isset($_SESSION["anonymous_session_id"])) {
+                $trackingHash = $_SESSION["anonymous_session_id"];
+                $numericTrackId = crc32($trackingHash);
+                $inMessageArr['BTRACKID'] = $numericTrackId;
+            } else {
+                $inMessageArr['BTRACKID'] = (int) (microtime(true) * 1000000);
+            }
+        } else {
+            // Regular authenticated user sessions
+            $userId = $_SESSION["USERPROFILE"]["BID"];
+            $inMessageArr['BTRACKID'] = (int) (microtime(true) * 1000000);
+        }
+        
         $fileCount = 0;
         // take the files uploaded into a new array
         $filesArr = [];
         
         $inMessageArr['BUNIXTIMES'] = time();
         $inMessageArr['BDATETIME'] = (string) date("YmdHis");
-        $inMessageArr['BTRACKID'] = (int) (microtime(true) * 1000000);
 
         // Handle file uploads if any
         if(!empty($_FILES['files'])) {
@@ -244,7 +289,17 @@ Class Frontend {
                 $fileType = mime_content_type($tmpName);
                 $fileExtension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
-                if(Central::checkMimeTypes($fileExtension, $fileType)) {
+                // Use appropriate MIME type checking based on session type
+                $mimeTypeAllowed = false;
+                if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+                    // Anonymous widget users have restricted file types
+                    $mimeTypeAllowed = Central::checkMimeTypesForAnonymous($fileExtension, $fileType);
+                } else {
+                    // Regular authenticated users have full file type access
+                    $mimeTypeAllowed = Central::checkMimeTypes($fileExtension, $fileType);
+                }
+
+                if($mimeTypeAllowed) {
                     // Zielpfad 
                     $userRelPath = substr($userId, -5, 3) . '/' . substr($userId, -2, 2) . '/' . date("Ym") . '/';
                     $fullUploadDir = __DIR__ . '/../up/' . $userRelPath;
@@ -270,7 +325,7 @@ Class Frontend {
             }
         }
         // fill for sorting first
-        $inMessageArr['BUSERID'] = $_SESSION["USERPROFILE"]["BID"];
+        $inMessageArr['BUSERID'] = $userId;
        
         $cleanPost = Tools::turnURLencodedIntoUTF8($_REQUEST['message']);
         $inMessageArr['BTEXT'] = DB::EscString(trim(strip_tags($cleanPost)));
@@ -333,6 +388,25 @@ Class Frontend {
             XSControl::countBytes($inMessageArr, 'FILE', false);
             // set the prompt id
             $metaRes = Central::handlePromptIdForMessage($inMessageArr);
+            
+            // Process RAG for anonymous widget users with "WIDGET" group key
+            if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true && $file['BFILE'] == 1) {
+                $ragFilesArr = [
+                    [
+                        'BID' => $resArr['lastId'],
+                        'BFILEPATH' => $file['BFILEPATH'],
+                        'BFILETYPE' => $file['BFILETYPE'],
+                        'BTEXT' => 'Widget file: ' . basename($file['BFILEPATH'])
+                    ]
+                ];
+                
+                // Process with "WIDGET" group key for anonymous widget users
+                $ragResult = Central::processRAGFiles($ragFilesArr, $userId, 'WIDGET', false);
+                
+                if($GLOBALS["debug"]) {
+                    error_log("Anonymous widget RAG processing result: " . print_r($ragResult, true));
+                }
+            }
         }
         // --
         $retArr['message'] = $inMessageArr['BTEXT'];
@@ -355,10 +429,25 @@ Class Frontend {
      */
     public static function saveRAGFiles(): array {
         $retArr = ["error" => "", "success" => false, "processedFiles" => []];
-        $userId = $_SESSION["USERPROFILE"]["BID"];
         
-        // Get the group key from POST data
-        $groupKey = isset($_REQUEST['groupKey']) ? trim(db::EscString($_REQUEST['groupKey'])) : 'DEFAULT';
+        // Handle anonymous widget sessions
+        if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+            // Use widget owner ID for anonymous sessions
+            $userId = $_SESSION["widget_owner_id"];
+        } else {
+            // Regular authenticated user sessions
+            $userId = $_SESSION["USERPROFILE"]["BID"];
+        }
+        
+        // Get the group key from POST data or use default based on session type
+        $groupKey = 'DEFAULT';
+        if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+            // Anonymous widget users use "WIDGET" as default group key
+            $groupKey = isset($_REQUEST['groupKey']) ? trim(db::EscString($_REQUEST['groupKey'])) : 'WIDGET';
+        } else {
+            // Regular users can specify their own group key
+            $groupKey = isset($_REQUEST['groupKey']) ? trim(db::EscString($_REQUEST['groupKey'])) : 'DEFAULT';
+        }
         
         if(empty($groupKey) || $groupKey === '') {
             $retArr['error'] = "Group key is required";
@@ -385,7 +474,17 @@ Class Frontend {
                 $fileType = mime_content_type($tmpName);
                 $fileExtension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
-                if(Central::checkMimeTypes($fileExtension, $fileType)) {
+                // Use appropriate MIME type checking based on session type
+                $mimeTypeAllowed = false;
+                if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+                    // Anonymous widget users have restricted file types
+                    $mimeTypeAllowed = Central::checkMimeTypesForAnonymous($fileExtension, $fileType);
+                } else {
+                    // Regular authenticated users have full file type access
+                    $mimeTypeAllowed = Central::checkMimeTypes($fileExtension, $fileType);
+                }
+
+                if($mimeTypeAllowed) {
                     // Create file path
                     $userRelPath = substr($userId, -5, 3) . '/' . substr($userId, -2, 2) . '/' . date("Ym") . '/';
                     $fullUploadDir = __DIR__ . '/../up/' . $userRelPath;
@@ -464,7 +563,14 @@ Class Frontend {
      * @return array Empty array (output is sent directly to client)
      */
     public static function chatStream(): array {
-        $userId = $_SESSION["USERPROFILE"]["BID"];
+        // Handle anonymous widget sessions
+        if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+            // Use widget owner ID for anonymous sessions
+            $userId = $_SESSION["widget_owner_id"];
+        } else {
+            // Regular authenticated user sessions
+            $userId = $_SESSION["USERPROFILE"]["BID"];
+        }
         $fileCount = 0;
         // ------------------------------------------------------------
         header('Content-Type: text/event-stream');
@@ -970,5 +1076,63 @@ Class Frontend {
         $retArr["success"] = true;
         $retArr["message"] = "Widget deleted successfully";
         return $retArr;
+    }
+    
+    /**
+     * Set anonymous widget session
+     * 
+     * Creates a temporary session for anonymous widget users
+     * 
+     * @param int $ownerId The widget owner's user ID
+     * @param int $widgetId The widget ID
+     * @return bool True if session was set successfully, false otherwise
+     */
+    public static function setAnonymousWidgetSession($ownerId, $widgetId): bool {
+        // Validate parameters
+        if ($ownerId <= 0 || $widgetId < 1 || $widgetId > 9) {
+            return false;
+        }
+        
+        // Generate unique anonymous session ID (shorter MD5 hash for DB storage)
+        $anonymousSessionId = md5('anon_' . uniqid() . '_' . time());
+        
+        // Set widget session variables
+        $_SESSION["is_widget"] = true;
+        $_SESSION["widget_owner_id"] = intval($ownerId);
+        $_SESSION["widget_id"] = intval($widgetId);
+        $_SESSION["anonymous_session_id"] = $anonymousSessionId;
+        $_SESSION["anonymous_session_created"] = time(); // Add creation timestamp
+        
+        // Do NOT set $_SESSION["USERPROFILE"] to prevent login access
+        // Messages will be saved as the widget owner
+        
+        return true;
+    }
+    
+    /**
+     * Validate anonymous widget session timeout
+     * 
+     * @return bool True if session is still valid, false if expired
+     */
+    public static function validateAnonymousSession(): bool {
+        if (!isset($_SESSION["is_widget"]) || $_SESSION["is_widget"] !== true) {
+            return false;
+        }
+        
+        // Check if session was created more than 24 hours ago (86400 seconds)
+        $sessionTimeout = 86400; // 24 hours
+        $sessionCreated = $_SESSION["anonymous_session_created"] ?? 0;
+        
+        if ((time() - $sessionCreated) > $sessionTimeout) {
+            // Session expired, clear anonymous session data
+            unset($_SESSION["is_widget"]);
+            unset($_SESSION["widget_owner_id"]);
+            unset($_SESSION["widget_id"]);
+            unset($_SESSION["anonymous_session_id"]);
+            unset($_SESSION["anonymous_session_created"]);
+            return false;
+        }
+        
+        return true;
     }
 }	
