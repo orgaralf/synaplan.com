@@ -356,8 +356,26 @@ class ProcessMethods {
                 Frontend::statusToStream(self::$msgId, 'pre', 'Calling standard '.$AIGENERAL.'. ');
             }
             $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, self::$threadArr, self::$stream);
-            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $AIGENERAL, self::$stream);
-            XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $GLOBALS["AI_CHAT"]["MODEL"], self::$stream);
+            
+            // Get the actual model used from the AI response
+            $usedModel = $GLOBALS["AI_CHAT"]["MODEL"]; // Default fallback
+            $usedService = $AIGENERAL; // Default fallback
+            
+            if (is_array($answerSorted)) {
+                if (isset($answerSorted['_USED_MODEL'])) {
+                    $usedModel = $answerSorted['_USED_MODEL'];
+                    // Remove the internal fields from the response
+                    unset($answerSorted['_USED_MODEL']);
+                }
+                if (isset($answerSorted['_AI_SERVICE'])) {
+                    $usedService = $answerSorted['_AI_SERVICE'];
+                    // Remove the internal fields from the response
+                    unset($answerSorted['_AI_SERVICE']);
+                }
+            }
+            
+            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $usedService, self::$stream);
+            XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $usedModel, self::$stream);
             $previousCall = true;
         } else {
             if(self::$stream) {
@@ -373,9 +391,27 @@ class ProcessMethods {
             if(self::$stream) {
                 Frontend::statusToStream(self::$msgId, 'pre', 'Modifying prompt with '.$AIGENERAL.'. ');
             }
-            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $AIGENERAL, self::$stream);
-
             $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, [], false);
+            
+            // Get the actual model used from the AI response
+            $usedModel = $GLOBALS["AI_CHAT"]["MODEL"]; // Default fallback
+            $usedService = $AIGENERAL; // Default fallback
+            
+            if (is_array($answerSorted)) {
+                if (isset($answerSorted['_USED_MODEL'])) {
+                    $usedModel = $answerSorted['_USED_MODEL'];
+                    // Remove the internal fields from the response
+                    unset($answerSorted['_USED_MODEL']);
+                }
+                if (isset($answerSorted['_AI_SERVICE'])) {
+                    $usedService = $answerSorted['_AI_SERVICE'];
+                    // Remove the internal fields from the response
+                    unset($answerSorted['_AI_SERVICE']);
+                }
+            }
+            
+            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $usedService, self::$stream);
+            XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $usedModel, self::$stream);
             $previousCall = true;
 
             // DEBUG: Log the raw response for troubleshooting

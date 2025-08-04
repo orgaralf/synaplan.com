@@ -47,8 +47,11 @@ class AIGoogle {
         // Get prompts from BasicAI
         $systemPrompt = BasicAI::getAprompt('tools:sort');
         
+        // Get the model from configuration
+        $myModel = $GLOBALS["AI_SORT"]["MODEL"];
+        
         // Prepare the API URL
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-05-06:generateContent?key=" . self::$key;
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/" . $myModel . ":generateContent?key=" . self::$key;
         $headers = [
             'Content-Type: application/json'
         ];
@@ -156,8 +159,17 @@ class AIGoogle {
             // call tools before the prompt is executed!
         }
         
+        // Determine the model to use
+        $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+        if (isset($systemPrompt['SETTINGS']['aiModel']) && $systemPrompt['SETTINGS']['aiModel'] > 0) {
+            $modelArr = BasicAI::getModelDetails(intval($systemPrompt['SETTINGS']['aiModel']));
+            $myModel = $modelArr['BPROVID'];
+        } else {
+            $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+        }
+        
         // Prepare the API URL
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-05-06:generateContent?key=" . self::$key;
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/" . $myModel . ":generateContent?key=" . self::$key;
         $headers = [
             'Content-Type: application/json'
         ];
@@ -227,6 +239,10 @@ class AIGoogle {
                         return "*APItopic Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
                     }    
                 }
+
+                // Add model information to the response
+                $arrAnswer['_USED_MODEL'] = $myModel;
+                $arrAnswer['_AI_SERVICE'] = 'AIGoogle';
 
                 return $arrAnswer;
             } else {
@@ -329,8 +345,11 @@ class AIGoogle {
         
         $base64Image = base64_encode($imageData);
 
+        // Get the model from configuration
+        $myModel = $GLOBALS["AI_PIC2TEXT"]["MODEL"];
+        
         // Prepare the API URL for Gemini Vision
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . self::$key;
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/" . $myModel . ":generateContent?key=" . self::$key;
         $headers = [
             'Content-Type: application/json'
         ];
@@ -455,7 +474,10 @@ class AIGoogle {
         $picPrompt = trim($picPrompt);
 
         if (strlen($picPrompt) > 1) {
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=" . self::$key;
+            // Get the model from configuration
+            $myModel = $GLOBALS["AI_TEXT2PIC"]["MODEL"];
+            
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/" . $myModel . ":generateContent?key=" . self::$key;
             $headers = [
                 'Content-Type: application/json'
             ];
@@ -551,8 +573,11 @@ class AIGoogle {
         $videoPrompt = trim($videoPrompt);
 
         if (strlen($videoPrompt) > 1) {
+            // Get the model from configuration
+            $myModel = $GLOBALS["AI_TEXT2VID"]["MODEL"];
+            
             // Start video generation
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/veo-2.0-generate-001:predictLongRunning?key=" . self::$key;
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/" . $myModel . ":predictLongRunning?key=" . self::$key;
             $headers = [
                 'Content-Type: application/json'
             ];
@@ -823,8 +848,11 @@ class AIGoogle {
             // Encode file content as base64
             $base64Content = base64_encode($fileContent);
 
+            // Get the model from configuration
+            $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+            
             // Prepare the API URL for Gemini
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" . self::$key;
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/" . $myModel . ":generateContent?key=" . self::$key;
             $headers = [
                 'Content-Type: application/json'
             ];
@@ -976,8 +1004,11 @@ class AIGoogle {
      * @return array Response array with success status and result/error
      */
     public static function simplePrompt($systemPrompt, $userPrompt): array {
+        // Get the model from configuration
+        $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+        
         // Prepare the API URL
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-05-06:generateContent?key=" . self::$key;
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/" . $myModel . ":generateContent?key=" . self::$key;
         $headers = [
             'Content-Type: application/json'
         ];

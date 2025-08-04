@@ -406,7 +406,7 @@ class AIOllama {
     public static function embed($text) {
         $vecclient = self::$client;
         $embeds = $vecclient->embed()->create([
-            'model' => 'bge-m3',
+            'model' => $GLOBALS["AI_VECTORIZE"]["MODEL"],
             'input' => [ $text ]
         ]);
         $arrRes = $embeds->toArray();

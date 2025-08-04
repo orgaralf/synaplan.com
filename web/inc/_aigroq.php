@@ -209,6 +209,10 @@ class AIGroq {
             }    
         }
 
+        // Add model information to the response
+        $arrAnswer['_USED_MODEL'] = $myModel;
+        $arrAnswer['_AI_SERVICE'] = 'AIGroq';
+
         return $arrAnswer;
     }
 
@@ -236,7 +240,7 @@ class AIGroq {
         
         try {
             $chat = $client->chat()->completions()->create([
-                'model' => 'llama-3.3-70b-versatile',
+                'model' => $GLOBALS["AI_CHAT"]["MODEL"],
                 'messages' => $arrMessages
             ]);
         } catch (GroqException $err) {
@@ -296,7 +300,7 @@ class AIGroq {
         try {
             $transcription = $client->audio()->transcriptions()->create([
                 'file' => './up/'.$arrMessage['BFILEPATH'],
-                'model' => 'whisper-large-v3',
+                'model' => $GLOBALS["AI_SOUND2TEXT"]["MODEL"],
                 'response_format' => 'text', /* Or 'text', 'json' */
                 /*'language' => 'en', /* ISO 639-1 code (optional but recommended) */
                 /* 'prompt' => 'Audio transcription...' /* (optional) */
@@ -346,7 +350,7 @@ class AIGroq {
 
         try {
             $chat = $client->chat()->completions()->create([
-                'model' => 'llama-3.3-70b-versatile',
+                'model' => $GLOBALS["AI_CHAT"]["MODEL"],
                 'messages' => $arrMessages
             ]);
         } catch (GroqException $err) {
@@ -371,7 +375,7 @@ class AIGroq {
         $arrMessages[] = ['role' => 'user', 'content' => $text];
         
         $chat = $client->chat()->completions()->create([
-            'model' => 'llama-3.3-70b-versatile',
+            'model' => $GLOBALS["AI_SUMMARIZE"]["MODEL"],
             'messages' => $arrMessages
         ]);
         return $chat['choices'][0]['message']['content'];

@@ -255,6 +255,10 @@ class AIOpenAI {
                 $arrAnswer['BFILETYPE'] = '';
                 $arrAnswer['BFILETEXT'] = '';
 
+                // Add model information to the response
+                $arrAnswer['_USED_MODEL'] = $myModel;
+                $arrAnswer['_AI_SERVICE'] = 'AIOpenAI';
+                
                 // avoid double output to the chat window
                 $arrAnswer['ALREADYSHOWN'] = true;
 
@@ -343,6 +347,11 @@ class AIOpenAI {
                         return "*API topic Error - Ralf made a bubu - please mail that to him: * " . $err->getMessage();
                     }    
                 }
+                
+                // Add model information to the response
+                $arrAnswer['_USED_MODEL'] = $myModel;
+                $arrAnswer['_AI_SERVICE'] = 'AIOpenAI';
+                
                 //file_put_contents('up/openai_log_'.(date("His")).'.txt', print_r($chat, true));            
                 return $arrAnswer;
             }
@@ -399,7 +408,7 @@ class AIOpenAI {
         $client = OpenAI::client(self::$key);
 
         $response = $client->audio()->speech([
-            'model' => 'tts-1',
+            'model' => $GLOBALS["AI_TEXT2SOUND"]["MODEL"],
             'input' => $msgArr['BTEXT'],
             'voice' => 'nova',
         ]);
@@ -558,7 +567,7 @@ class AIOpenAI {
         try {
             $transcription = $client->audio()->transcriptions()->create([
                 'file' => './up/'.$arrMessage['BFILEPATH'],
-                'model' => 'whisper-1',
+                'model' => $GLOBALS["AI_SOUND2TEXT"]["MODEL"],
                 'response_format' => 'text'
             ]);
         
@@ -704,7 +713,7 @@ class AIOpenAI {
         try {
             // Step 1: Create the response request
             $responseData = [
-                'model' => 'gpt-4o',
+                'model' => $GLOBALS["AI_CHAT"]["MODEL"],
                 'tools' => [
                     [
                         'type' => 'code_interpreter',

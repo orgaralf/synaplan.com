@@ -184,28 +184,48 @@ class AIAnthropic {
      */
     public static function topicPrompt($msgArr, $threadArr, $stream = false): array|string|bool {
         set_time_limit(3600);
-        
         $systemPrompt = BasicAI::getAprompt($msgArr['BTOPIC'], $msgArr['BLANG'], $msgArr, true);
 
         if(isset($systemPrompt['TOOLS'])) {
             // call tools before the prompt is executed!
         }
 
-        $messages = [
-            ['role' => 'user', 'content' => $systemPrompt['BPROMPT']]
-        ];
+        if ($stream) {
+            $messages = [
+                ['role' => 'user', 'content' => 'You are the Synaplan.com AI assistant. Please answer in the language of the user.']
+            ];
+        } else {
+            $messages = [
+                ['role' => 'user', 'content' => $systemPrompt['BPROMPT']]
+            ];
+        }
 
         // Build message history
         foreach($threadArr as $msg) {
-            $messages[] = ['role' => 'user', 'content' => "[".$msg['BID']."] ".$msg['BTEXT']];
+            $role = 'user';
+            if($msg['BDIRECT'] == 'OUT') {
+                $role = 'assistant';
+            }
+            if ($stream) {
+                $messages[] = ['role' => $role, 'content' => "[".$msg['BDATETIME']."]: ".$msg['BTEXT']];
+            } else {
+                $messages[] = ['role' => 'user', 'content' => "[".$msg['BID']."] ".$msg['BTEXT']];
+            }
         }
 
         // Add current message
-        $msgText = json_encode($msgArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $messages[] = ['role' => 'user', 'content' => $msgText];
+        if($stream) {
+            $msgText = $msgArr['BTEXT'];
+            if(strlen($msgArr['BFILETEXT']) > 1) {
+                $msgText .= "\n\n\n---\n\n\nUser provided a file: ".$msgArr['BFILETYPE'].", saying: '".$msgArr['BFILETEXT']."'\n\n";
+            }
+            $messages[] = ['role' => 'user', 'content' => $msgText];
+        } else {
+            $msgText = json_encode($msgArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $messages[] = ['role' => 'user', 'content' => $msgText];
+        }
         
         // Determine model
-        $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
         if(isset($systemPrompt['SETTINGS'])) {
             foreach($systemPrompt['SETTINGS'] as $setting) {
                 $systemPrompt[$setting['BTOKEN']] = $setting['BVALUE'];
@@ -213,7 +233,11 @@ class AIAnthropic {
             if(isset($systemPrompt['aiModel']) AND intval($systemPrompt['aiModel']) > 0) {
                 $modelArr = BasicAI::getModelDetails(intval($systemPrompt['aiModel']));
                 $myModel = $modelArr['BPROVID'];
+            } else {
+                $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
             }
+        } else {
+            $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
         }
 
         $requestData = [
@@ -269,6 +293,10 @@ class AIAnthropic {
                     return "*API topic Error - JSON decode failed: " . $err->getMessage();
                 }    
             }
+
+            // Add model information to the response
+            $arrAnswer['_USED_MODEL'] = $myModel;
+            $arrAnswer['_AI_SERVICE'] = 'AIAnthropic';
 
             return $arrAnswer;
         }
@@ -342,6 +370,10 @@ class AIAnthropic {
         $arrAnswer['BFILETYPE'] = '';
         $arrAnswer['BFILETEXT'] = '';
 
+        // Add model information to the response
+        $arrAnswer['_USED_MODEL'] = $requestData['model'];
+        $arrAnswer['_AI_SERVICE'] = 'AIAnthropic';
+        
         // avoid double output to the chat window
         $arrAnswer['ALREADYSHOWN'] = true;
 
