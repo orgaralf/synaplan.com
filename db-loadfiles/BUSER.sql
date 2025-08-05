@@ -3,7 +3,7 @@
 --
 -- Host: localhost    Database: synaplan
 -- ------------------------------------------------------
--- Server version	11.7.2-MariaDB-ubu2204-log
+-- Server version	11.7.2-MariaDB-ubu2404
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -37,7 +37,7 @@ CREATE TABLE `BUSER` (
   KEY `BPROVIDERID` (`BPROVIDERID`),
   KEY `BUSERLEVEL` (`BUSERLEVEL`),
   KEY `BMAIL` (`BMAIL`)
-) ENGINE=InnoDB AUTO_INCREMENT=138 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=150 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -47,7 +47,7 @@ CREATE TABLE `BUSER` (
 LOCK TABLES `BUSER` WRITE;
 /*!40000 ALTER TABLE `BUSER` DISABLE KEYS */;
 INSERT INTO `BUSER` VALUES
-(2,'20250123171248','WA','rs@metadist.de','9c2d9bae47d9cc20d000570d770cf366','491754070111','NEW','{\n    \"firstName\": \"Ralf\",\n    \"lastName\": \"Schwoebel\",\n    \"phone\": \"+491754070111\",\n    \"companyName\": \"metadist data management GmbH\",\n    \"vatId\": \"DE301805620\",\n    \"street\": \"Huschberger Str. 12, c\\/o SeedVC\",\n    \"zipCode\": \"40212\",\n    \"city\": \"Düsseldorf\",\n    \"country\": \"DE\",\n    \"language\": \"en\",\n    \"timezone\": \"Europe\\/Berlin\",\n    \"invoiceEmail\": \"rs@metadist.de\"\n}'),
+(2,'20250123171248','WA','rs@metadist.de','9c2d9bae47d9cc20d000570d770cf366','491754070111','NEW','{\n    \"firstName\": \"Ralfs Kram\",\n    \"lastName\": \"Schwöbel\",\n    \"phone\": \"+491754070111\",\n    \"companyName\": \"metadist data management GmbH\",\n    \"vatId\": \"DE301805620\",\n    \"street\": \"Huschberger Str. 12, c\\/o SeedVC\",\n    \"zipCode\": \"40212\",\n    \"city\": \"Düsseldorf\",\n    \"country\": \"DE\",\n    \"language\": \"en\",\n    \"timezone\": \"Europe\\/Berlin\",\n    \"invoiceEmail\": \"rs@metadist.de\"\n}'),
 (78,'20250218164328','MAIL','','','12522461215804672598478fcba98bf0','NEW','{\"MAIL\":\"hodyroff@gmail.com\",\"PHONE\":\"\",\"CREATED\":\"202502181643\"}'),
 (94,'20250222131001','MAIL','','','e7f94c387b57f27fd6ce39fe6c762b7c','NEW','{\"MAIL\":\"rs@orgamail.net\",\"MAILCHECKED\":1,\"PHONE\":\"\",\"CREATED\":\"202502221310\"}'),
 (98,'20250223204553','WA','','','491726950567','NEW','{\"MAIL\":\"\",\"MAILCHECKED\":\"bdee53\",\"PHONE\":\"491726950567\",\"CREATED\":\"202502232045\"}'),
@@ -60,9 +60,12 @@ INSERT INTO `BUSER` VALUES
 (129,'202506011200','MAIL','naverianiana7@gmail.com','471a35e8cd7dc75c56644d905d712e17','manual100','NEW','{\"MAIL\":\"naverianiana7@gmail.com\",\"MAILCHECKED\":1,\"PHONE\":\"\",\"CREATED\":\"20250601\"}'),
 (133,'202506011200','MAIL','poojanethraa@gmail.com','993a264b1ab269b848161c61599e019b','manual101','NEW','{\"MAIL\":\"poojanethraa@gmail.com\",\"MAILCHECKED\":1,\"PHONE\":\"\",\"CREATED\":\"20250601\"}'),
 (134,'202506011200','MAIL','peter.braun@jacobs.com.mt','211b69a696bc30d7dc9add15a7042cec','manual102','NEW','{\"MAIL\":\"peter.braun@jacobs.com.mt\",\"MAILCHECKED\":1,\"PHONE\":\"\",\"CREATED\":\"20250601\"}'),
-(135,'202506011200','MAIL','oliver.braun@jacobs.com.mt','41aa75997e55f61d6b6180240f857d80','manual102','NEW','{\"MAIL\":\"oliver.braun@jacobs.com.mt\",\"MAILCHECKED\":1,\"PHONE\":\"\",\"CREATED\":\"20250601\"}'),
-(136,'202506011200','MAIL','hodyroff@gmail.com','5c5180a22b35e9806897d9f0b7bd252c','manual102','NEW','{\"MAIL\":\"hodyroff@gmail.com\",\"MAILCHECKED\":1,\"PHONE\":\"\",\"CREATED\":\"20250601\"}'),
-(137,'202506011200','MAIL','dev@dominik-schmidt.de','5c5180a22b35e9806897d9f0b7bd252c','manual102','NEW','{\"MAIL\":\"dev@dominik-schmidt.de\",\"MAILCHECKED\":1,\"PHONE\":\"\",\"CREATED\":\"20250601\"}');
+(135,'202506011200','MAIL','oliver.braun@jacobs.com.mt','41aa75997e55f61d6b6180240f857d80','manual102','NEW','{\n    \"firstName\": \"Oliver\",\n    \"lastName\": \"Braun\",\n    \"phone\": \"+35699000002\",\n    \"companyName\": \"\",\n    \"vatId\": \"\",\n    \"street\": \"Queensgate, Forrest Street, Flat 20\",\n    \"zipCode\": \"2030\",\n    \"city\": \"St Julians \",\n    \"country\": \"OTHER\",\n    \"language\": \"de\",\n    \"timezone\": \"Europe\\/Berlin\",\n    \"invoiceEmail\": \"oliver@braun-privat.com\"\n}'),
+(136,'202506011200','MAIL','hodyroff@gmail.com','d17206df55be46078720a26cc3bd7dd1','manual102','NEW','{\"MAIL\":\"hodyroff@gmail.com\",\"MAILCHECKED\":1,\"PHONE\":\"\",\"CREATED\":\"20250601\"}'),
+(137,'202506011200','MAIL','dev@dominik-schmidt.de','5c5180a22b35e9806897d9f0b7bd252c','manual102','NEW','{\"MAIL\":\"dev@dominik-schmidt.de\",\"MAILCHECKED\":1,\"PHONE\":\"\",\"CREATED\":\"20250601\"}'),
+(138,'202506011200','MAIL','eby@alien.de','8830413bf7d173e040faf631d80dbfe3','manual102','NEW','{\"MAIL\":\"eby@alien.de\",\"MAILCHECKED\":1,\"PHONE\":\"\",\"CREATED\":\"20250601\"}'),
+(142,'202506011200','MAIL','dr.nemat@t-online.de','1aebd8cee1b8aff0c91f7dd4384b34c2','manual102','NEW','{\"MAIL\":\"dr.nemat@t-online.de\",\"MAILCHECKED\":1,\"PHONE\":\"\",\"CREATED\":\"20250601\"}'),
+(146,'202506011200','MAIL','jester@arcor.de','9734d1ffe09a6324eadeff1abe323416','manual102','NEW','{\"MAIL\":\"jester@arcor.de\",\"MAILCHECKED\":1,\"PHONE\":\"\",\"CREATED\":\"20250601\"}');
 /*!40000 ALTER TABLE `BUSER` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -75,4 +78,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2025-07-26 13:34:08
+-- Dump completed on 2025-08-05 11:22:36

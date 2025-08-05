@@ -2,6 +2,17 @@
 
 Synaplan is an open-source communication management platform that enables seamless interaction with various AI services through multiple channels. Built with modern PHP and leveraging vector search capabilities, it provides a robust foundation for AI-powered communication.
 
+## Installation
+
+Check out the code to your webdirectory.
+
+Login with
+
+Username: synaplan@synaplan.com
+Password: synaplan
+
+The user is set in the table BUSER.
+
 ## 🌟 Key Features
 
 - **Multi-AI Integration**: Connect with leading AI services:

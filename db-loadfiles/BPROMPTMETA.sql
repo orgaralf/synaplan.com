@@ -3,7 +3,7 @@
 --
 -- Host: localhost    Database: synaplan
 -- ------------------------------------------------------
--- Server version	11.7.2-MariaDB-ubu2204-log
+-- Server version	11.7.2-MariaDB-ubu2404
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -31,7 +31,7 @@ CREATE TABLE `BPROMPTMETA` (
   PRIMARY KEY (`BID`),
   KEY `BPROMPTID` (`BPROMPTID`),
   KEY `BTOKEN` (`BTOKEN`)
-) ENGINE=InnoDB AUTO_INCREMENT=110 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=77 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -70,7 +70,12 @@ INSERT INTO `BPROMPTMETA` VALUES
 (47,141,'tool_internet','0'),
 (48,141,'tool_files','0'),
 (49,141,'tool_screenshot','0'),
-(50,141,'tool_transfer','0');
+(50,141,'tool_transfer','0'),
+(72,144,'aiModel','69'),
+(73,144,'tool_internet','0'),
+(74,144,'tool_files','0'),
+(75,144,'tool_screenshot','0'),
+(76,144,'tool_transfer','0');
 /*!40000 ALTER TABLE `BPROMPTMETA` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -83,4 +88,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2025-07-26 13:34:08
+-- Dump completed on 2025-08-05 11:22:36

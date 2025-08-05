@@ -3,7 +3,7 @@
 --
 -- Host: localhost    Database: synaplan
 -- ------------------------------------------------------
--- Server version	11.7.2-MariaDB-ubu2204-log
+-- Server version	11.7.2-MariaDB-ubu2404
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -33,7 +33,7 @@ CREATE TABLE `BCONFIG` (
   KEY `BOWNERID` (`BOWNERID`),
   KEY `BSETTING` (`BSETTING`),
   KEY `BGROUP` (`BGROUP`)
-) ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -43,15 +43,19 @@ CREATE TABLE `BCONFIG` (
 LOCK TABLES `BCONFIG` WRITE;
 /*!40000 ALTER TABLE `BCONFIG` DISABLE KEYS */;
 INSERT INTO `BCONFIG` VALUES
-(1,0,'DEFAULTMODEL','CHAT','30'),
-(5,0,'DEFAULTMODEL','SORT','9'),
+(1,0,'DEFAULTMODEL','CHAT','57'),
+(5,0,'DEFAULTMODEL','SORT','49'),
 (9,0,'DEFAULTMODEL','SUMMARIZE','9'),
 (13,0,'DEFAULTMODEL','TEXT2PIC','29'),
 (17,0,'DEFAULTMODEL','TEXT2SOUND','41'),
 (21,0,'DEFAULTMODEL','SOUND2TEXT','21'),
 (25,0,'DEFAULTMODEL','PIC2TEXT','17'),
 (29,0,'DEFAULTMODEL','VECTORIZE','13'),
-(33,0,'DEFAULTMODEL','TEXT2VID','45');
+(33,0,'DEFAULTMODEL','TEXT2VID','45'),
+(34,2,'widget_1','color','#007bff'),
+(35,2,'widget_1','position','bottom-right'),
+(36,2,'widget_1','autoMessage','Hello! How can I help you today?'),
+(37,2,'widget_1','prompt','general');
 /*!40000 ALTER TABLE `BCONFIG` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -64,4 +68,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2025-07-26 13:34:07
+-- Dump completed on 2025-08-05 11:22:35
