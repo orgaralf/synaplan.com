@@ -1,0 +1,26 @@
+{
+    "require": {
+        "league/flysystem": "^3.0",
+        "netflie/whatsapp-cloud-api": "^2.2",
+        "phpmailer/phpmailer": "^6.9",
+        "openai-php/client": "^0.13.0",
+        "codewithkyrian/whisper.php": "^1.1",
+        "ardagnsrn/ollama-php": "^1.0",
+        "smalot/pdfparser": "^2.11",
+        "phpoffice/phpword": "^1.3",
+        "phpoffice/phppresentation": "^1.1",
+        "lucianotonet/groq-php": "^0.0.10",
+        "google/apiclient": "^2.18.0",
+        "gemini-api-php/client": "^1.7",
+        "erusev/parsedown": "^1.7"
+    },
+    "scripts": {
+        "pre-autoload-dump": "Google\\Task\\Composer::cleanup"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true,
+            "codewithkyrian/platform-package-installer": true
+        }
+    }
+}

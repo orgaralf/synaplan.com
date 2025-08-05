@@ -1,0 +1,42 @@
+<?php
+require_once($root . '/vendor/autoload.php');
+require_once($root . '/inc/_confsys.php');
+require_once($root . '/inc/_confdb.php');
+require_once($root . '/inc/_confkeys.php');
+require_once($root . '/inc/_confdefaults.php');
+require_once($root . '/inc/_mail.php');
+require_once($root . '/inc/_tools.php');
+// the AI classes
+require_once($root . '/inc/_aiollama.php');
+require_once($root . '/inc/_aigroq.php');
+require_once($root . '/inc/_aianthropic.php');
+require_once($root . '/inc/_aithehive.php');  
+require_once($root . '/inc/_aiopenai.php');
+require_once($root . '/inc/_aigoogle.php');
+// incoming tools
+require_once($root . '/inc/_wasender.php');
+require_once($root . '/inc/_myGMail.php');
+require_once($root . '/inc/_xscontrol.php');
+// frontend tools
+require_once($root . '/inc/_frontend.php');
+// central tool
+require_once($root . '/inc/_central.php');
+// basic ai tools
+require_once($root . '/inc/_basicai.php');
+// Load utility classes
+require_once($root . '/inc/_curler.php');
+require_once($root . '/inc/_listtools.php');
+require_once($root . '/inc/_processmethods.php');
+
+// ----------------------------------------------------- storage path
+// https://flysystem.thephpleague.com/docs/getting-started/
+$appPath = getcwd() . "/";
+$rootPath = getcwd() . "/up/";
+// error_log("rootPath: " . $rootPath);
+
+$adapter = new League\Flysystem\Local\LocalFilesystemAdapter($rootPath);
+$GLOBALS["filesystem"] = new League\Flysystem\Filesystem($adapter, [
+    'visibility' => 'public',
+    'directory_visibility' => 'public'
+]);
+// -----------------------------------------------------

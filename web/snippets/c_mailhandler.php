@@ -1,0 +1,371 @@
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4" id="contentMain">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Mail Handler Configuration</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.href='index.php/chat'">
+                    <i class="fas fa-comments"></i> Chat
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.href='index.php/tools'">
+                    <i class="fas fa-tools"></i> Tools
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <form id="mailhandlerForm" method="POST" action="index.php/mailhandler">
+        <input type="hidden" name="action" id="action" value="updateMailhandler">
+        
+        <!-- Mail Pick Up Config Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-server"></i> Mail Pick Up Config</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <label for="mailServer" class="col-sm-2 col-form-label"><strong>Mail Server:</strong></label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="mailServer" id="mailServer" placeholder="mail.example.com" required>
+                        <div class="form-text">POP3 or IMAP server address</div>
+                    </div>
+                    <label for="mailPort" class="col-sm-2 col-form-label"><strong>Port:</strong></label>
+                    <div class="col-sm-4">
+                        <input type="number" class="form-control" name="mailPort" id="mailPort" placeholder="993" min="1" max="65535" value="993" required>
+                        <div class="form-text">Server port (993 for IMAP SSL, 995 for POP3 SSL)</div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <label for="mailProtocol" class="col-sm-2 col-form-label"><strong>Protocol:</strong></label>
+                    <div class="col-sm-4">
+                        <select class="form-select" name="mailProtocol" id="mailProtocol" required>
+                            <option value="imap">IMAP</option>
+                            <option value="pop3">POP3</option>
+                        </select>
+                        <div class="form-text">Mail protocol to use</div>
+                    </div>
+                    <label for="mailSecurity" class="col-sm-2 col-form-label"><strong>Security:</strong></label>
+                    <div class="col-sm-4">
+                        <select class="form-select" name="mailSecurity" id="mailSecurity" required>
+                            <option value="ssl">SSL/TLS</option>
+                            <option value="tls">STARTTLS</option>
+                            <option value="none">None</option>
+                        </select>
+                        <div class="form-text">Connection security method</div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <label for="mailUsername" class="col-sm-2 col-form-label"><strong>Username:</strong></label>
+                    <div class="col-sm-4">
+                        <input type="email" class="form-control" name="mailUsername" id="mailUsername" placeholder="user@example.com" required>
+                        <div class="form-text">Email address or username for authentication</div>
+                    </div>
+                    <label for="mailPassword" class="col-sm-2 col-form-label"><strong>Password:</strong></label>
+                    <div class="col-sm-4">
+                        <input type="password" class="form-control" name="mailPassword" id="mailPassword" placeholder="Enter password" required>
+                        <div class="form-text">Password for mail account</div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <label for="mailCheckInterval" class="col-sm-2 col-form-label"><strong>Check Interval:</strong></label>
+                    <div class="col-sm-4">
+                        <select class="form-select" name="mailCheckInterval" id="mailCheckInterval" required>
+                            <option value="5">5 minutes</option>
+                            <option value="10" selected>10 minutes</option>
+                            <option value="15">15 minutes</option>
+                            <option value="30">30 minutes</option>
+                            <option value="60">1 hour</option>
+                        </select>
+                        <div class="form-text">How often to check for new emails</div>
+                    </div>
+                    <label for="mailDeleteAfter" class="col-sm-2 col-form-label"><strong>Delete After:</strong></label>
+                    <div class="col-sm-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="mailDeleteAfter" id="mailDeleteAfter">
+                            <label class="form-check-label" for="mailDeleteAfter">
+                                Delete processed emails from server
+                            </label>
+                        </div>
+                        <div class="form-text">Remove emails after processing (POP3 only)</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-sm-10 offset-sm-2">
+                        <button type="button" class="btn btn-outline-primary" onclick="testMailConnection()">
+                            <i class="fas fa-plug"></i> Test Connection
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="showMailHelp()">
+                            <i class="fas fa-question-circle"></i> Connection Help
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mail Departments Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-envelope"></i> Mail Departments</h5>
+                <small class="text-muted">Configure up to 10 target email addresses for forwarding processed emails</small>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Note:</strong> You must set at least one department as DEFAULT. Processed emails will be forwarded to the appropriate department based on content analysis.
+                </div>
+
+                <div id="mailDepartments">
+                    <!-- Department entries will be dynamically added here -->
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="button" class="btn btn-outline-success" onclick="addMailDepartment()" id="addDepartmentBtn">
+                            <i class="fas fa-plus"></i> Add Department
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetMailDepartments()">
+                            <i class="fas fa-refresh"></i> Reset to Default
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="btn-group" role="group" aria-label="Mail handler actions">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="fas fa-save"></i> Save Configuration
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-lg" onclick="loadMailhandlerConfig()">
+                        <i class="fas fa-refresh"></i> Reset Form
+                    </button>
+                    <button type="button" class="btn btn-info btn-lg" onclick="previewMailProcessing()">
+                        <i class="fas fa-eye"></i> Preview Processing
+                    </button>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">Mail handler will automatically process incoming emails and forward them to appropriate departments.</small>
+                </div>
+            </div>
+        </div>
+
+    </form>
+</main>
+
+<script>
+    let departmentCount = 0;
+    const maxDepartments = 10;
+
+    // Load mail handler configuration when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadMailhandlerConfig();
+        addMailDepartment(); // Add first department by default
+    });
+
+    // Function to load current mail handler configuration
+    function loadMailhandlerConfig() {
+        // TODO: Implement API call to load configuration
+        console.log('Loading mail handler configuration...');
+    }
+
+    // Function to add a new mail department
+    function addMailDepartment() {
+        if (departmentCount >= maxDepartments) {
+            alert('Maximum of ' + maxDepartments + ' departments allowed');
+            return;
+        }
+
+        const departmentsContainer = document.getElementById('mailDepartments');
+        const departmentDiv = document.createElement('div');
+        departmentDiv.className = 'department-entry border rounded p-3 mb-3';
+        departmentDiv.id = 'department-' + departmentCount;
+
+        departmentDiv.innerHTML = `
+            <div class="row">
+                <div class="col-sm-5">
+                    <label class="form-label"><strong>Email Address:</strong></label>
+                    <input type="email" class="form-control" name="departmentEmail[]" placeholder="department@example.com" required>
+                </div>
+                <div class="col-sm-5">
+                    <label class="form-label"><strong>Description:</strong></label>
+                    <input type="text" class="form-control" name="departmentDescription[]" placeholder="e.g., Customer Support, Sales, Technical" required>
+                </div>
+                <div class="col-sm-2">
+                    <label class="form-label"><strong>Default:</strong></label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="defaultDepartment" value="${departmentCount}" ${departmentCount === 0 ? 'checked' : ''}>
+                        <label class="form-check-label">Set as default</label>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-12">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeMailDepartment(${departmentCount})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+            </div>
+        `;
+
+        departmentsContainer.appendChild(departmentDiv);
+        departmentCount++;
+
+        // Update add button state
+        updateAddButtonState();
+    }
+
+    // Function to remove a mail department
+    function removeMailDepartment(index) {
+        const departmentDiv = document.getElementById('department-' + index);
+        if (departmentDiv) {
+            departmentDiv.remove();
+            
+            // Reindex remaining departments
+            const departments = document.querySelectorAll('.department-entry');
+            departments.forEach((dept, newIndex) => {
+                dept.id = 'department-' + newIndex;
+                const radio = dept.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.value = newIndex;
+                }
+                const removeBtn = dept.querySelector('button');
+                if (removeBtn) {
+                    removeBtn.onclick = () => removeMailDepartment(newIndex);
+                }
+            });
+            
+            departmentCount--;
+            updateAddButtonState();
+        }
+    }
+
+    // Function to update add button state
+    function updateAddButtonState() {
+        const addBtn = document.getElementById('addDepartmentBtn');
+        if (departmentCount >= maxDepartments) {
+            addBtn.disabled = true;
+            addBtn.innerHTML = '<i class="fas fa-ban"></i> Max Departments Reached';
+        } else {
+            addBtn.disabled = false;
+            addBtn.innerHTML = '<i class="fas fa-plus"></i> Add Department';
+        }
+    }
+
+    // Function to reset mail departments to default
+    function resetMailDepartments() {
+        const departmentsContainer = document.getElementById('mailDepartments');
+        departmentsContainer.innerHTML = '';
+        departmentCount = 0;
+        addMailDepartment(); // Add one default department
+    }
+
+    // Function to test mail connection
+    function testMailConnection() {
+        const server = document.getElementById('mailServer').value;
+        const port = document.getElementById('mailPort').value;
+        const protocol = document.getElementById('mailProtocol').value;
+        const username = document.getElementById('mailUsername').value;
+        const password = document.getElementById('mailPassword').value;
+
+        if (!server || !port || !username || !password) {
+            alert('Please fill in all required mail server fields before testing connection.');
+            return;
+        }
+
+        // TODO: Implement connection test
+        console.log('Testing mail connection...');
+        alert('Connection test feature will be implemented in the backend.');
+    }
+
+    // Function to show mail help
+    function showMailHelp() {
+        const helpText = `
+Common Mail Server Settings:
+
+Gmail IMAP:
+- Server: imap.gmail.com
+- Port: 993
+- Protocol: IMAP
+- Security: SSL/TLS
+
+Outlook/Hotmail IMAP:
+- Server: outlook.office365.com
+- Port: 993
+- Protocol: IMAP
+- Security: SSL/TLS
+
+Yahoo Mail IMAP:
+- Server: imap.mail.yahoo.com
+- Port: 993
+- Protocol: IMAP
+- Security: SSL/TLS
+
+Note: You may need to enable "Less secure app access" or use app-specific passwords for some providers.
+        `;
+        alert(helpText);
+    }
+
+    // Function to preview mail processing
+    function previewMailProcessing() {
+        // TODO: Implement preview functionality
+        console.log('Opening mail processing preview...');
+        alert('Preview feature will show how emails will be processed and forwarded.');
+    }
+
+    // Form validation
+    document.getElementById('mailhandlerForm').addEventListener('submit', function(e) {
+        const defaultDept = document.querySelector('input[name="defaultDepartment"]:checked');
+        if (!defaultDept) {
+            e.preventDefault();
+            alert('Please select a default department.');
+            return;
+        }
+
+        const departments = document.querySelectorAll('input[name="departmentEmail[]"]');
+        let hasValidDepartments = false;
+        departments.forEach(dept => {
+            if (dept.value.trim() !== '') {
+                hasValidDepartments = true;
+            }
+        });
+
+        if (!hasValidDepartments) {
+            e.preventDefault();
+            alert('Please add at least one department.');
+            return;
+        }
+    });
+</script>
+
+<style>
+    .card-header h5 {
+        color: #495057;
+    }
+    .btn-group .btn {
+        min-width: 150px;
+    }
+    .text-muted {
+        font-size: 0.875rem;
+    }
+    .department-entry {
+        background-color: #f8f9fa;
+        border-color: #dee2e6 !important;
+    }
+    .department-entry:hover {
+        background-color: #e9ecef;
+    }
+    .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    .alert-info {
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+        color: #0c5460;
+    }
+</style> 
