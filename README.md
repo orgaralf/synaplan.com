@@ -14,6 +14,10 @@ Synaplan is an open-source communication management platform that enables seamle
 - **Composer** (for PHP dependencies)
 - **Node.js & npm** (for frontend dependencies)
 - **Web server** (Apache/Nginx)
+- **Linux System Tools** (required for audio processing and file operations):
+  - `ffmpeg` (for audio/video file processing)
+  - `curl` (for external API communications)
+  - `wget` (for downloading models and files)
 
 ### Step-by-Step Installation
 
@@ -120,6 +124,23 @@ DB_PASS=synaplan
 
 # Other Configuration
 DEBUG=false
+```
+
+**⚠️ CRITICAL SECURITY WARNING:** The `.env` file contains sensitive information and **MUST NOT** be accessible via web requests. Ensure your web server configuration blocks access to `.env` files:
+
+**Apache (.htaccess):**
+```apache
+<Files ".env">
+    Require all denied
+</Files>
+```
+
+**Nginx:**
+```nginx
+location ~ /\.env {
+    deny all;
+    return 404;
+}
 ```
 
 **Recommended AI Service:** We recommend [Groq.com](https://groq.com) as a cost-effective, super-fast AI service for production use.

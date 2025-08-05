@@ -44,7 +44,7 @@ The Anonymous Widget system allows external websites to embed a chat widget from
 
 2. **Embed Widget**:
    ```html
-   <iframe src="https://synaplan.com/web/widgetloader.php?uid=YOUR_USER_ID&widgetid=1" 
+   <iframe src="https://app.synaplan.com/widgetloader.php?uid=YOUR_USER_ID&widgetid=1" 
            width="400" height="600" 
            frameborder="0">
    </iframe>
