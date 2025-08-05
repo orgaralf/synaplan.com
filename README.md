@@ -2,16 +2,163 @@
 
 Synaplan is an open-source communication management platform that enables seamless interaction with various AI services through multiple channels. Built with modern PHP and leveraging vector search capabilities, it provides a robust foundation for AI-powered communication.
 
-## Installation
+## 🚀 Installation
 
-Check out the code to your webdirectory.
+### Prerequisites
 
-Login with
+- **PHP 8.3+** with the following extensions:
+  - `curl`, `json`, `mysqli` (required)
+  - `memcached` (recommended for session management)
+  - `bcmath`, `bz2`, `gd`, `http`, `imagick` (recommended)
+- **MariaDB 11.7+** (required for vector search capabilities)
+- **Composer** (for PHP dependencies)
+- **Node.js & npm** (for frontend dependencies)
+- **Web server** (Apache/Nginx)
 
-Username: synaplan@synaplan.com
-Password: synaplan
+### Step-by-Step Installation
 
-The user is set in the table BUSER.
+#### 1. Download and Extract
+```bash
+# Clone or download the repository
+git clone https://github.com/your-repo/synaplan.git
+cd synaplan
+```
+
+#### 2. Database Setup
+```sql
+-- Create database and user
+CREATE DATABASE synaplan;
+CREATE USER 'synaplan'@'localhost' IDENTIFIED BY 'synaplan';
+GRANT ALL PRIVILEGES ON synaplan.* TO 'synaplan'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+#### 3. Load Database Schema
+Load all SQL files from the `db-loadfiles/` directory into your MariaDB database. The files can be loaded in any order:
+
+```bash
+# Option 1: Using mysql command line
+mysql -u synaplan -p synaplan < db-loadfiles/*.sql
+
+# Option 2: Using phpMyAdmin or your preferred database tool
+# Import each .sql file from the db-loadfiles/ directory
+```
+
+**Note:** This will create the default user account:
+- **Username:** synaplan@synaplan.com
+- **Password:** synaplan
+
+#### 4. Install Dependencies
+```bash
+# Install PHP dependencies
+cd web/
+composer install
+
+# Install Node.js dependencies
+npm install
+```
+
+#### 5. Configure Web Server
+Point your web server's document root to the `web/` directory.
+
+**Apache Example:**
+```apache
+<VirtualHost *:80>
+    ServerName your-domain.com
+    DocumentRoot /path/to/synaplan/web
+    
+    <Directory /path/to/synaplan/web>
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+```
+
+**Nginx Example:**
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    root /path/to/synaplan/web;
+    index index.php;
+    
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+    
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi_params;
+    }
+}
+```
+
+#### 6. Set File Permissions
+```bash
+# Create upload directory and set permissions
+mkdir -p web/up/
+chmod 755 web/up/
+chown www-data:www-data web/up/  # Adjust user/group as needed
+```
+
+#### 7. Configure Environment
+Create a `.env` file in the `web/` directory with your API keys:
+
+```env
+# AI Service API Keys (configure at least one)
+GROQ_API_KEY=your_groq_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+GOOGLE_GEMINI_API_KEY=your_gemini_api_key_here
+OLLAMA_URL=http://localhost:11434  # If using local Ollama
+
+# Database Configuration (if different from defaults)
+DB_HOST=localhost
+DB_NAME=synaplan
+DB_USER=synaplan
+DB_PASS=synaplan
+
+# Other Configuration
+DEBUG=false
+```
+
+**Recommended AI Service:** We recommend [Groq.com](https://groq.com) as a cost-effective, super-fast AI service for production use.
+
+#### 8. Update Configuration Paths
+If you're not installing in `/wwwroot/synaplan.com/web/`, update the paths in `web/inc/_confsys.php`:
+
+```php
+// Update these values to match your installation path
+$devUrl = "http://localhost/your-path/web/";
+$liveUrl = "https://your-domain.com/";
+```
+
+#### 9. Verify Installation
+1. Point your browser to your installation URL
+2. You should see a login page
+3. Login with the default credentials:
+   - **Username:** synaplan@synaplan.com
+   - **Password:** synaplan
+
+### Troubleshooting
+
+**Common Issues:**
+- **Vector search not working:** Ensure MariaDB 11.7+ is installed
+- **Upload errors:** Check `web/up/` directory permissions
+- **AI services not responding:** Verify API keys in `.env` file
+- **Database connection errors:** Check database credentials and MariaDB service
+
+**For Local Development:**
+- If using Ollama for local AI processing, ensure you have a fast GPU
+- The sorting prompt requires local processing capabilities
+
+### Next Steps
+
+After successful installation:
+1. Change the default password
+2. Configure your preferred AI services
+3. Set up communication channels (WhatsApp, Gmail, etc.)
+4. Customize the web widget for your needs
 
 ## 🌟 Key Features
 
