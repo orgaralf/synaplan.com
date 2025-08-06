@@ -1,7 +1,7 @@
 <?php
 // ------------------------------------------------------ base config
-require_once(__DIR__ . '/inc/_confdb.php');
-require_once(__DIR__ . '/inc/_mail.php');
+$root = __DIR__ . '/';
+require_once($root . 'inc/_coreincludes.php');
 // -------------------------------------------------- LOCAL SERVICES CHECK
 $output = [];
 exec('ps afx', $output);
@@ -11,10 +11,9 @@ $keyfound = false;
 $errors = [];
 
 $keywords = [];
-$keywords[] = 'ollama serve';
 $keywords[] = 'apache2';
 $keywords[] = 'mariadb';
-$keywords[] = 'php-fpm';
+$keywords[] = 'memcached';
 
 foreach ($keywords as $keyword) {
     foreach ($output as $line) {
@@ -62,19 +61,25 @@ $sql = "SELECT COUNT(*) ANZ FROM BMESSAGES WHERE BUNIXTIMES > ".(time()-180);
 $res = DB::query($sql);
 $countArr = DB::FetchArr($res);
 $count = $countArr["ANZ"];
-if($count > 20) {
+if($count > 50) {
     $errors[] = "Incoming messages: ERROR - ".($count)." messages in the last 3 minutes\n";
 } else {
     $errors[] = "Incoming messages: OK - ".($count)." messages in the last 3 minutes\n";
+}
+$myServer = ApiKeys::get("OLLAMA_SERVER");
+$host = 'http://'.$myServer;
+$ollama = file_get_contents($host);
+if(strpos($ollama, 'running') >0 ) {
+    $errors[] = "Ollama: OK - ".$ollama."\n";
+} else {
+    $errors[] = "Ollama: ERROR - ".$ollama."\n";
 }
 ?>
 <html>
     <body>  
         <h1>System Monitor</h1>
-        <pre>
-            <?php
-                print_r($errors);
-            ?>
+        <pre><?php
+                print_r($errors); ?>
         </pre>
     </body>
 </html>
