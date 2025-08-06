@@ -62,9 +62,9 @@ The Docker Compose setup includes the following services:
   - Apache with mod_rewrite enabled
   - Hot-reload for development (volume mounted)
 
-### 2. **db** (MySQL Database)
+### 2. **db** (MariaDB Database)
 - **Port:** 3306
-- **Base Image:** MySQL 8.0
+- **Base Image:** mariadb:11.8.2
 - **Features:**
   - Automatic database initialization with SQL files
   - Persistent data storage
