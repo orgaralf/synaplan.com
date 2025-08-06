@@ -289,14 +289,14 @@
     {
         "@context": "https://schema.org",
         "@type": "Organization",
-        "name": "Synaplan Software UG",
+        "name": "metadist GmbH",
         "url": "https://synaplan.com",
         "logo": "https://synaplan.com/assets/synaplan_logo_ondark.svg",
         "address": {
             "@type": "PostalAddress",
-            "streetAddress": "Belsenstr. 14",
-            "addressLocality": "Dusseldorf",
-            "postalCode": "40545",
+            "streetAddress": "Königsallee 82",
+            "addressLocality": "Düsseldorf",
+            "postalCode": "40212",
             "addressCountry": "DE"
         },
         "contactPoint": {
@@ -491,10 +491,10 @@
                         <li class="mb-2">✓ Full Open Core announced</li>
                         <li class="mb-2">✓ Fair dual license model</li>
                     </ul>
-                    <a href="#waitinglist" class="btn btn-success btn-lg mt-4">Get notified!</a>
+                    <a href="https://github.com/orgaralf/synaplan.com" class="btn btn-success btn-lg mt-4">GitHub</a>
                 </div>
                 <div class="col-lg-6 p-2">
-                    <img src="assets/github_screen.png" style="max-width:90%;">
+                    <a href="https://github.com/orgaralf/synaplan.com" target="_blank"><img src="assets/github_screen.png" style="max-width:90%;"></a>
                 </div>
             </div>
         </section>
@@ -505,18 +505,18 @@
                 <h2 class="text-center mb-5">Imprint / Contact</h2>
                 <div class="col-5">
                     <img src="assets/single_bird.svg" alt="Synaplan" style="max-height:40px;"><BR>
-                    Synaplan Software UG<br>
-                    Belsenstr. 14<br>
-                    40545 Dusseldorf<br>
+                    metadist GmbH<br>
+                    K&ouml;nigsallee 82<br>
+                    40212 Dusseldorf<br>
                     Germany<br>
                 </div>
                 <div class="col-5">
                     CEO: Ralf Schwoebel<br>
                     <br>
                     Registered at Dusseldorf District Court<br>
-                    HRB 109177 - Tax ID: applied for, pending<br>
+                    HRB 101206 - VAT-ID: DE301805620<br>
                     <br>
-                    Phone: + 49 (0)211 90760084<br>
+                    Phone: +49 (0)211 90760084<br>
                     <a href="mailto:team@synaplan.com">team@synaplan.com</a>
                 </div>
             </div>
@@ -526,7 +526,7 @@
     <!-- Footer -->
     <footer class="text-center" role="contentinfo">
         <div class="container">
-            <p>&copy; 2025 Synaplan UG</p>
+            <p>&copy; 2025 metadist GmbH</p>
             <!-- small>Impressum | Datenschutz | Contact</small -->
         </div>
     </footer>
