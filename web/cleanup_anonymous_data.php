@@ -21,8 +21,22 @@ echo "=== Anonymous Widget Data Cleanup ===\n";
 echo "Cutoff date: $cutoffDate\n";
 echo "Retention period: $retentionDays days\n\n";
 
-// 1. Clean up anonymous messages (those with "WEBWIDGET: " prefix)
-echo "1. Cleaning up old anonymous messages...\n";
+// 1. Clean up RAG entries for anonymous widget files FIRST
+echo "1. Cleaning up old anonymous RAG entries...\n";
+
+$deleteRagSQL = "DELETE BRAG FROM BRAG 
+                 INNER JOIN BMESSAGES ON BRAG.BMID = BMESSAGES.BID 
+                 WHERE BRAG.BGROUPKEY = 'WIDGET' 
+                 AND BMESSAGES.BTEXT LIKE 'WEBWIDGET: %'
+                 AND BMESSAGES.BUNIXTIMES < $cutoffTime";
+
+$result = db::Query($deleteRagSQL);
+$deletedRagEntries = db::AffectedRows();
+
+echo "   Deleted $deletedRagEntries anonymous RAG entries\n";
+
+// 2. Clean up anonymous messages (those with "WEBWIDGET: " prefix)
+echo "2. Cleaning up old anonymous messages...\n";
 
 $deleteMessagesSQL = "DELETE FROM BMESSAGES 
                      WHERE BTEXT LIKE 'WEBWIDGET: %' 
@@ -32,19 +46,6 @@ $result = db::Query($deleteMessagesSQL);
 $deletedMessages = db::AffectedRows();
 
 echo "   Deleted $deletedMessages anonymous messages\n";
-
-// 2. Clean up RAG entries for anonymous widget files
-echo "2. Cleaning up old anonymous RAG entries...\n";
-
-$deleteRagSQL = "DELETE BRAG FROM BRAG 
-                 INNER JOIN BMESSAGES ON BRAG.BMID = BMESSAGES.BID 
-                 WHERE BRAG.BGROUPKEY = 'WIDGET' 
-                 AND BMESSAGES.BUNIXTIMES < $cutoffTime";
-
-$result = db::Query($deleteRagSQL);
-$deletedRagEntries = db::AffectedRows();
-
-echo "   Deleted $deletedRagEntries anonymous RAG entries\n";
 
 // 3. Clean up orphaned RAG entries (in case messages were deleted but RAG entries remained)
 echo "3. Cleaning up orphaned RAG entries...\n";
@@ -70,8 +71,8 @@ if (function_exists('session_gc')) {
 $totalDeleted = $deletedMessages + $deletedRagEntries + $deletedOrphanedRag;
 echo "\n=== Cleanup Summary ===\n";
 echo "Total items deleted: $totalDeleted\n";
-echo "Anonymous messages: $deletedMessages\n";
 echo "Anonymous RAG entries: $deletedRagEntries\n";
+echo "Anonymous messages: $deletedMessages\n";
 echo "Orphaned RAG entries: $deletedOrphanedRag\n";
 echo "Cleanup completed at: " . date('Y-m-d H:i:s') . "\n";
 
