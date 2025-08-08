@@ -56,7 +56,7 @@ mysql -u synaplan -p synaplan < db-loadfiles/*.sql
 ```bash
 # Install PHP dependencies
 cd web/
-composer install
+COMPOSER_PROCESS_TIMEOUT=1600 composer install
 
 # Install Node.js dependencies
 npm install
