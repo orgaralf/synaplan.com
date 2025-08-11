@@ -63,11 +63,6 @@ COMPOSER_PROCESS_TIMEOUT=1600 composer install
 # Install Node.js dependencies
 npm install
 ```
-While here, you should also create the upload directory:
-```bash
-mkdir up
-chmod a+rwx up
-```
 
 #### 5. Configure Web Server
 Point your web server's document root to the `web/` directory.
