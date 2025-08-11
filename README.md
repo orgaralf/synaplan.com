@@ -292,9 +292,7 @@ For support, feature requests, or to report issues, please:
 
 ## 🌐 Links
 
-- [Documentation](https://docs.synaplan.com) (coming soon)
-- [Community Forum](https://community.synaplan.com) (coming soon)
-- [API Documentation](https://api.synaplan.com) (coming soon)
+- [Documentation](https://www.synaplan.com/docs.php) (coming soon)
 
 ---
 
