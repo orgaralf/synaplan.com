@@ -88,3 +88,6 @@
 172.19.0.1 - - [12/Aug/2025:10:20:44 +0000] "POST /index.php HTTP/1.1" 200 1587 "http://localhost:8080/index.php" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
 172.19.0.1 - - [12/Aug/2025:10:20:57 +0000] "POST /index.php HTTP/1.1" 200 1587 "http://localhost:8080/index.php" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
 172.19.0.1 - - [12/Aug/2025:10:21:48 +0000] "-" 408 0 "-" "-"
+172.19.0.1 - - [12/Aug/2025:11:52:30 +0000] "GET / HTTP/1.1" 200 1587 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+172.19.0.1 - - [12/Aug/2025:11:52:38 +0000] "POST /index.php HTTP/1.1" 200 1587 "http://localhost:8080/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+172.19.0.1 - - [12/Aug/2025:11:52:56 +0000] "POST /index.php HTTP/1.1" 200 1587 "http://localhost:8080/index.php" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"

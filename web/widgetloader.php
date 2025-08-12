@@ -99,7 +99,7 @@ header('Pragma: no-cache');
         
         .widget-content {
             height: calc(100vh - 60px);
-            overflow: hidden;
+            overflow: auto;
         }
         
         /* Widget-specific chat container adjustments */
