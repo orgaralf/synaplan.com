@@ -42,12 +42,13 @@
                 AI Config
             </a>
             <?php if($contentInc == "ais" || $contentInc == "inbound" || $contentInc == "preprocessor" 
-                || $contentInc == "prompts" || $contentInc == "aimodels" || $contentInc == "outprocessor") { ?>
+                || $contentInc == "prompts" || $contentInc == "aimodels" || $contentInc == "outprocessor" || $contentInc == "apikeys") { ?>
                 <ul class="nav flex-column" style="margin-left: 18px;">
                     <li class="subitem"><a href="index.php/inbound" id="menuPoint1">Inbound</a></li>
                     <li class="subitem"><a href="index.php/aimodels" id="menuPoint4">AI Models</a></li>
                     <li class="subitem"><a href="index.php/prompts" id="menuPoint3">Task Prompts</a></li>
                     <li class="subitem"><a href="index.php/preprocessor" id="menuPoint2">Sorting Prompt</a></li>
+                    <li class="subitem"><a href="index.php/apikeys" id="menuPoint5">API Keys</a></li>
                     <!-- li class="subitem"><a href="index.php/outprocessor">Outbound</a></li -->
                 </ul>
             <?php } ?>
