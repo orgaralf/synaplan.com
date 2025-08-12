@@ -13,6 +13,42 @@ session_start();
 $root = __DIR__ . '/';
 require_once($root . '/inc/_coreincludes.php');
 
+// ----------------------------- Bearer API key authentication (override session if provided)
+function getAuthHeaderValue(): string {
+    $headers = [];
+    if (function_exists('getallheaders')) { $headers = getallheaders(); }
+    $auth = '';
+    if (isset($headers['Authorization'])) { $auth = $headers['Authorization']; }
+    elseif (isset($headers['authorization'])) { $auth = $headers['authorization']; }
+    elseif (isset($_SERVER['HTTP_AUTHORIZATION'])) { $auth = $_SERVER['HTTP_AUTHORIZATION']; }
+    return trim($auth);
+}
+
+$authHeader = getAuthHeaderValue();
+if ($authHeader && stripos($authHeader, 'Bearer ') === 0) {
+    $apiKey = trim(substr($authHeader, 7));
+    if (strlen($apiKey) > 20) {
+        $sql = "SELECT BOWNERID, BID, BSTATUS FROM BAPIKEYS WHERE BKEY = '".DB::EscString($apiKey)."' LIMIT 1";
+        $res = DB::Query($sql);
+        $row = DB::FetchArr($res);
+        if ($row && $row['BSTATUS'] === 'active') {
+            $userRes = DB::Query("SELECT * FROM BUSER WHERE BID = ".intval($row['BOWNERID'])." LIMIT 1");
+            $userArr = DB::FetchArr($userRes);
+            if ($userArr) {
+                $_SESSION['USERPROFILE'] = $userArr;
+                $_SESSION['AUTH_MODE'] = 'api_key';
+                // update last used
+                DB::Query("UPDATE BAPIKEYS SET BLASTUSED = ".time()." WHERE BID = ".intval($row['BID']));
+            }
+        } else {
+            http_response_code(401);
+            header('Content-Type: application/json; charset=UTF-8');
+            echo json_encode(['error' => 'Invalid or inactive API key']);
+            exit;
+        }
+    }
+}
+
 // Check if this is a JSON-RPC request
 $isJsonRpc = false;
 $jsonRpcRequest = null;
@@ -127,7 +163,11 @@ $authenticatedOnlyEndpoints = [
     'loadChatHistory',
     'getWidgets',
     'saveWidget',
-    'deleteWidget'
+    'deleteWidget',
+    'getApiKeys',
+    'createApiKey',
+    'setApiKeyStatus',
+    'deleteApiKey'
 ];
 
 // Check authentication for the requested action
@@ -261,6 +301,18 @@ switch($apiAction) {
         break;
     case 'deleteWidget':
         $resArr = Frontend::deleteWidget();
+        break;
+    case 'getApiKeys':
+        $resArr = Frontend::getApiKeys();
+        break;
+    case 'createApiKey':
+        $resArr = Frontend::createApiKey();
+        break;
+    case 'setApiKeyStatus':
+        $resArr = Frontend::setApiKeyStatus();
+        break;
+    case 'deleteApiKey':
+        $resArr = Frontend::deleteApiKey();
         break;
     default:
         $resArr = ['error' => 'Invalid action'];
