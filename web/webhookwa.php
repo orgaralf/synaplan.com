@@ -304,8 +304,7 @@ function processWAMessage($messageBlock): array {
 }
 
 // media handling
-function downloadMediaInfo(string $mediaId, string $mediaDownloadUrl, string $accessToken): array
-{
+function downloadMediaInfo(string $mediaId, string $mediaDownloadUrl, string $accessToken): array {
     $url = $mediaDownloadUrl . $mediaId;
     $headers = [
         "Authorization: Bearer $accessToken",
@@ -319,8 +318,7 @@ function downloadMediaInfo(string $mediaId, string $mediaDownloadUrl, string $ac
 }
 // create 
 // download the media file with a curl request via shell!
-function downloadMediaFile(array $mediaInfo, string $accessToken): array
-{
+function downloadMediaFile(array $mediaInfo, string $accessToken): array {
     if (!isset($mediaInfo['url'])) {
         throw new Exception('Media URL is missing.');
     }
