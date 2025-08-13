@@ -228,7 +228,8 @@
 
                                 if (!empty($selectedGroup)) {
                                     // Only show files in the selected group
-                                    $sql = "SELECT BMESSAGES.*, BRAG.BGROUPKEY 
+                                    $sql = "SELECT BMESSAGES.*, BRAG.BGROUPKEY, 
+                                            CASE WHEN BRAG.BMID IS NOT NULL THEN 1 ELSE 0 END as hasRAGContent
                                             FROM BMESSAGES
                                             INNER JOIN BRAG ON BRAG.BMID = BMESSAGES.BID
                                             WHERE $where
@@ -237,7 +238,8 @@
                                             LIMIT $offset, $limit";
                                 } else {
                                     // Show all files for the user with group info
-                                    $sql = "SELECT BMESSAGES.*, BRAG.BGROUPKEY 
+                                    $sql = "SELECT BMESSAGES.*, BRAG.BGROUPKEY,
+                                            CASE WHEN BRAG.BMID IS NOT NULL THEN 1 ELSE 0 END as hasRAGContent
                                             FROM BMESSAGES
                                             LEFT JOIN BRAG ON BRAG.BMID = BMESSAGES.BID
                                             WHERE $where
@@ -274,9 +276,15 @@
                                     // Group column
                                     echo "<td>";
                                     if (isset($row['BGROUPKEY']) && $row['BGROUPKEY'] != '') {
-                                        echo '<span class="badge bg-primary" style="cursor: pointer;" onclick="changeFileGroup(' . (int)$row['BID'] . ', \'' . htmlspecialchars($row['BGROUPKEY']) . '\')" title="Click to change group">' . htmlspecialchars($row['BGROUPKEY']) . '</span>';
+                                        if ($row['hasRAGContent']) {
+                                            echo '<span class="badge bg-primary" style="cursor: pointer;" onclick="changeFileGroup(' . (int)$row['BID'] . ', \'' . htmlspecialchars($row['BGROUPKEY']) . '\')" title="Click to change group">' . htmlspecialchars($row['BGROUPKEY']) . '</span>';
+                                        } else {
+                                            echo '<span class="badge bg-primary" style="cursor: default;" title="File not yet processed for RAG">' . htmlspecialchars($row['BGROUPKEY']) . '</span>';
+                                        }
                                     } else {
-                                        echo '<span class="badge bg-secondary" style="cursor: pointer;" onclick="changeFileGroup(' . (int)$row['BID'] . ', \'\')" title="Click to assign group">No Group</span>';
+                                        if ($row['hasRAGContent']) {
+                                            echo '<span class="badge bg-secondary" style="cursor: pointer;" onclick="changeFileGroup(' . (int)$row['BID'] . ', \'\')" title="Click to assign group">No Group</span>';
+                                        }
                                     }
                                     echo "</td>";
                                     echo "<td>";

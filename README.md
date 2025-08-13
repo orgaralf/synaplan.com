@@ -12,7 +12,7 @@ Synaplan is an open-source communication management platform that enables seamle
   - `bcmath`, `bz2`, `gd`, `http`, `imagick` (recommended)
 - **MariaDB 11.7+** (required for vector search capabilities)
 - **Composer** (for PHP dependencies)
-- **Node.js & npm** (for frontend dependencies)
+- **npm (of Node.js)** (for frontend dependencies)
 - **Web server** (Apache/Nginx)
 - **Linux System Tools** (required for audio processing and file operations):
   - `ffmpeg` (for audio/video file processing)
@@ -20,6 +20,8 @@ Synaplan is an open-source communication management platform that enables seamle
   - `wget` (for downloading models and files)
 
 ### Step-by-Step Installation
+
+After installation, synaplan sits in "web/", the "www/" directory is our official website.
 
 #### 1. Download and Extract
 ```bash
@@ -41,14 +43,14 @@ FLUSH PRIVILEGES;
 Load all SQL files from the `db-loadfiles/` directory into your MariaDB database. The files can be loaded in any order:
 
 ```bash
-# Option 1: Using mysql command line
-mysql -u synaplan -p synaplan < db-loadfiles/*.sql
+# Option 1: Using mariadb command line
+mariadb -u synaplan -p synaplan < db-loadfiles/*.sql
 
 # Option 2: Using phpMyAdmin or your preferred database tool
 # Import each .sql file from the db-loadfiles/ directory
 ```
 
-**Note:** This will create the default user account:
+**Note:** This will create the default user account for the web frontend:
 - **Username:** synaplan@synaplan.com
 - **Password:** synaplan
 
@@ -56,7 +58,7 @@ mysql -u synaplan -p synaplan < db-loadfiles/*.sql
 ```bash
 # Install PHP dependencies
 cd web/
-composer install
+COMPOSER_PROCESS_TIMEOUT=1600 composer install
 
 # Install Node.js dependencies
 npm install
@@ -64,6 +66,8 @@ npm install
 
 #### 5. Configure Web Server
 Point your web server's document root to the `web/` directory.
+
+Note the security hint about the ".env" file. Disallow that - how is described below.
 
 **Apache Example:**
 ```apache
@@ -288,9 +292,7 @@ For support, feature requests, or to report issues, please:
 
 ## 🌐 Links
 
-- [Documentation](https://docs.synaplan.com) (coming soon)
-- [Community Forum](https://community.synaplan.com) (coming soon)
-- [API Documentation](https://api.synaplan.com) (coming soon)
+- [Documentation](https://www.synaplan.com/docs.php) (coming soon)
 
 ---
 

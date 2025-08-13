@@ -1135,4 +1135,58 @@ Class Frontend {
         
         return true;
     }
+
+    // ********************************************** API KEY MANAGEMENT **********************************************
+    public static function getApiKeys(): array {
+        $ret = ["success"=>false, "keys"=>[]];
+        if (!isset($_SESSION["USERPROFILE"]["BID"])) return $ret;
+        $uid = intval($_SESSION["USERPROFILE"]["BID"]);
+        $sql = "SELECT BID, BOWNERID, BNAME, CONCAT(SUBSTRING(BKEY,1,12),'...',RIGHT(BKEY,4)) AS BMASKEDKEY, BSTATUS, BCREATED, BLASTUSED FROM BAPIKEYS WHERE BOWNERID = ".$uid." ORDER BY BID DESC";
+        $res = DB::Query($sql);
+        $rows = [];
+        while($row = DB::FetchArr($res)) { $rows[] = $row; }
+        $ret["success"] = true;
+        $ret["keys"] = $rows;
+        return $ret;
+    }
+
+    public static function createApiKey(): array {
+        $ret = ["success"=>false];
+        if (!isset($_SESSION["USERPROFILE"]["BID"])) return $ret;
+        $uid = intval($_SESSION["USERPROFILE"]["BID"]);
+        $name = isset($_REQUEST['name']) ? DB::EscString($_REQUEST['name']) : '';
+        $now = time();
+        $random = bin2hex(random_bytes(24));
+        $key = 'sk_live_' . $random;
+        $ins = "INSERT INTO BAPIKEYS (BOWNERID, BNAME, BKEY, BSTATUS, BCREATED, BLASTUSED) VALUES (".$uid.", '".$name."', '".DB::EscString($key)."', 'active', ".$now.", 0)";
+        DB::Query($ins);
+        $ret["success"] = true;
+        $ret["key"] = $key;
+        return $ret;
+    }
+
+    public static function setApiKeyStatus(): array {
+        $ret = ["success"=>false];
+        if (!isset($_SESSION["USERPROFILE"]["BID"])) return $ret;
+        $uid = intval($_SESSION["USERPROFILE"]["BID"]);
+        $id = isset($_REQUEST['id']) ? intval($_REQUEST['id']) : 0;
+        $status = isset($_REQUEST['status']) ? DB::EscString($_REQUEST['status']) : '';
+        if($id <= 0 || !in_array($status, ['active','paused'])) return $ret;
+        $upd = "UPDATE BAPIKEYS SET BSTATUS='".$status."' WHERE BID = ".$id." AND BOWNERID = ".$uid;
+        DB::Query($upd);
+        $ret["success"] = DB::AffectedRows() ? true : true; // consider true even if unchanged
+        return $ret;
+    }
+
+    public static function deleteApiKey(): array {
+        $ret = ["success"=>false];
+        if (!isset($_SESSION["USERPROFILE"]["BID"])) return $ret;
+        $uid = intval($_SESSION["USERPROFILE"]["BID"]);
+        $id = isset($_REQUEST['id']) ? intval($_REQUEST['id']) : 0;
+        if($id <= 0) return $ret;
+        $del = "DELETE FROM BAPIKEYS WHERE BID = ".$id." AND BOWNERID = ".$uid;
+        DB::Query($del);
+        $ret["success"] = DB::AffectedRows() ? true : true;
+        return $ret;
+    }
 }	
