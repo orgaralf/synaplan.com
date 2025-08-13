@@ -112,7 +112,7 @@ $uid = $_REQUEST['uid'] ?? 2; // Default to user ID 2 if not provided
             
             <div class="code">
                 <strong>Integration Code Used:</strong><br>
-                &lt;script src="web/widget.php?uid=<?php echo htmlspecialchars($uid); ?>&amp;widgetid=<?php echo htmlspecialchars($widgetId); ?>"&gt;&lt;/script&gt;
+                &lt;script src="widget.php?uid=<?php echo htmlspecialchars($uid); ?>&amp;widgetid=<?php echo htmlspecialchars($widgetId); ?>"&gt;&lt;/script&gt;
             </div>
             
             <p>If you don't see the widget, please check:</p>
@@ -138,7 +138,7 @@ $uid = $_REQUEST['uid'] ?? 2; // Default to user ID 2 if not provided
         <script>
         (function() {
             var script = document.createElement('script');
-            script.src = window.location.protocol + '//' + window.location.host + '/synaplan.com'+'/web/widget.php?uid=2&widgetid=1';
+            script.src = 'widget.php?uid=2&widgetid=1';
             script.async = true;
             document.head.appendChild(script);
         })();
