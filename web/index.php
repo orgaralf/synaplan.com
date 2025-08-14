@@ -1,8 +1,15 @@
 <?php
 //==================================================================================
 require_once(__DIR__ . '/vendor/autoload.php');
+require_once(__DIR__ . '/inc/_session_fallback.php');
+
 // ------------------------------------------------------ lang config
-session_start();
+// Use session fallback handler for robust session management
+$sessionStarted = SessionFallback::start();
+if (!$sessionStarted) {
+    error_log("Warning: Failed to start session, continuing without session support");
+}
+
 if(!isset($_SESSION["LANG"])) {
     $_SESSION["LANG"] = "en";
 }
@@ -23,7 +30,7 @@ require_once($root . '/inc/_coreincludes.php');
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Ralfs.AI Dashboard">
     <meta name="author" content="Ralf Schwoebel, based on Bootstrap 5">
-    <meta name="generator" content="Manually crafted by Ralf">
+    <meta name="generator" content="Manually crafted by Ralf, Yusuf and with help from Cursor">
     <title>synaplan - digital thinking</title>
     <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom styles for this template -->
