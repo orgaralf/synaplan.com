@@ -1,14 +1,12 @@
 <?php
 //==================================================================================
+session_start();
+//==================================================================================
+
 require_once(__DIR__ . '/vendor/autoload.php');
-require_once(__DIR__ . '/inc/_session_fallback.php');
 
 // ------------------------------------------------------ lang config
 // Use session fallback handler for robust session management
-$sessionStarted = SessionFallback::start();
-if (!$sessionStarted) {
-    error_log("Warning: Failed to start session, continuing without session support");
-}
 
 if(!isset($_SESSION["LANG"])) {
     $_SESSION["LANG"] = "en";
