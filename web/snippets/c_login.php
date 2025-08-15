@@ -2,8 +2,8 @@
 <main class="col-md-12 ms-sm-auto col-lg-12 px-md-4" id="contentMain">
     <H1><?php _s("Please login", __FILE__, $_SESSION["LANG"]); ?></H1>
     <p>
-        <?php _s("You may login with your email address and password or your WhatsApp phone number and password.", __FILE__, $_SESSION["LANG"]); ?><BR>
-        <?php _s("If you have NOT yet set your password, please send <B>\"/link\"</B> to our AI address (smart@synaplan.com) or the WhatsApp numbers published on the website.", __FILE__, $_SESSION["LANG"]); ?>
+        <?php _s("You may login with your email address and password.", __FILE__, $_SESSION["LANG"]); ?><BR>
+        <?php _s("Registration is free", __FILE__, $_SESSION["LANG"]); ?>: <B><a href="index.php/register"><?php _s("Register", __FILE__, $_SESSION["LANG"]); ?></a></B>
     </p>
     <form action="index.php" method="post">
         <input type="hidden" name="action" value="login">
@@ -17,6 +17,8 @@
         </div>
         <button type="submit" class="btn btn-primary mt-2"><?php _s("Login", __FILE__, $_SESSION["LANG"]); ?></button>
     </form>
+    <BR>
+    <p><?php _s("Forgot your password?", __FILE__, $_SESSION["LANG"]); ?> <B><a href="forgotpw.php"><?php _s("Reset password", __FILE__, $_SESSION["LANG"]); ?></a></B></p>
     <BR>
     <p><?php _s("Go to our homepage for more information: <a href=\"https://www.synaplan.com/\">https://synaplan.com/</a>", __FILE__, $_SESSION["LANG"]); ?></p>
 </main>

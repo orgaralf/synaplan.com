@@ -146,7 +146,8 @@ if ($GLOBALS["debug"]) {
 $anonymousAllowedEndpoints = [
     'messageNew',
     'chatStream',
-    'getMessageFiles'
+    'getMessageFiles',
+    'userRegister'
 ];
 
 // Define which endpoints require authenticated user sessions
@@ -313,6 +314,9 @@ switch($apiAction) {
         break;
     case 'deleteApiKey':
         $resArr = Frontend::deleteApiKey();
+        break;
+    case 'userRegister':
+        $resArr = Frontend::registerNewUser();
         break;
     default:
         $resArr = ['error' => 'Invalid action'];
