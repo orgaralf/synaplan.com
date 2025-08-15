@@ -1,0 +1,25 @@
+{
+  "description": "Accepted client model names and alias resolution to internal provider/model strings",
+  "version": "1.0.0",
+  "default_model": "openai/gpt-4o-mini",
+  "aliases": {
+    "gpt-4": "openai/gpt-4",
+    "gpt-4o": "openai/gpt-4o",
+    "gpt-4o-mini": "openai/gpt-4o-mini",
+    "gpt-3.5-turbo": "openai/gpt-3.5-turbo",
+    "claude-3": "anthropic/claude-3",
+    "llama-70b": "ollama/llama-70b",
+    "llama3-70b": "groq/llama3-70b",
+    "gemini-pro": "google/gemini-pro"
+  },
+  "whitelist": [
+    "openai/gpt-4",
+    "openai/gpt-4o",
+    "openai/gpt-4o-mini",
+    "openai/gpt-3.5-turbo",
+    "anthropic/claude-3",
+    "groq/llama3-70b",
+    "ollama/llama-70b",
+    "google/gemini-pro"
+  ]
+}

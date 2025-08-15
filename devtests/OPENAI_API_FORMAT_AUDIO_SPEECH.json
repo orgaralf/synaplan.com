@@ -1,0 +1,24 @@
+{
+  "description": "OpenAI-compatible Text-to-Speech: request/response schema",
+  "version": "1.0.0",
+  "request": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "TextToSpeechRequest",
+    "type": "object",
+    "required": ["model", "input"],
+    "properties": {
+      "model": { "type": "string" },
+      "input": { "type": "string" },
+      "voice": { "type": "string" },
+      "format": { "type": "string", "enum": ["mp3", "wav", "ogg", "webm"] }
+    }
+  },
+  "response_binary": {
+    "content_type_by_format": {
+      "mp3": "audio/mpeg",
+      "wav": "audio/wav",
+      "ogg": "audio/ogg",
+      "webm": "audio/webm"
+    }
+  }
+}

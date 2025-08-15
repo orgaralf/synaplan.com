@@ -3,6 +3,19 @@
 ## Overview
 This document outlines the plan to add OpenAI-compatible API functionality to the existing synaplan.com API system. The goal is to provide a unified interface that can handle both the current custom API endpoints and new OpenAI-compatible endpoints, while maintaining backward compatibility.
 
+### Specs library (single source of truth)
+Machine-readable specs and templates in `devtests/` to be consumed by the implementation (no direct hard-coding):
+- `OPENAI_API_FORMAT_CHAT_COMPLETIONS.json`
+- `OPENAI_API_ERRORS.json`
+- `OPENAI_API_STREAMING_SSE.md`
+- `OPENAI_API_ROUTING_MAP.json`
+- `OPENAI_API_PROVIDER_INTERFACE.php.stub`
+- `OPENAI_API_RESPONSE_TEMPLATES.json`
+- `OPENAI_API_MODEL_MAPPING.json`
+- `OPENAI_API_CORS_SECURITY.md`
+- `OPENAI_API_TEST_MATRIX.md`
+- `OPENAI_API_IMPLEMENTATION_CHECKLIST.md`
+
 ## Current Architecture Analysis
 
 ### Existing AI Classes
@@ -51,9 +64,9 @@ Examples:
 - **Purpose**: Text generation and conversation
 - **Features**: 
   - Support for all AI providers
-  - Streaming and non-streaming modes
+  - Streaming and non-streaming modes (see `OPENAI_API_STREAMING_SSE.md`)
   - Message history context
-  - Model selection via `model` parameter
+  - Model selection via `model` parameter (see `OPENAI_API_MODEL_MAPPING.json`)
 
 #### B. Audio Transcription (`/v1/audio/transcriptions`)
 - **Method**: POST
@@ -61,7 +74,7 @@ Examples:
 - **Features**:
   - Support for OpenAI Whisper
   - Support for Groq audio transcription
-  - File upload handling
+  - File upload handling (see `OPENAI_API_CORS_SECURITY.md`)
 
 #### C. Image Generation (`/v1/images/generations`)
 - **Method**: POST
@@ -90,34 +103,35 @@ Examples:
 ### 3. Implementation Phases
 
 #### Phase 1: Core Infrastructure
-1. **Create new routing system** in `api.php`
-2. **Implement model parser** to extract provider and model
-3. **Create AI provider factory** to instantiate correct AI class
-4. **Add new endpoint handlers** alongside existing action-based system
+1. Load routing map from `OPENAI_API_ROUTING_MAP.json` in `api.php`
+2. Model parsing and alias resolution from `OPENAI_API_MODEL_MAPPING.json`
+3. Provider factory using `OPENAI_API_PROVIDER_INTERFACE.php.stub`
+4. Error normalization using `OPENAI_API_ERRORS.json`
+5. CORS/preflight and payload limits per `OPENAI_API_CORS_SECURITY.md`
 
 #### Phase 2: Chat Completions
-1. **Implement `/v1/chat/completions` endpoint**
-2. **Add streaming support** for compatible providers
-3. **Handle message formatting** between OpenAI format and internal format
-4. **Add conversation context management**
+1. Implement `/v1/chat/completions` using `OPENAI_API_FORMAT_CHAT_COMPLETIONS.json`
+2. SSE streaming per `OPENAI_API_STREAMING_SSE.md` (normalize provider deltas to OpenAI chunks)
+3. Message/response format conversion using `OPENAI_API_RESPONSE_TEMPLATES.json`
+4. Conversation context management (existing logic)
 
 #### Phase 3: Audio Processing
-1. **Implement `/v1/audio/transcriptions` endpoint**
-2. **Implement `/v1/audio/speech` endpoint**
-3. **Add file upload handling** for audio files
-4. **Support multiple audio formats**
+1. Implement `/v1/audio/transcriptions` (spec to be added as `OPENAI_API_FORMAT_AUDIO_TRANSCRIPTIONS.json`)
+2. Implement `/v1/audio/speech` (spec to be added as `OPENAI_API_FORMAT_AUDIO_SPEECH.json`)
+3. File upload handling per `OPENAI_API_CORS_SECURITY.md`
+4. Support multiple audio formats (enumerated in respective format spec)
 
 #### Phase 4: Image Processing
-1. **Implement `/v1/images/generations` endpoint**
-2. **Add image analysis** to chat completions
-3. **Handle image file uploads** and processing
-4. **Support multiple image formats**
+1. Implement `/v1/images/generations` (spec to be added as `OPENAI_API_FORMAT_IMAGES_GENERATIONS.json`)
+2. Add image analysis to chat via multimodal content parts (see chat format spec)
+3. Handle image uploads per `OPENAI_API_CORS_SECURITY.md`
+4. Support multiple image formats
 
 #### Phase 5: Testing and Optimization
-1. **Comprehensive testing** of all endpoints
-2. **Performance optimization** for streaming
-3. **Error handling** and logging improvements
-4. **Documentation** and examples
+1. Execute `OPENAI_API_TEST_MATRIX.md`
+2. Performance optimization for streaming; tune chunk size per SSE guide
+3. Verify error handling parity per `OPENAI_API_ERRORS.json`
+4. Documentation and examples (reference `OPENAI_API_FORMAT_*` schemas)
 
 ### 4. Technical Implementation Details
 
@@ -214,7 +228,7 @@ $msgArr = [
 // Internal response
 $response = AIOllama::topicPrompt($msgArr, $threadArr, $stream);
 
-// Convert to OpenAI format
+// Convert to OpenAI format (see OPENAI_API_RESPONSE_TEMPLATES.json)
 $openAIResponse = [
     'id' => 'chatcmpl-' . uniqid(),
     'object' => 'chat.completion',
@@ -229,6 +243,11 @@ $openAIResponse = [
             ],
             'finish_reason' => 'stop'
         ]
+    ],
+    'usage' => [
+        'prompt_tokens' => $response['BTOKENS_PROMPT'] ?? 0,
+        'completion_tokens' => $response['BTOKENS_COMPLETION'] ?? 0,
+        'total_tokens' => ($response['BTOKENS_PROMPT'] ?? 0) + ($response['BTOKENS_COMPLETION'] ?? 0)
     ]
 ];
 ```
