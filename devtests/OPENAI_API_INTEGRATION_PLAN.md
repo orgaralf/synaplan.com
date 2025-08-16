@@ -40,6 +40,7 @@ Machine-readable specs and templates in `devtests/` to be consumed by the implem
 - **Audio Transcription**: OpenAI (Whisper), Groq
 - **Text-to-Speech**: OpenAI, Anthropic, Google Gemini
 - **Streaming**: OpenAI, Ollama, Groq support streaming
+- **Video Generation**: Google Gemini only
 
 ## Integration Strategy
 
@@ -56,6 +57,7 @@ Examples:
 - "google/gemini-pro" → Google Gemini
 - "thehive/stable-diffusion" → The Hive
 ```
+These are not the only ones, look at the current list of models in db-loadfiles/BMODELS.sql.
 
 ### 2. New API Endpoints Structure
 
@@ -76,13 +78,20 @@ Examples:
   - Support for Groq audio transcription
   - File upload handling (see `OPENAI_API_CORS_SECURITY.md`)
 
-#### C. Image Generation (`/v1/images/generations`)
+#### C-1. Image Generation (`/v1/images/generations`)
 - **Method**: POST
 - **Purpose**: Generate images from text prompts
 - **Features**:
   - Support for OpenAI DALL-E
   - Support for The Hive Stable Diffusion
   - Configurable image parameters
+
+#### C-2. Video Generation (`/v1/images/generations`)
+- **Method**: POST
+- **Purpose**: Generate short videos from text prompts
+- **Features**:
+  - Support for Google Veo Model
+  - Support for later enhancements with other models
 
 #### D. Image Analysis (`/v1/chat/completions` with image input)
 - **Method**: POST
@@ -121,8 +130,9 @@ Examples:
 3. File upload handling per `OPENAI_API_CORS_SECURITY.md`
 4. Support multiple audio formats (enumerated in respective format spec)
 
-#### Phase 4: Image Processing
+#### Phase 4: Image and Video Processing
 1. Implement `/v1/images/generations` (spec to be added as `OPENAI_API_FORMAT_IMAGES_GENERATIONS.json`)
+   sub-task: add the video implementation - `/v1/images/videos`
 2. Add image analysis to chat via multimodal content parts (see chat format spec)
 3. Handle image uploads per `OPENAI_API_CORS_SECURITY.md`
 4. Support multiple image formats

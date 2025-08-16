@@ -6,6 +6,7 @@
     "POST /v1/audio/transcriptions": "handleAudioTranscriptions",
     "POST /v1/audio/speech": "handleTextToSpeech",
     "POST /v1/images/generations": "handleImageGeneration",
+    "POST /v1/images/videos": "handleVideoGeneration",
     "OPTIONS /v1/*": "handlePreflight"
   }
 }
