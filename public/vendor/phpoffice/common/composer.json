@@ -1,0 +1,36 @@
+{
+    "name": "phpoffice/common",
+    "description": "PHPOffice Common",
+    "keywords": ["PHP","Office","Common","component"],
+    "homepage": "http://phpoffice.github.io",
+    "type": "library",
+    "license": "LGPL-3.0-only",
+    "authors": [
+        {
+            "name": "Mark Baker"
+        },
+        {
+            "name": "Franck Lefevre",
+            "homepage": "http://rootslabs.net"
+        }
+    ],
+    "require": {
+        "php": ">=7.1",
+        "pclzip/pclzip": "^2.8"
+    },
+    "require-dev": {
+        "phpunit/phpunit": ">=7",
+        "phpmd/phpmd": "2.*",
+        "phpstan/phpstan": "^0.12.88 || ^1.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "PhpOffice\\Common\\": "src/Common/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PhpOffice\\Common\\Tests\\": "tests/Common/Tests"
+        }
+    }
+}

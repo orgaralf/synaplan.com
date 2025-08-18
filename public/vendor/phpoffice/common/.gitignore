@@ -1,0 +1,7 @@
+## PHPCSFixer
+/.php-cs-fixer.cache
+## PHPUnit
+/.phpunit.result.cache
+## Dependencies
+/composer.lock
+/vendor/

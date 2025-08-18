@@ -1,0 +1,72 @@
+{
+  "name": "gemini-api-php/client",
+  "description": "API client for Google's Gemini API",
+  "keywords": [
+    "php",
+    "client",
+    "sdk",
+    "api",
+    "google",
+    "gemini",
+    "gemini pro",
+    "gemini pro vision",
+    "ai"
+  ],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Erdem Köse",
+      "email": "erdemkose@gmail.com"
+    }
+  ],
+  "require": {
+    "php": "^8.1",
+    "php-http/discovery": "^1.19",
+    "psr/http-client": "^1.0",
+    "psr/http-client-implementation": "*",
+    "psr/http-factory": "^1.0.2",
+    "psr/http-factory-implementation": "*",
+    "psr/http-message": "^1.0.1 || ^2.0"
+  },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.41",
+    "guzzlehttp/guzzle": "^7.8.0",
+    "guzzlehttp/psr7": "^2.0.0",
+    "phpstan/phpstan": "^1.10.50",
+    "phpunit/phpunit": "^10.5"
+  },
+  "suggest": {
+    "ext-curl": "Required for streaming responses"
+  },
+  "autoload": {
+    "psr-4": {
+      "GeminiAPI\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "GeminiAPI\\Tests\\": "tests/"
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "config": {
+    "sort-packages": true,
+    "preferred-install": "dist",
+    "allow-plugins": {
+      "php-http/discovery": false
+    }
+  },
+  "scripts": {
+    "fix:style": "php-cs-fixer fix . -vv",
+    "test:style": "php-cs-fixer check . -vv",
+    "test:types": "phpstan analyse --ansi",
+    "test:unit": "phpunit --testsuite unit",
+    "test:unit-with-coverage": "phpunit --testsuite unit --coverage-text",
+    "test": [
+      "@test:style",
+      "@test:types",
+      "@test:unit"
+    ]
+  }
+}

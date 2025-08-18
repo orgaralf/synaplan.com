@@ -1,0 +1,39 @@
+name: Code Quality
+
+on: ['push']
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        php-version: [8.1]
+
+    name: Code Quality
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Cache dependencies
+        uses: actions/cache@v1
+        with:
+          path: ~/.composer/cache/files
+          key: php-${{ matrix.php-version }}-composer-${{ hashFiles('composer.json') }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer update --no-interaction --prefer-stable --prefer-dist
+
+      - name: Code Style Checks
+        run: composer test:style
+
+      - name: Types Checks
+        run: composer test:types
