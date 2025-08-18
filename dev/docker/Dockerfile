@@ -86,23 +86,6 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy composer files first for better caching
-COPY web/composer.json ./
-
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader
-
-# Copy web directory contents to the document root
-COPY web/ ./
-
-# Set proper permissions for whispermodels
-RUN chown -R www-data:www-data /var/www/html/whispermodels \
-    && chmod -R 755 /var/www/html/whispermodels
-
-# Set proper permissions for the rest of web
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html
-
 # Enable Apache modules
 RUN a2enmod rewrite
 
