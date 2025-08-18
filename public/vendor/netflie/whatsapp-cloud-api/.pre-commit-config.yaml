@@ -1,7 +1,0 @@
-repos:
-  - repo: https://github.com/digitalpulp/pre-commit-php.git
-    rev: 1.4.0
-    hooks:
-    - id: php-cs-fixer
-      files: \.(php)$
-      exclude: ^(vendor)
