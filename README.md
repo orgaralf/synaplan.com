@@ -2,65 +2,82 @@
 
 Synaplan is an open-source platform to orchestrate conversations with multiple AI providers across channels (web, email, WhatsApp), with auditing, usage tracking, and vector search.
 
-### Requirements
-- PHP 8.3+ (extensions: curl, json, mysqli; optional: memcached, bcmath, bz2, gd, http, imagick)
-- MariaDB 11.7+
-- Composer, Node.js/npm
-- Web server (Apache or Nginx)
-- CLI tools: ffmpeg, curl, wget
+## 🚀 Dev Setup
 
-### Quick Start
-1) Clone
+### Prerequisites
+
+- **docker compose**
+- **npm (of Node.js)** (for frontend dependencies)
+
+#### 1. Download source code
 ```bash
-git clone https://github.com/your-repo/synaplan.git
+# Clone or download the repository
+git clone https://github.com/orgaralf/synaplan.com.git synaplan/
 cd synaplan
 ```
 
-2) Database
-```sql
-CREATE DATABASE synaplan;
-CREATE USER 'synaplan'@'localhost' IDENTIFIED BY 'synaplan';
-GRANT ALL PRIVILEGES ON synaplan.* TO 'synaplan'@'localhost';
-FLUSH PRIVILEGES;
-```
-Load schema (any order):
+#### 2. Install dependencies
+
 ```bash
-mariadb -u synaplan -p synaplan < db-loadfiles/*.sql
+docker compose run app composer install
+cd public/
+npm ci
+cd ..
 ```
 
-3) Dependencies
+### 3. Build and start services
+
 ```bash
-cd web
-COMPOSER_PROCESS_TIMEOUT=1600 composer install
-npm install
+docker compose build
+docker compose up -d
 ```
 
-4) Environment
+#### 4. Set File Permissions
 ```bash
-cp .env.example .env
-```
-Edit `web/.env` for DB and API keys (OpenAI, Groq, Gemini, Ollama). Keep it private and block access:
-```apache
-# web/.htaccess
-<Files ".env">Require all denied</Files>
-```
-```nginx
-location ~ /\.env { deny all; return 404; }
+# Create upload directory and set permissions
+mkdir -p public/up/
+chmod 755 public/up/
 ```
 
-5) Web server
-- Point document root to `web/`
-- If paths differ, update `web/inc/_confsys.php` (`$devUrl`, `$liveUrl`)
+#### 5. Configure Environment
+Create a `.env` file in the project root directory with your API keys:
 
-6) Uploads
-```bash
-mkdir -p web/up && chmod 755 web/up
+```env
+# AI Service API Keys (configure at least one)
+GROQ_API_KEY=your_groq_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+GOOGLE_GEMINI_API_KEY=your_gemini_api_key_here
+OLLAMA_URL=http://localhost:11434  # If using local Ollama
+
+# Database Configuration (if different from defaults)
+DB_HOST=localhost
+DB_NAME=synaplan
+DB_USER=synaplan
+DB_PASS=synaplan
+
+# Other Configuration
+DEBUG=false
 ```
 
-7) Login
-- URL: your site root
-- User: `synaplan@synaplan.com`
-- Pass: `synaplan`
+**⚠️ CRITICAL SECURITY WARNING:** The `.env` file contains sensitive information and **MUST NOT** be accessible via web requests in production environments. Ensure your web server configuration blocks access to `.env` files:
+
+**Recommended AI Service:** We recommend [Groq.com](https://groq.com) as a cost-effective, super-fast AI service for production use.
+
+#### 6. Update Configuration Paths
+If you're not installing in `/wwwroot/synaplan.com/web/`, update the paths in `web/inc/_confsys.php`:
+
+```php
+// Update these values to match your installation path
+$devUrl = "http://localhost/your-path/web/";
+$liveUrl = "https://your-domain.com/";
+```
+
+#### 7. Verify Installation
+1. Point your browser to [http://localhost:8080](http://localhost:8080)
+2. You should see a login page
+3. Login with the default credentials:
+   - **Username:** synaplan@synaplan.com
+   - **Password:** synaplan
 
 ### Features
 - Multiple AI providers (OpenAI, Gemini, Groq, Ollama)
