@@ -26,7 +26,7 @@ After installation, synaplan sits in "web/", the "www/" directory is our officia
 #### 1. Download and Extract
 ```bash
 # Clone or download the repository
-git clone https://github.com/your-repo/synaplan.git
+git clone https://github.com/orgaralf/synaplan.com.git
 cd synaplan
 ```
 
