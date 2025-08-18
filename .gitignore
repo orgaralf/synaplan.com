@@ -15,3 +15,6 @@ client_secret_222517592163-eotadpkna5tda1vf9jfopc0madv4fqb0.apps.googleuserconte
 dockerdev/logs/*
 web/whispermodels/large-v3-turbo.pt
 web/whispermodels/medium.pt
+
+public/node_modules/
+public/vendor/

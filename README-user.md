@@ -14,7 +14,7 @@ All while keeping your data secure and your workflows organized. Synaplan also *
 
 ## 2. Meet the Chat Console
 
-![Chat Console Screenshot](#)
+![Chat Console Screenshot](https://www.synaplan.com/assets/member-screen.png)
 
 ### Key Interface Elements:
 - **Chat Area**: Displays your conversation history based on selected time span.
