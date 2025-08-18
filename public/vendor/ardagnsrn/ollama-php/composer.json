@@ -1,0 +1,57 @@
+{
+    "name": "ardagnsrn/ollama-php",
+    "description": "This is a PHP library for Ollama. Ollama is an open-source project that serves as a powerful and user-friendly platform for running LLMs on your local machine. It acts as a bridge between the complexities of LLM technology and the desire for an accessible and customizable AI experience.",
+    "keywords": [
+        "ArdaGnsrn",
+        "ollama-php",
+        "llm",
+        "llama",
+        "ai",
+        "ollama",
+        "gemma2",
+        "llama3.1",
+        "mistral"
+    ],
+    "homepage": "https://github.com/ardagnsrn/ollama-php",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Arda GUNSUREN",
+            "email": "ardagunsuren@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "guzzlehttp/guzzle": "^7.9"
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.0",
+        "laravel/pint": "^1.0",
+        "spatie/ray": "^1.28"
+    },
+    "autoload": {
+        "psr-4": {
+            "ArdaGnsrn\\Ollama\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ArdaGnsrn\\Ollama\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage",
+        "format": "vendor/bin/pint"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

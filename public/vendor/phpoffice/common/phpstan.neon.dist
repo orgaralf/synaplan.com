@@ -1,0 +1,14 @@
+parameters:
+  level: 6
+  bootstrapFiles:
+    - tests/bootstrap.php
+  paths:
+    - src
+    - tests
+  reportUnmatchedIgnoredErrors: false
+  ignoreErrors:
+    # # PHP 8.0 & Attribute
+    - '#^Attribute class PHPUnit\\Framework\\Attributes\\DataProvider does not exist\.#'
+
+  ## Remove after remove ArrayObject
+  treatPhpDocTypesAsCertain: false
