@@ -1,0 +1,35 @@
+{
+  "description": "Canonical OpenAI-style error body and HTTP status mappings",
+  "version": "1.0.0",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "OpenAIStyleError",
+    "type": "object",
+    "required": ["error"],
+    "properties": {
+      "error": {
+        "type": "object",
+        "required": ["message", "type"],
+        "properties": {
+          "message": { "type": "string" },
+          "type": { "type": "string" },
+          "param": { "type": ["string", "null"] },
+          "code": { "type": ["string", "null"] }
+        }
+      }
+    }
+  },
+  "http_status_map": {
+    "invalid_request_error": 400,
+    "authentication_error": 401,
+    "not_found_error": 404,
+    "rate_limit_error": 429,
+    "server_error": 500,
+    "overloaded_error": 503
+  },
+  "templates": {
+    "rate_limit": { "error": { "message": "Rate limit exceeded", "type": "rate_limit_error", "param": null, "code": "rate_limit" } },
+    "auth_missing": { "error": { "message": "Missing or invalid bearer token", "type": "authentication_error", "param": null, "code": "invalid_api_key" } },
+    "not_found": { "error": { "message": "Endpoint not found", "type": "not_found_error", "param": null, "code": "not_found" } }
+  }
+}

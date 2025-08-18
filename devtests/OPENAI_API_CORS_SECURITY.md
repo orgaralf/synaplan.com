@@ -1,0 +1,22 @@
+### CORS and security guidelines for /v1/* endpoints
+
+- CORS:
+  - Allow: configurable origins; default deny `*`
+  - Methods: POST, OPTIONS
+  - Headers: Authorization, Content-Type
+  - Preflight: respond 200 with max-age (e.g., 600s)
+- Auth:
+  - Mandatory Bearer token for all /v1/** (same validator as legacy)
+  - Uniform middleware for legacy and new routes
+- Limits:
+  - JSON body max ~1 MB; multipart max configurable (e.g., 25 MB)
+  - Validate `model` against `OPENAI_API_MODEL_MAPPING.json`
+- Uploads:
+  - Enforce mime sniffing and extension whitelist
+  - Save outside webroot, temporary, with TTL cleanup
+  - Normalize filenames; reject archives and executables
+- Logging:
+  - Generate `x-request-id`; log user, provider, model, duration, token counts
+  - Redact secrets; cap prompt preview (first 100 chars)
+- Rate limiting:
+  - IP + user + provider quotas; emit 429 with Retry-After

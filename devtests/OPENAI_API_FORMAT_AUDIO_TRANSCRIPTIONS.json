@@ -1,0 +1,20 @@
+{
+  "description": "OpenAI-compatible Audio Transcriptions: multipart/form-data request and JSON response schema",
+  "version": "1.0.0",
+  "request_multipart_fields": {
+    "file": { "type": "binary", "required": true, "description": "Audio file contents" },
+    "model": { "type": "string", "required": true },
+    "language": { "type": "string", "required": false },
+    "prompt": { "type": "string", "required": false },
+    "response_format": { "type": "string", "enum": ["json", "text", "srt", "verbose_json", "vtt"], "required": false },
+    "temperature": { "type": "number", "minimum": 0, "maximum": 1, "required": false }
+  },
+  "response": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "AudioTranscriptionResponse",
+    "type": "object",
+    "required": ["text"],
+    "properties": { "text": { "type": "string" } }
+  },
+  "limits": { "max_file_mb": 25, "allowed_mime": ["audio/mpeg", "audio/wav", "audio/mp4", "audio/webm", "audio/ogg"] }
+}

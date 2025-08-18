@@ -1,0 +1,36 @@
+{
+  "description": "OpenAI-compatible Images Generation: request/response schema",
+  "version": "1.0.0",
+  "request": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "ImagesGenerationsRequest",
+    "type": "object",
+    "required": ["model", "prompt"],
+    "properties": {
+      "model": { "type": "string" },
+      "prompt": { "type": "string" },
+      "n": { "type": "integer", "minimum": 1, "maximum": 10 },
+      "size": { "type": "string", "enum": ["256x256", "512x512", "1024x1024"] },
+      "response_format": { "type": "string", "enum": ["url", "b64_json"] }
+    }
+  },
+  "response": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "ImagesGenerationsResponse",
+    "type": "object",
+    "required": ["created", "data"],
+    "properties": {
+      "created": { "type": "integer" },
+      "data": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "url": { "type": "string" },
+            "b64_json": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
