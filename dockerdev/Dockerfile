@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y \
     # Additional whisper.cpp dependencies
     libopenblas-dev \
     liblapack-dev \
-    libatlas-base-dev \
+    #libatlas-base-dev \
     gfortran \
     # FFmpeg and multimedia dependencies
     ffmpeg \
@@ -87,7 +87,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Copy composer files first for better caching
-COPY web/composer.json web/composer.lock ./
+COPY web/composer.json ./
 
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader

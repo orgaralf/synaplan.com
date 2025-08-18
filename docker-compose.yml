@@ -2,14 +2,12 @@ services:
   # PHP Application
   app:
     build:
-      context: ..
       dockerfile: dockerdev/Dockerfile
     container_name: synaplan-app
     ports:
       - "8080:80"
     volumes:
-      - ../web:/var/www/html
-      - ./logs:/var/log/apache2
+      - ./web:/var/www/html
     environment:
       - APP_ENV=development
       - APP_DEBUG=true
@@ -38,14 +36,14 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ../db-loadfiles:/docker-entrypoint-initdb.d
+      - ./db-loadfiles:/docker-entrypoint-initdb.d
     networks:
       - synaplan-network
 
   # Ollama for local AI models
   ollama:
     build:
-      context: .
+      context: dockerdev/
       dockerfile: Dockerfile.ollama
     container_name: synaplan-ollama
     ports:
