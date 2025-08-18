@@ -1,9 +1,6 @@
 # Use PHP 8.3 with Apache
 FROM php:8.3-apache
 
-# Set working directory
-WORKDIR /var/www/html
-
 # Install system dependencies including FFmpeg and whisper.cpp dependencies
 RUN apt-get update && apt-get install -y \
     git \
@@ -53,6 +50,10 @@ RUN apt-get update && apt-get install -y \
     libharfbuzz-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Set working directory
+WORKDIR /var/www/html
+RUN git config --global --add safe.directory /var/www/html
+
 # Install whisper.cpp with proper error handling and dependencies
 RUN cd /tmp && \
     git clone https://github.com/ggerganov/whisper.cpp.git && \
@@ -89,8 +90,10 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Enable Apache modules
 RUN a2enmod rewrite
 
-# Configure Apache for PHP
-RUN echo '<Directory /var/www/html>\n\
+# Configure Apache document root to point to public directory
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf \
+    && sed -i 's|<Directory /var/www/>|<Directory /var/www/html/public>|g' /etc/apache2/apache2.conf \
+    && echo '<Directory /var/www/html/public>\n\
     Options Indexes FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
@@ -124,6 +127,7 @@ RUN echo '<FilesMatch "^\.">\n\
     Require all denied\n\
 </FilesMatch>' > /etc/apache2/conf-available/security-headers.conf \
     && a2enconf security-headers
+
 
 # Expose port 80
 EXPOSE 80

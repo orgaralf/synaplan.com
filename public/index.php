@@ -3,7 +3,7 @@
 session_start();
 //==================================================================================
 
-require_once(__DIR__ . '/vendor/autoload.php');
+require_once(__DIR__ . '/../vendor/autoload.php');
 
 // ------------------------------------------------------ lang config
 // Use session fallback handler for robust session management
