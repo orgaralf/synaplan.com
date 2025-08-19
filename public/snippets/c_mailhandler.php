@@ -58,7 +58,7 @@
                 <div class="row mb-3">
                     <label for="mailUsername" class="col-sm-2 col-form-label"><strong>Username:</strong></label>
                     <div class="col-sm-4">
-                        <input type="email" class="form-control" name="mailUsername" id="mailUsername" placeholder="user@example.com" required>
+                        <input type="text" class="form-control" name="mailUsername" id="mailUsername" placeholder="user@example.com or account123" required>
                         <div class="form-text">Email address or username for authentication</div>
                     </div>
                     <label for="mailPassword" class="col-sm-2 col-form-label"><strong>Password:</strong></label>
@@ -164,6 +164,18 @@
     // Load mail handler configuration when page loads
     document.addEventListener('DOMContentLoaded', function() {
         loadMailhandlerConfig();
+        // warn once if username has no @
+        let warnedUserNoAt = false;
+        const u = document.getElementById('mailUsername');
+        if (u) {
+            u.addEventListener('blur', function() {
+                const val = (u.value || '').trim();
+                if (val && val.indexOf('@') === -1 && !warnedUserNoAt) {
+                    alert('Note: Some servers accept usernames without an @ sign. If your login requires a full email address, include the domain.');
+                    warnedUserNoAt = true;
+                }
+            });
+        }
     });
 
     // Function to load current mail handler configuration
@@ -410,6 +422,8 @@ Note: You may need to enable "Less secure app access" or use app-specific passwo
         e.preventDefault();
         const form = document.getElementById('mailhandlerForm');
         const formData = new FormData(form);
+        // Remove conflicting hidden form action that would override the API query param
+        if (formData.has('action')) { formData.delete('action'); }
         fetch('api.php?action=saveMailhandler', {
             method: 'POST',
             body: formData,
