@@ -26,7 +26,7 @@ echo "Found ".count($users)." user(s) with mail handler configured.\n";
 
 // Example input (development): replace with real fetched emails later
 $exampleSubject = 'Order inquiry for wine delivery';
-$exampleBody = 'Hello, we would like to know the availability of your red wines in large bottles and whether overnight delivery is possible.';
+$exampleBody = 'Hello orga.zone, wie ist das wetter im cyberspace?';
 
 foreach ($users as $uid) {
 	echo "\n---\nUser ID: $uid\n";
