@@ -2,9 +2,6 @@
 //==================================================================================
 session_start();
 //==================================================================================
-
-require_once(__DIR__ . '/../vendor/autoload.php');
-
 // ------------------------------------------------------ lang config
 // Use session fallback handler for robust session management
 
@@ -18,7 +15,8 @@ if(isset($_REQUEST["lang"])) {
 // ------------------------------------------------------ include files
 // core app files with relative paths
 $root = __DIR__ . '/';
-require_once($root . '/inc/_coreincludes.php');
+require_once($root . 'inc/_coreincludes.php');
+
 ?>
 <!doctype html>
 <html lang="en">

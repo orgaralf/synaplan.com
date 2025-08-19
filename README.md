@@ -9,10 +9,12 @@ Synaplan is an open-source platform to orchestrate conversations with multiple A
 - **docker compose**
 - **npm (of Node.js)** (for frontend dependencies)
 
+for a dockerless installation, see below.
+
 #### 1. Download source code
 ```bash
 # Clone or download the repository
-git clone https://github.com/orgaralf/synaplan.com.git synaplan/
+git clone https://github.com/orgaralf/synaplan.git synaplan/
 cd synaplan
 ```
 
@@ -64,11 +66,11 @@ DEBUG=false
 **Recommended AI Service:** We recommend [Groq.com](https://groq.com) as a cost-effective, super-fast AI service for production use.
 
 #### 6. Update Configuration Paths
-If you're not installing in `/wwwroot/synaplan.com/web/`, update the paths in `web/inc/_confsys.php`:
+If you're not installing in `/wwwroot/synaplan/public/`, update the paths in `public/inc/_confsys.php`:
 
 ```php
 // Update these values to match your installation path
-$devUrl = "http://localhost/your-path/web/";
+$devUrl = "http://localhost/your-path/public/";
 $liveUrl = "https://your-domain.com/";
 ```
 
@@ -79,6 +81,31 @@ $liveUrl = "https://your-domain.com/";
    - **Username:** synaplan@synaplan.com
    - **Password:** synaplan
 
+### Install on a standard Linux server (no Docker)
+
+You can also deploy Synaplan on a regular Linux server using Apache, PHP 8.3, and MariaDB 11.7+ (required for vector search). This is ideal when you rely on 3rd‑party AI APIs (OpenAI, Groq, Gemini) instead of local models.
+
+1. Install prerequisites
+   - Apache (or any web server) configured to serve the `public/` directory as the document root
+   - PHP 8.3 with extensions: `mysqli`, `mbstring`, `curl`, `json`, `zip`
+   - MariaDB 11.7+ (for vector search features)
+2. Deploy code
+   - Place the repository on the server and point your vhost to the `public/` directory
+3. Install PHP deps and frontend assets
+   - `composer install`
+   - `cd public && npm ci && cd ..`
+4. Database
+   - Create a database (e.g., `synaplan`) and user
+   - Import SQL files from `dev/db-loadfiles/` into the database
+5. Environment configuration
+   - Create a `.env` in the project root with your API keys and DB settings (see the `.env` example above)
+6. File permissions
+   - Ensure `public/up/` exists with writable permissions for the web server user
+7. App URLs
+   - Adjust `$devUrl` and `$liveUrl` in `public/inc/_confsys.php` to match your domains/paths
+8. Test
+   - Open your site (e.g., `https://your-domain/`) and log in with the default credentials above
+
 ### Features
 - Multiple AI providers (OpenAI, Gemini, Groq, Ollama)
 - Channels: Web widget, Gmail business, WhatsApp
@@ -88,7 +115,7 @@ $liveUrl = "https://your-domain.com/";
 
 ### Architecture (brief)
 ```
-web/
+public/
 ├─ index.php            # Entry
 ├─ snippets/            # UI (routed by snippets/director.php)
 ├─ inc/                 # Business logic & AI integrations
@@ -100,19 +127,17 @@ Configuration-driven AI selection via `$GLOBALS` and centralized key management 
 ### API & Integrations
 - REST endpoints, embeddable web widget, Gmail and WhatsApp integrations.
 
-### Docker
-Docker setup will be simplified and summarized here shortly
-
 ### Troubleshooting
 - Vector search: ensure MariaDB 11.7+
-- Uploads: check `web/up/` permissions
-- AI calls: verify API keys in `web/.env`
+- Uploads: check `public/up/` permissions
+- AI calls: verify API keys in `public/.env`
 - DB errors: verify credentials and service status
+- COMPOSER_PROCESS_TIMEOUT=1600 necessary? Composer times out on slow drives like WSL2 mounted ones.
 
 ### Contributing
 PRs welcome for providers, channels, docs, and performance. Start from `web/`, review `snippets/director.php`, and follow existing patterns.
 
 ### License
-[To be added]
+See "LICENSE": Apache 2.0 real open core, because we love it!
 
 
