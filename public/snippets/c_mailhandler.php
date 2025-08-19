@@ -164,13 +164,79 @@
     // Load mail handler configuration when page loads
     document.addEventListener('DOMContentLoaded', function() {
         loadMailhandlerConfig();
-        addMailDepartment(); // Add first department by default
     });
 
     // Function to load current mail handler configuration
     function loadMailhandlerConfig() {
-        // TODO: Implement API call to load configuration
-        console.log('Loading mail handler configuration...');
+        fetch('api.php?action=getMailhandler', { credentials: 'include' })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) { throw new Error(data.error || 'Failed to load'); }
+                const c = data.config || {};
+                document.getElementById('mailServer').value = c.mailServer || '';
+                document.getElementById('mailPort').value = c.mailPort || '993';
+                document.getElementById('mailProtocol').value = c.mailProtocol || 'imap';
+                document.getElementById('mailSecurity').value = c.mailSecurity || 'ssl';
+                document.getElementById('mailUsername').value = c.mailUsername || '';
+                document.getElementById('mailPassword').value = c.mailPassword || '';
+                document.getElementById('mailCheckInterval').value = c.mailCheckInterval || '10';
+                document.getElementById('mailDeleteAfter').checked = (c.mailDeleteAfter === '1' || c.mailDeleteAfter === 1);
+
+                // departments
+                const departmentsContainer = document.getElementById('mailDepartments');
+                departmentsContainer.innerHTML = '';
+                departmentCount = 0;
+                const depts = Array.isArray(data.departments) ? data.departments : [];
+                if (depts.length === 0) {
+                    addMailDepartment();
+                } else {
+                    depts.forEach((d, idx) => addMailDepartmentPrefill(d.email, d.description, d.isDefault ? idx : -1, idx));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                // ensure one default entry
+                const departmentsContainer = document.getElementById('mailDepartments');
+                if (departmentsContainer.children.length === 0) { addMailDepartment(); }
+            });
+    }
+
+    function addMailDepartmentPrefill(email, description, defaultIdx, currentIdx) {
+        if (departmentCount >= maxDepartments) { return; }
+        const departmentsContainer = document.getElementById('mailDepartments');
+        const departmentDiv = document.createElement('div');
+        departmentDiv.className = 'department-entry border rounded p-3 mb-3';
+        departmentDiv.id = 'department-' + departmentCount;
+        const isDefault = (defaultIdx === currentIdx) ? 'checked' : '';
+        departmentDiv.innerHTML = `
+            <div class="row">
+                <div class="col-sm-5">
+                    <label class="form-label"><strong>Email Address:</strong></label>
+                    <input type="email" class="form-control" name="departmentEmail[]" value="${email || ''}" placeholder="department@example.com" required>
+                </div>
+                <div class="col-sm-5">
+                    <label class="form-label"><strong>Description:</strong></label>
+                    <input type="text" class="form-control" name="departmentDescription[]" value="${description || ''}" placeholder="e.g., Customer Support, Sales, Technical" required>
+                </div>
+                <div class="col-sm-2">
+                    <label class="form-label"><strong>Default:</strong></label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="defaultDepartment" value="${departmentCount}" ${isDefault}>
+                        <label class="form-check-label">Set as default</label>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-12">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeMailDepartment(${departmentCount})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+            </div>
+        `;
+        departmentsContainer.appendChild(departmentDiv);
+        departmentCount++;
+        updateAddButtonState();
     }
 
     // Function to add a new mail department
@@ -339,6 +405,26 @@ Note: You may need to enable "Less secure app access" or use app-specific passwo
             alert('Please add at least one department.');
             return;
         }
+
+        // send via API instead of direct POST navigation
+        e.preventDefault();
+        const form = document.getElementById('mailhandlerForm');
+        const formData = new FormData(form);
+        fetch('api.php?action=saveMailhandler', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        }).then(r => r.json()).then(data => {
+            if (data && data.success) {
+                alert('Configuration saved');
+                loadMailhandlerConfig();
+            } else {
+                alert('Save failed: ' + (data.error || 'Unknown error'));
+            }
+        }).catch(err => {
+            console.error(err);
+            alert('Save failed');
+        });
     });
 </script>
 
