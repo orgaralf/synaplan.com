@@ -35,7 +35,7 @@ if(isset($_SERVER["REQUEST_URI"])) {
 $liveUrl = "https://app.synaplan.com/";
 
 // ----------------------------------------------------- DEV
-$devUrl = "http://localhost/synaplan.com/public/";
+$devUrl = "http://localhost/synaplan/public/";
 $baseUrl = "";
 
 // ----------------------------------------------------- set right url
