@@ -13,7 +13,7 @@ set_time_limit(0);
  . hand over to sending
 */
 //==================================================================================
-require_once(__DIR__ . '/vendor/autoload.php');
+require_once(__DIR__ . '/../vendor/autoload.php');
 
 // ------------------------------------------------------ base config
 require_once(__DIR__ . '/inc/_confkeys.php');

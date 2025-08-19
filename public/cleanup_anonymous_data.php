@@ -9,7 +9,7 @@
  * Recommended: Run daily via cron job
  */
 
-require_once(__DIR__ . '/vendor/autoload.php');
+require_once(__DIR__ . '/../vendor/autoload.php');
 require_once(__DIR__ . '/inc/_coreincludes.php');
 
 // Configuration

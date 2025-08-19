@@ -1,5 +1,5 @@
 <?php
-require_once($root . '/vendor/autoload.php');
+require_once(__DIR__ . '/../../vendor/autoload.php');
 require_once($root . '/inc/_confsys.php');
 require_once($root . '/inc/_confdb.php');
 require_once($root . '/inc/_confkeys.php');

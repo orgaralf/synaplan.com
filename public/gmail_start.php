@@ -1,6 +1,5 @@
 <?php
-// needs to be copied into the web folder
-require 'vendor/autoload.php';
+require_once(__DIR__ . '/../vendor/autoload.php');
 require_once(__DIR__ . '/inc/_oauth.php');
 
 session_start();

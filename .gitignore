@@ -18,3 +18,4 @@ web/whispermodels/medium.pt
 
 public/node_modules/
 public/vendor/
+vendor/
