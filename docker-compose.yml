@@ -2,12 +2,16 @@ services:
   # PHP Application
   app:
     build:
+      context: .
       dockerfile: dev/docker/Dockerfile
     container_name: synaplan-app
     ports:
       - "8080:80"
     volumes:
       - ./:/var/www/html
+      - whisper_models:/var/www/html/inc/whispermodels:ro
+      - vendor:/var/www/html/vendor
+      - node_modules:/var/www/html/public/node_modules
     environment:
       - APP_ENV=development
       - APP_DEBUG=true
@@ -17,8 +21,86 @@ services:
       - DB_PASSWORD=synaplan_password
       - OLLAMA_SERVER=ollama:11434
     depends_on:
-      - db
-      - ollama
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+      whisper-models:
+        condition: service_completed_successfully
+      composer-install:
+        condition: service_completed_successfully
+      npm-install:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - synaplan-network
+
+  # Composer Dependencies Installer
+  composer-install:
+    image: composer:2
+    container_name: synaplan-composer-install
+    working_dir: /var/www/html
+    environment:
+      - COMPOSER_ALLOW_SUPERUSER=1
+      - COMPOSER_PROCESS_TIMEOUT=1600
+    volumes:
+      - ./:/var/www/html
+      - vendor:/var/www/html/vendor
+    command: >
+      sh -c '
+        set -e;
+        echo "Checking Composer dependencies..." &&
+        if [ -f "/var/www/html/vendor/autoload.php" ]; then
+          echo "Composer dependencies already installed, skipping"
+        else
+          echo "Installing Composer dependencies..." &&
+          composer install --prefer-dist --no-interaction
+        fi &&
+        echo "Composer installation completed."
+      '
+    restart: "no"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - synaplan-network
+
+  # NPM Dependencies Installer
+  npm-install:
+    image: node:20-alpine
+    container_name: synaplan-npm-install
+    working_dir: /var/www/html/public
+    volumes:
+      - ./:/var/www/html
+      - node_modules:/var/www/html/public/node_modules
+    command: >
+      sh -c '
+        set -e;
+        echo "Checking NPM dependencies..." &&
+        if [ -d "/var/www/html/public/node_modules" ] && [ "$(ls -A /var/www/html/public/node_modules)" ]; then
+          echo "NPM dependencies already installed, skipping"
+        else
+          echo "Installing NPM dependencies..." &&
+          npm ci --no-audit --no-fund
+        fi &&
+        echo "NPM installation completed."
+      '
+    restart: "no"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - synaplan-network
 
@@ -37,6 +119,16 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./dev/db-loadfiles:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mariadb", "-h", "localhost", "-u", "root", "-proot_password", "-e", "SELECT 1;"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - synaplan-network
 
@@ -52,12 +144,58 @@ services:
       - ollama_data:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - synaplan-network
+
+  # Whisper Models Download Service
+  whisper-models:
+    image: alpine:3.20
+    container_name: synaplan-whisper-models
+    command: >
+      sh -c '
+        set -e;
+        echo "Installing curl and certificates..." &&
+        apk add --no-cache curl ca-certificates &&
+        echo "Creating models directory..." &&
+        mkdir -p /models &&
+        echo "Checking existing models..." &&
+        f() { 
+          if [ -f "/models/$1.bin" ]; then
+            echo "Model $1.bin already exists, skipping download"
+          else
+            echo "Downloading $1 model..." &&
+            curl -fL --retry 3 --retry-delay 5 --retry-all-errors --max-time 600 -o "/models/$1.bin.tmp" "$2" &&
+            mv "/models/$1.bin.tmp" "/models/$1.bin" &&
+            echo "Successfully downloaded $1.bin"
+          fi
+        } &&
+        f medium    https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin &&
+        f medium.en https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin &&
+        f base      https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin &&
+        echo "Setting permissions..." &&
+        ls /models/*.bin >/dev/null 2>&1 && chmod 644 /models/*.bin &&
+        echo "Models check/download completed successfully!" &&
+        ls -lh /models/ &&
+        echo "Whisper models service completed."
+      '
+    volumes:
+      - whisper_models:/models
+    restart: "no"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - synaplan-network
 
@@ -74,12 +212,20 @@ services:
       - "8081:80"
     depends_on:
       - db
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - synaplan-network
 
 volumes:
   mysql_data:
   ollama_data:
+  whisper_models:
+  vendor:
+  node_modules:
 
 networks:
   synaplan-network:
