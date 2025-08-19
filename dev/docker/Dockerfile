@@ -15,8 +15,6 @@ RUN apt-get update && apt-get install -y \
     libsodium-dev \
     zip \
     unzip \
-    nodejs \
-    npm \
     libffi-dev \
     # Build tools for whisper.cpp
     build-essential \
@@ -44,7 +42,6 @@ RUN apt-get update && apt-get install -y \
     libopus-dev \
     libvorbis-dev \
     libass-dev \
-    libfreetype6-dev \
     libfontconfig1-dev \
     libfribidi-dev \
     libharfbuzz-dev \
@@ -104,7 +101,8 @@ RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /e
 </FilesMatch>\n\
 \n\
 DirectoryIndex index.php index.html' > /etc/apache2/conf-available/docker-php.conf \
-    && a2enconf docker-php
+    && a2enconf docker-php \
+    && echo 'DocumentRoot /var/www/html/public' >> /etc/apache2/apache2.conf
 
 # Block access to sensitive files
 RUN echo '<FilesMatch "^\.">\n\

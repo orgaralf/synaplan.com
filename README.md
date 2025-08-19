@@ -6,7 +6,7 @@ Synaplan is an open-source platform to orchestrate conversations with multiple A
 
 ### Prerequisites
 
-- **docker compose**
+- **docker compose ≥ v2.20**
 - **npm (of Node.js)** (for frontend dependencies)
 
 for a dockerless installation, see below.
@@ -18,30 +18,37 @@ git clone https://github.com/orgaralf/synaplan.git synaplan/
 cd synaplan
 ```
 
-#### 2. Install dependencies
+#### 2. Start the complete environment
 
 ```bash
-docker compose run app composer install
-cd public/
-npm ci
-cd ..
-```
-
-### 3. Build and start services
-
-```bash
-docker compose build
 docker compose up -d
 ```
 
-#### 4. Set File Permissions
+**🎯 That's it!** The system automatically:
+- Downloads and installs all dependencies (Composer + NPM)
+- Downloads Whisper models (~3GB) for audio transcription
+- Downloads Ollama AI models (llama3.2:3b, mistral:7b, codellama:7b)
+- Starts all services with proper health checks
+
+**First-time setup:** The initial download of models may take several minutes. Monitor progress with:
+```bash
+# Monitor Whisper model downloads
+docker compose logs -f whisper-models
+
+# Monitor Ollama model downloads  
+docker compose logs -f ollama
+```
+
+**Subsequent starts:** All models are cached and startup is fast.
+
+#### 3. Set File Permissions
 ```bash
 # Create upload directory and set permissions
 mkdir -p public/up/
 chmod 755 public/up/
 ```
 
-#### 5. Configure Environment
+#### 4. Configure Environment
 Create a `.env` file in the project root directory with your API keys:
 
 ```env
@@ -65,7 +72,7 @@ DEBUG=false
 
 **Recommended AI Service:** We recommend [Groq.com](https://groq.com) as a cost-effective, super-fast AI service for production use.
 
-#### 6. Update Configuration Paths
+#### 5. Update Configuration Paths
 If you're not installing in `/wwwroot/synaplan/public/`, update the paths in `public/inc/_confsys.php`:
 
 ```php
@@ -74,7 +81,7 @@ $devUrl = "http://localhost/your-path/public/";
 $liveUrl = "https://your-domain.com/";
 ```
 
-#### 7. Verify Installation
+#### 6. Verify Installation
 1. Point your browser to [http://localhost:8080](http://localhost:8080)
 2. You should see a login page
 3. Login with the default credentials:
@@ -132,7 +139,24 @@ Configuration-driven AI selection via `$GLOBALS` and centralized key management 
 - Uploads: check `public/up/` permissions
 - AI calls: verify API keys in `public/.env`
 - DB errors: verify credentials and service status
-- COMPOSER_PROCESS_TIMEOUT=1600 necessary? Composer times out on slow drives like WSL2 mounted ones.
+- **Whisper models:** If you need to re-download models, delete the volume and restart:
+  ```bash
+  docker compose down
+  docker volume rm synaplan_whisper_models
+  docker compose up -d
+  ```
+- **Ollama models:** If you need to re-download AI models, delete the volume and restart:
+  ```bash
+  docker compose down
+  docker volume rm synaplan_ollama_data
+  docker compose up -d
+  ```
+- **All dependencies:** If you need to reinstall Composer/NPM dependencies:
+  ```bash
+  docker compose down
+  docker volume rm synaplan_vendor synaplan_node_modules
+  docker compose up -d
+  ```
 
 ### Contributing
 PRs welcome for providers, channels, docs, and performance. Start from `web/`, review `snippets/director.php`, and follow existing patterns.
