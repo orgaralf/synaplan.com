@@ -1,11 +1,21 @@
+<!-- Top Navbar for mobile devices -->
+<nav class="navbar navbar-expand-md d-md-none gradient-dots fixed-top" style="z-index: 1030;">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <img src="img/synaplan_logo_ondark.svg" alt="AI management" width="120">
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</nav>
+
+<!-- Sidebar -->
 <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block gradient-dots sidebar collapse">
     <div class="position-sticky pt-2">
-        <!-- Mobile toggle button and logo -->
-        <div class="px-3 py-2 mb-2 text-center">
+        <!-- Logo only (toggle moved to top navbar) -->
+        <div class="px-3 py-2 mb-2 text-center d-none d-md-block">
             <a class="navbar-brand" href="/"><img src="img/synaplan_logo_ondark.svg" alt="AI management" width="140"></a>
-            <button class="d-md-none collapsed btn btn-link text-white" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
         </div>
         <hr style="border: 0; border-top: 1px solid #d1d5db; margin: 5px 10px 12px 10px;">
         <ul class="nav flex-column">
@@ -66,5 +76,24 @@
             </a>
             </li>
         </ul>
+    </div>
+    
+    <!-- Logout Section at Bottom -->
+    <div class="logout-section">
+        <div class="user-info">
+            <div class="user-avatar">
+                <div class="avatar-circle">
+                    <?php echo isset($_SESSION["USERPROFILE"]["BMAIL"]) ? strtoupper(substr($_SESSION["USERPROFILE"]["BMAIL"], 0, 1)) : 'S'; ?>
+                </div>
+            </div>
+            <div class="user-details">
+                <div class="user-email">
+                    <?php echo isset($_SESSION["USERPROFILE"]["BMAIL"]) ? $_SESSION["USERPROFILE"]["BMAIL"] : 'user@example.com'; ?>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="showLogoutModal()" title="Logout">
+                <span data-feather="log-out"></span>
+            </button>
+        </div>
     </div>
 </nav>
