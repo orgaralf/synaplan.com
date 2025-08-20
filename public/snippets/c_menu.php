@@ -69,31 +69,25 @@
                 Statistics
             </a>
             </li>
-            <li class="nav-item">
-            <a class="nav-link<?php ($contentInc=="settings") ? print " active" : ""; ?>" href="index.php/settings">
-                <span data-feather="settings"></span>
-                Profile
-            </a>
-            </li>
         </ul>
     </div>
     
     <!-- Logout Section at Bottom -->
     <div class="logout-section">
-        <div class="user-info">
-            <div class="user-avatar">
-                <div class="avatar-circle">
-                    <?php echo isset($_SESSION["USERPROFILE"]["BMAIL"]) ? strtoupper(substr($_SESSION["USERPROFILE"]["BMAIL"], 0, 1)) : 'S'; ?>
+            <div class="user-info" onclick="window.location.href='index.php/settings'" style="cursor: pointer;">
+                <div class="user-avatar">
+                    <div class="avatar-circle">
+                        <?php echo isset($_SESSION["USERPROFILE"]["BMAIL"]) ? strtoupper(substr($_SESSION["USERPROFILE"]["BMAIL"], 0, 1)) : 'S'; ?>
+                    </div>
                 </div>
-            </div>
-            <div class="user-details">
-                <div class="user-email">
-                    <?php echo isset($_SESSION["USERPROFILE"]["BMAIL"]) ? $_SESSION["USERPROFILE"]["BMAIL"] : 'user@example.com'; ?>
+                <div class="user-details">
+                    <div class="user-email">
+                        <?php echo isset($_SESSION["USERPROFILE"]["BMAIL"]) ? $_SESSION["USERPROFILE"]["BMAIL"] : 'user@example.com'; ?>
+                    </div>
                 </div>
+                <button class="logout-btn" onclick="event.stopPropagation(); showLogoutModal()" title="Logout">
+                    <span data-feather="log-out"></span>
+                </button>
             </div>
-            <button class="logout-btn" onclick="showLogoutModal()" title="Logout">
-                <span data-feather="log-out"></span>
-            </button>
         </div>
-    </div>
 </nav>

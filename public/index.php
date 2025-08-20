@@ -44,24 +44,7 @@ require_once($root . 'inc/_coreincludes.php');
     <script src="node_modules/feather-icons/dist/feather.min.js"></script>
     <script src="js/dashboard.js"></script>
     
-    <!-- Logout Confirmation Modal -->
-    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content logout-modal">
-                <div class="modal-body text-center">
-                    <div class="logout-icon mb-3">
-                        <span data-feather="log-out"></span>
-                    </div>
-                    <h5 class="mb-3">Sign out of your account?</h5>
-                    <p class="text-muted mb-4">You can always sign back in at any time.</p>
-                    <div class="d-flex gap-3 justify-content-center">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-danger" onclick="confirmLogout()">Sign out</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Generic Modal for various purposes -->
     <div class="modal fade" id="genericModal" tabindex="-1" aria-labelledby="genericModalLabel" aria-hidden="true">

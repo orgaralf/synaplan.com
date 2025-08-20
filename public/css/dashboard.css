@@ -48,16 +48,18 @@ body, html {
 
 .sidebar {
   position: sticky;
-  top: 0; /* Changed from 50px to 0 since no top navbar */
-  height: 100vh; /* Changed from calc(100vh - 50px) to full height */
-  overflow-y: auto; /* Allow scrolling within sidebar if needed */
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
   overflow-x: hidden;
-  min-height: 100vh; /* Changed from calc(100vh - 50px) to full height */
-  background: linear-gradient(135deg, #02102a, #061a36 80%); /* Ensure background is always applied */
+  min-height: 100vh;
+  background: linear-gradient(135deg, #02102a, #061a36 80%);
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
-  z-index: 100; /* Behind the navbar */
+  z-index: 100;
   padding-top: 10px;
-  padding-bottom: 80px; /* Space for logout section */
+  padding-bottom: 80px;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 @media (max-width: 767.98px) {
@@ -91,8 +93,8 @@ body, html {
   }
   
   .sidebar .position-sticky {
-    padding-top: 0 !important;
-  }
+  padding-top: 0 !important;
+}
   
   .sidebar hr {
     margin-top: 0 !important;
@@ -112,7 +114,7 @@ body, html {
   font-size: 1.05rem;
   color: #f0f0f0;
   margin: 6px 0px 6px 0px;
-  padding: 9px 16px;
+  padding: 9px 12px;
   border: none;
   border-radius: 32px;
   background: none;
@@ -157,13 +159,13 @@ body, html {
 @media (max-width: 1199.98px) {
   .sidebar .nav-link {
     font-size: 1.05rem;
-    padding: 9px 14px;
+    padding: 9px 10px;
   }
 }
 @media (max-width: 991.98px) {
   .sidebar .nav-link {
     font-size: 0.98rem;
-    padding: 8px 10px;
+    padding: 8px 8px;
     margin: 5px 0;
   }
 }
@@ -172,8 +174,8 @@ body, html {
   font-size: 0.95rem;
   margin: 2px 0px 2px 0px;
   background-color: rgba(255, 255, 255, 0.05);
-  padding: 10px 16px 10px 32px;
-  margin-right: 8px;
+  padding: 10px 12px 10px 28px;
+  margin-right: 6px;
   border-left: 3px solid rgba(255, 255, 255, 0.2);
   font-weight: 400;
   border-radius: 0 6px 6px 0;
@@ -1542,24 +1544,25 @@ CHAT INTERFACE STYLES
   position: absolute;
   bottom: 0;
   left: 0;
-  right: 0;
+  width: 100%;
   padding: 12px 16px 16px 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   background: linear-gradient(135deg, #02102a, #061a36 80%);
+  box-sizing: border-box;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: 8px;
-  border-radius: 12px;
+  border-radius: 10px;
   transition: all 0.2s ease;
   cursor: pointer;
 }
 
 .user-info:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .user-avatar {
@@ -1583,23 +1586,26 @@ CHAT INTERFACE STYLES
 .user-details {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .user-email {
   color: #ffffff;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .logout-btn {
   background: transparent;
   border: none;
-  color: #a0a0a0;
+  color: #dc3545;
   cursor: pointer;
-  padding: 6px;
+  padding: 8px;
   border-radius: 8px;
   transition: all 0.2s ease;
   display: flex;
@@ -1609,13 +1615,13 @@ CHAT INTERFACE STYLES
 }
 
 .logout-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
 }
 
 .logout-btn .feather {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 /* Logout Modal Styling */
