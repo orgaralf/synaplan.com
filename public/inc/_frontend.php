@@ -1078,6 +1078,154 @@ Class Frontend {
         return $retArr;
     }
     
+    // ****************************************************************************************************** 
+    // Mail Handler Configuration (per user)
+    // ****************************************************************************************************** 
+    
+    /**
+     * Load mail handler configuration for current user
+     */
+    public static function getMailhandler(): array {
+        $retArr = ["success" => false, "config" => [], "departments" => []];
+        
+        if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            $retArr["error"] = "User not logged in";
+            return $retArr;
+        }
+        
+        $userId = intval($_SESSION["USERPROFILE"]["BID"]);
+        
+        // Defaults
+        $config = [
+            'mailServer' => '',
+            'mailPort' => '993',
+            'mailProtocol' => 'imap',
+            'mailSecurity' => 'ssl',
+            'mailUsername' => '',
+            'mailPassword' => '',
+            'mailCheckInterval' => '10',
+            'mailDeleteAfter' => '0'
+        ];
+        
+        // Load saved config
+        $cfgSQL = "SELECT BSETTING, BVALUE FROM BCONFIG WHERE BOWNERID = " . $userId . " AND BGROUP = 'mailhandler'";
+        $cfgRes = DB::Query($cfgSQL);
+        while($row = DB::FetchArr($cfgRes)) {
+            switch ($row['BSETTING']) {
+                case 'server': $config['mailServer'] = $row['BVALUE']; break;
+                case 'port': $config['mailPort'] = $row['BVALUE']; break;
+                case 'protocol': $config['mailProtocol'] = $row['BVALUE']; break;
+                case 'security': $config['mailSecurity'] = $row['BVALUE']; break;
+                case 'username': $config['mailUsername'] = $row['BVALUE']; break;
+                case 'password': $config['mailPassword'] = $row['BVALUE']; break;
+                case 'checkInterval': $config['mailCheckInterval'] = $row['BVALUE']; break;
+                case 'deleteAfter': $config['mailDeleteAfter'] = $row['BVALUE']; break;
+            }
+        }
+        
+        // Load departments
+        $deptSQL = "SELECT BSETTING, BVALUE FROM BCONFIG WHERE BOWNERID = " . $userId . " AND BGROUP = 'mailhandler_dept' ORDER BY CAST(BSETTING AS UNSIGNED) ASC";
+        $deptRes = DB::Query($deptSQL);
+        $departments = [];
+        while($row = DB::FetchArr($deptRes)) {
+            // stored as email|description|isDefault
+            $parts = explode('|', $row['BVALUE']);
+            $departments[] = [
+                'email' => $parts[0] ?? '',
+                'description' => $parts[1] ?? '',
+                'isDefault' => ($parts[2] ?? '0') === '1' ? 1 : 0
+            ];
+        }
+        
+        $retArr['success'] = true;
+        $retArr['config'] = $config;
+        $retArr['departments'] = $departments;
+        return $retArr;
+    }
+    
+    /**
+     * Save mail handler configuration for current user
+     */
+    public static function saveMailhandler(): array {
+        $retArr = ["success" => false];
+        
+        if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            $retArr["error"] = "User not logged in";
+            return $retArr;
+        }
+        
+        $userId = intval($_SESSION["USERPROFILE"]["BID"]);
+        
+        // Sanitize inputs
+        $server = db::EscString($_REQUEST['mailServer'] ?? '');
+        $port = intval($_REQUEST['mailPort'] ?? 993);
+        $protocol = db::EscString($_REQUEST['mailProtocol'] ?? 'imap');
+        $security = db::EscString($_REQUEST['mailSecurity'] ?? 'ssl');
+        $username = db::EscString($_REQUEST['mailUsername'] ?? '');
+        $password = db::EscString($_REQUEST['mailPassword'] ?? '');
+        $checkInterval = intval($_REQUEST['mailCheckInterval'] ?? 10);
+        $deleteAfter = isset($_REQUEST['mailDeleteAfter']) && ($_REQUEST['mailDeleteAfter'] === 'on' || $_REQUEST['mailDeleteAfter'] === '1') ? 1 : 0;
+        
+        // Basic validation
+        if ($server === '' || $port < 1 || $port > 65535 || $username === '') {
+            $retArr['error'] = 'Invalid input values';
+            return $retArr;
+        }
+        
+        $group = 'mailhandler';
+        $settings = [
+            'server' => $server,
+            'port' => (string)$port,
+            'protocol' => $protocol,
+            'security' => $security,
+            'username' => $username,
+            'password' => $password,
+            'checkInterval' => (string)$checkInterval,
+            'deleteAfter' => (string)$deleteAfter
+        ];
+        
+        foreach ($settings as $setting => $value) {
+            $checkSQL = "SELECT BID FROM BCONFIG WHERE BOWNERID = " . $userId . " AND BGROUP = '" . db::EscString($group) . "' AND BSETTING = '" . db::EscString($setting) . "'";
+            $checkRes = DB::Query($checkSQL);
+            if (DB::CountRows($checkRes) > 0) {
+                $updateSQL = "UPDATE BCONFIG SET BVALUE = '" . $value . "' WHERE BOWNERID = " . $userId . " AND BGROUP = '" . db::EscString($group) . "' AND BSETTING = '" . db::EscString($setting) . "'";
+                DB::Query($updateSQL);
+            } else {
+                $insertSQL = "INSERT INTO BCONFIG (BOWNERID, BGROUP, BSETTING, BVALUE) VALUES (" . $userId . ", '" . db::EscString($group) . "', '" . db::EscString($setting) . "', '" . $value . "')";
+                DB::Query($insertSQL);
+            }
+        }
+        
+        // Departments
+        $emails = isset($_REQUEST['departmentEmail']) ? $_REQUEST['departmentEmail'] : [];
+        $descs = isset($_REQUEST['departmentDescription']) ? $_REQUEST['departmentDescription'] : [];
+        $defaultIdx = isset($_REQUEST['defaultDepartment']) ? intval($_REQUEST['defaultDepartment']) : -1;
+        
+        // Normalize arrays
+        if (!is_array($emails)) $emails = [];
+        if (!is_array($descs)) $descs = [];
+        
+        // Clear previous departments
+        DB::Query("DELETE FROM BCONFIG WHERE BOWNERID = " . $userId . " AND BGROUP = 'mailhandler_dept'");
+        
+        // Insert new departments
+        $count = 0;
+        for ($i = 0; $i < count($emails); $i++) {
+            $email = trim($emails[$i]);
+            $desc = isset($descs[$i]) ? trim($descs[$i]) : '';
+            if ($email === '') continue;
+            $isDefault = ($i === $defaultIdx) ? '1' : '0';
+            $val = db::EscString($email . '|' . $desc . '|' . $isDefault);
+            $ins = "INSERT INTO BCONFIG (BOWNERID, BGROUP, BSETTING, BVALUE) VALUES (" . $userId . ", 'mailhandler_dept', '" . $count . "', '" . $val . "')";
+            DB::Query($ins);
+            $count++;
+        }
+        
+        $retArr['success'] = true;
+        $retArr['message'] = 'Mail handler configuration saved';
+        return $retArr;
+    }
+    
     /**
      * Set anonymous widget session
      * 

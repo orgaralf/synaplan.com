@@ -27,6 +27,7 @@ require_once($root . 'inc/_basicai.php');
 require_once($root . 'inc/_curler.php');
 require_once($root . 'inc/_listtools.php');
 require_once($root . 'inc/_processmethods.php');
+require_once($root . 'inc/_toolmailhandler.php');
 
 // ----------------------------------------------------- storage path
 // https://flysystem.thephpleague.com/docs/getting-started/

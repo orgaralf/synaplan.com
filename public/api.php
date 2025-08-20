@@ -168,7 +168,9 @@ $authenticatedOnlyEndpoints = [
     'getApiKeys',
     'createApiKey',
     'setApiKeyStatus',
-    'deleteApiKey'
+    'deleteApiKey',
+    'getMailhandler',
+    'saveMailhandler'
 ];
 
 // Check authentication for the requested action
@@ -317,6 +319,12 @@ switch($apiAction) {
         break;
     case 'userRegister':
         $resArr = Frontend::registerNewUser();
+        break;
+    case 'getMailhandler':
+        $resArr = Frontend::getMailhandler();
+        break;
+    case 'saveMailhandler':
+        $resArr = Frontend::saveMailhandler();
         break;
     default:
         $resArr = ['error' => 'Invalid action'];
