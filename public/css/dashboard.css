@@ -48,24 +48,56 @@ body, html {
 
 .sidebar {
   position: sticky;
-  top: 0; /* Changed from 50px to 0 since no top navbar */
-  height: 100vh; /* Changed from calc(100vh - 50px) to full height */
-  overflow-y: auto; /* Allow scrolling within sidebar if needed */
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
   overflow-x: hidden;
-  min-height: 100vh; /* Changed from calc(100vh - 50px) to full height */
-  background: linear-gradient(135deg, #02102a, #061a36 80%); /* Ensure background is always applied */
+  min-height: 100vh;
+  background: linear-gradient(135deg, #02102a, #061a36 80%);
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
-  z-index: 100; /* Behind the navbar */
+  z-index: 100;
   padding-top: 10px;
-  padding-bottom: 20px;
+  padding-bottom: 80px;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 @media (max-width: 767.98px) {
   .sidebar {
+    /* Drop-down layout under the top navbar (no side overlay) */
     position: relative;
-    top: auto;
+    top: 0;
+    left: 0;
     height: auto;
     min-height: auto;
+    z-index: 1;
+    width: 100%;
+    margin-top: 0;
+  }
+  
+  /* Add padding to body on mobile to prevent overlap */
+  body {
+    padding-top: 60px;
+  }
+  
+  /* Ensure navbar-toggler is visible */
+  .navbar-toggler {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0.25rem 0.5rem;
+  }
+  
+  /* Remove white gap between navbar and sidebar */
+  .sidebar {
+    margin-top: -4.5px !important;
+    border-top: none !important;
+  }
+  
+  .sidebar .position-sticky {
+  padding-top: 0 !important;
+}
+  
+  .sidebar hr {
+    margin-top: 0 !important;
   }
 }
 
@@ -79,10 +111,10 @@ body, html {
 
 .sidebar .nav-link {
   font-weight: 600;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   color: #f0f0f0;
-  margin: 8px 0px 8px 0px;
-  padding: 11px 19px;
+  margin: 6px 0px 6px 0px;
+  padding: 9px 12px;
   border: none;
   border-radius: 32px;
   background: none;
@@ -109,11 +141,11 @@ body, html {
 }
 
 .sidebar .nav-link .feather {
-  margin-right: 12px;
+  margin-right: 10px;
   color: #fff;
   transition: all 0.3s ease;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 /* Remove old border and box-shadow for nav-link */
@@ -127,13 +159,13 @@ body, html {
 @media (max-width: 1199.98px) {
   .sidebar .nav-link {
     font-size: 1.05rem;
-    padding: 9px 14px;
+    padding: 9px 10px;
   }
 }
 @media (max-width: 991.98px) {
   .sidebar .nav-link {
     font-size: 0.98rem;
-    padding: 8px 10px;
+    padding: 8px 8px;
     margin: 5px 0;
   }
 }
@@ -142,8 +174,8 @@ body, html {
   font-size: 0.95rem;
   margin: 2px 0px 2px 0px;
   background-color: rgba(255, 255, 255, 0.05);
-  padding: 10px 16px 10px 32px;
-  margin-right: 8px;
+  padding: 10px 12px 10px 28px;
+  margin-right: 6px;
   border-left: 3px solid rgba(255, 255, 255, 0.2);
   font-weight: 400;
   border-radius: 0 6px 6px 0;
@@ -276,6 +308,10 @@ body, html {
 .navbar .navbar-toggler {
   top: .25rem;
   right: 1rem;
+}
+
+.navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.75%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
 .navbar .form-control {
@@ -1501,6 +1537,158 @@ CHAT INTERFACE STYLES
 .sidebar .navbar-brand:hover {
   color: #ffffff;
   opacity: 0.8;
+}
+
+/* Logout Section Styling - ChatGPT Style */
+.logout-section {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 12px 16px 16px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, #02102a, #061a36 80%);
+  box-sizing: border-box;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.user-info:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.user-avatar {
+  flex-shrink: 0;
+}
+
+.avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.user-email {
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.logout-btn {
+  background: transparent;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logout-btn:hover {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+}
+
+.logout-btn .feather {
+  width: 18px;
+  height: 18px;
+}
+
+/* Logout Modal Styling */
+.logout-modal {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.logout-modal .modal-body {
+  padding: 2rem;
+}
+
+.logout-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logout-icon .feather {
+  width: 24px;
+  height: 24px;
+  color: white;
+}
+
+.logout-modal h5 {
+  font-weight: 600;
+  color: #333;
+}
+
+.logout-modal .text-muted {
+  color: #6c757d !important;
+  font-size: 0.95rem;
+}
+
+.logout-modal .btn {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 0.5rem 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.logout-modal .btn-secondary {
+  background: #f8f9fa;
+  border-color: #dee2e6;
+  color: #6c757d;
+}
+
+.logout-modal .btn-secondary:hover {
+  background: #e9ecef;
+  border-color: #dee2e6;
+  color: #495057;
+}
+
+.logout-modal .btn-danger {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  border: none;
+}
+
+.logout-modal .btn-danger:hover {
+  background: linear-gradient(135deg, #c82333, #a02622);
+  transform: translateY(-1px);
 }
 
 /* ------------------------------------------------------------ */

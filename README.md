@@ -99,7 +99,7 @@ You can also deploy Synaplan on a regular Linux server using Apache, PHP 8.3, an
 2. Deploy code
    - Place the repository on the server and point your vhost to the `public/` directory
 3. Install PHP deps and frontend assets
-   - `composer install`
+   - `composer install` (if you encounter timeout issues, use `COMPOSER_PROCESS_TIMEOUT=1600 composer install`)
    - `cd public && npm ci && cd ..`
 4. Database
    - Create a database (e.g., `synaplan`) and user

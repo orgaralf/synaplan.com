@@ -44,6 +44,8 @@ require_once($root . 'inc/_coreincludes.php');
     <script src="node_modules/feather-icons/dist/feather.min.js"></script>
     <script src="js/dashboard.js"></script>
     
+
+
     <!-- Generic Modal for various purposes -->
     <div class="modal fade" id="genericModal" tabindex="-1" aria-labelledby="genericModalLabel" aria-hidden="true">
         <div class="modal-dialog">
