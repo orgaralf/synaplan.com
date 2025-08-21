@@ -504,6 +504,10 @@ class Tools {
     // --------------------------------------------------------------------------
     // CRON coordination helpers (store state in BCONFIG with BOWNERID=0, BGROUP='CRON')
     // --------------------------------------------------------------------------
+    // Lightweight debug output helper for cron jobs controlled by $GLOBALS['DEBUG_CRON']
+    public static function debugCronLog(string $message): void {
+        if (!empty($GLOBALS['DEBUG_CRON'])) { echo $message; }
+    }
     public static function addCron(string $cronId): bool {
         $id = db::EscString($cronId);
         $ts = date("YmdHis");
