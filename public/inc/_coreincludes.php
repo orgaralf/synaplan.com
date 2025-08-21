@@ -31,8 +31,9 @@ require_once($root . 'inc/_toolmailhandler.php');
 
 // ----------------------------------------------------- storage path
 // https://flysystem.thephpleague.com/docs/getting-started/
-$appPath = getcwd() . "/";
-$rootPath = getcwd() . "/up/";
+// Use the caller-provided $root (points to public/) so storage is always under public/up/
+$appPath = $root;
+$rootPath = $root . 'up/';
 // error_log("rootPath: " . $rootPath);
 
 $adapter = new League\Flysystem\Local\LocalFilesystemAdapter($rootPath);

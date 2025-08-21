@@ -5,7 +5,7 @@
 
 require_once("inc/_inboundconf.php");
 ?>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="fa/css/all.min.css">
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4" id="contentMain">
     <h1><?php _s("Inbound", __FILE__, $_SESSION["LANG"]); ?></h1>
     <p>
@@ -17,7 +17,7 @@ require_once("inc/_inboundconf.php");
     <!-- WhatsApp Channel Card -->
     <div class="card mb-4">
         <div class="card-header">
-            <h5 class="card-title mb-0"><i class="fa-brands fa-whatsapp"></i> WhatsApp Channel(s)</h5>
+            <h5 class="card-title mb-0"><i class="fab fa-whatsapp me-1"></i> WhatsApp Channel(s)</h5>
         </div>
         <div class="card-body">
             <?php
@@ -33,7 +33,7 @@ require_once("inc/_inboundconf.php");
     <!-- Email Channel Card -->
     <div class="card mb-4">
         <div class="card-header">
-            <h5 class="card-title mb-0"><i class="fa-solid fa-envelope"></i> Email Channel(s)</h5>
+            <h5 class="card-title mb-0"><i class="fas fa-envelope"></i> Email Channel(s)</h5>
         </div>
         <div class="card-body">
             <a href="mailto:smart@ralfs.ai">smart@synaplan.com</a>: default handling<br>
@@ -52,7 +52,7 @@ require_once("inc/_inboundconf.php");
     <!-- Repeat the card pattern for API Channel and Web Widget below -->
     <div class="card mb-4">
         <div class="card-header">
-            <h5 class="card-title mb-0"><i class="fa-solid fa-code"></i> API Channel</h5>
+            <h5 class="card-title mb-0"><i class="fas fa-code"></i> API Channel</h5>
         </div>
         <div class="card-body">
             Simple API calls with your personal API key:<br>
@@ -69,7 +69,7 @@ require_once("inc/_inboundconf.php");
 
     <div class="card mb-4">
         <div class="card-header">
-            <h5 class="card-title mb-0"><i class="fa-solid fa-window-maximize"></i> Web Widget</h5>
+            <h5 class="card-title mb-0"><i class="fas fa-window-maximize"></i> Web Widget</h5>
         </div>
         <div class="card-body">
             <strong>To activate the widget, please enter your domain name like "yourdomain.net" in the field below.</strong>

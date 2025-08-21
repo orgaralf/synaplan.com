@@ -500,4 +500,80 @@ class Tools {
         // we don't need JSON-style unescaping anymore. Just return the URL-decoded string.
         return $step1;
     }
+
+    // --------------------------------------------------------------------------
+    // CRON coordination helpers (store state in BCONFIG with BOWNERID=0, BGROUP='CRON')
+    // --------------------------------------------------------------------------
+    // Lightweight debug output helper for cron jobs controlled by $GLOBALS['DEBUG_CRON']
+    public static function debugCronLog(string $message): void {
+        if (!empty($GLOBALS['DEBUG_CRON'])) { echo $message; }
+    }
+    public static function addCron(string $cronId): bool {
+        $id = db::EscString($cronId);
+        $ts = date("YmdHis");
+        // Try to create the CRON row if it doesn't exist
+        $insertSql = "INSERT INTO BCONFIG (BOWNERID, BGROUP, BSETTING, BVALUE)\n"
+                   . "SELECT 0, 'CRON', '".$id."', '".$ts."'\n"
+                   . "FROM DUAL\n"
+                   . "WHERE NOT EXISTS (SELECT 1 FROM BCONFIG WHERE BOWNERID=0 AND BGROUP='CRON' AND BSETTING='".$id."')";
+        db::Query($insertSql);
+
+        // Verify if we own the slot (value equals our timestamp -> we inserted just now)
+        $sel = "SELECT BVALUE FROM BCONFIG WHERE BOWNERID=0 AND BGROUP='CRON' AND BSETTING='".$id."' ORDER BY BID DESC LIMIT 1";
+        $res = db::Query($sel);
+        $row = $res ? db::FetchArr($res) : null;
+        return ($row && $row['BVALUE'] === $ts);
+    }
+
+
+    public static function updateCron(string $cronId): bool {
+        $id = db::EscString($cronId);
+        $ts = date("YmdHis");
+        $sql = "UPDATE BCONFIG SET BVALUE='".$ts."' WHERE BOWNERID=0 AND BGROUP='CRON' AND BSETTING='".$id."'";
+        return (bool) db::Query($sql);
+    }
+
+    public static function deleteCron(string $cronId): bool {
+        $id = db::EscString($cronId);
+        $sql = "DELETE FROM BCONFIG WHERE BOWNERID=0 AND BGROUP='CRON' AND BSETTING='".$id."'";
+        return (bool) db::Query($sql);
+    }
+
+    // Returns human-friendly runtime string like "123s" or "2m 3s"
+    public static function cronTime(string $cronId): string {
+        $id = db::EscString($cronId);
+        $sel = "SELECT BVALUE FROM BCONFIG WHERE BOWNERID=0 AND BGROUP='CRON' AND BSETTING='".$id."' ORDER BY BID DESC LIMIT 1";
+        $res = db::Query($sel);
+        $row = $res ? db::FetchArr($res) : null;
+        if (!$row || empty($row['BVALUE'])) {
+            return '0s';
+        }
+        $start = DateTime::createFromFormat('YmdHis', $row['BVALUE']);
+        if (!$start) {
+            return 'unknown';
+        }
+        $diff = time() - $start->getTimestamp();
+        if ($diff < 0) { $diff = 0; }
+        $m = intdiv($diff, 60);
+        $s = $diff % 60;
+        if ($m > 0) {
+            return $m.'m '.$s.'s';
+        }
+        return $s.'s';
+    }
+
+    // Check if a cron with given ID is already running anywhere. If not running, register start.
+    // Returns true if already running (caller should exit), false if successfully registered this run.
+    public static function cronRunCheck(string $cronId): bool {
+        $id = db::EscString($cronId);
+        $sel = "SELECT BVALUE FROM BCONFIG WHERE BOWNERID=0 AND BGROUP='CRON' AND BSETTING='".$id."' ORDER BY BID DESC LIMIT 1";
+        $res = db::Query($sel);
+        $row = $res ? db::FetchArr($res) : null;
+        if ($row && !empty($row['BVALUE'])) {
+            // Already running
+            return true;
+        }
+        // Try to claim the cron slot
+        return !self::addCron($cronId) ? true : false;
+    }
 }
