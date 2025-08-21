@@ -84,8 +84,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Enable Apache modules
-RUN a2enmod rewrite
+# Enable Apache modules (headers first for CSP)
+RUN a2enmod headers rewrite
 
 # Configure Apache document root to point to public directory
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf \
@@ -125,6 +125,16 @@ RUN echo '<FilesMatch "^\.">\n\
     Require all denied\n\
 </FilesMatch>' > /etc/apache2/conf-available/security-headers.conf \
     && a2enconf security-headers
+
+# Security headers with CSP
+RUN echo 'Header always set X-Content-Type-Options nosniff' > /etc/apache2/conf-available/secure-basics.conf \
+    && echo 'Header always set Referrer-Policy "strict-origin-when-cross-origin"' >> /etc/apache2/conf-available/secure-basics.conf \
+    && echo 'Header always set Permissions-Policy "camera=(),microphone=(),geolocation=()"' >> /etc/apache2/conf-available/secure-basics.conf \
+    && a2enconf secure-basics
+
+# CSP Report-Only für DEV
+RUN echo 'Header always set Content-Security-Policy-Report-Only "default-src '"'"'self'"'"'; script-src '"'"'self'"'"' '"'"'unsafe-inline'"'"'; style-src '"'"'self'"'"' '"'"'unsafe-inline'"'"'; img-src '"'"'self'"'"' data: blob:; font-src '"'"'self'"'"' data:; connect-src '"'"'self'"'"' wss: https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.thehive.ai https://api.search.brave.com https://graph.search.brave.com https://graph.facebook.com; worker-src '"'"'self'"'"' blob:; media-src '"'"'self'"'"' blob:; manifest-src '"'"'self'"'"'; frame-src '"'"'self'"'"'; object-src '"'"'none'"'"'; base-uri '"'"'self'"'"'; form-action '"'"'self'"'"'; frame-ancestors '"'"'none'"'"'"' > /etc/apache2/conf-available/csp-reportonly.conf \
+    && a2enconf csp-reportonly
 
 
 # Expose port 80
