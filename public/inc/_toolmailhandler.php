@@ -348,7 +348,8 @@ class mailHandler {
 		$systemPrompt = self::getMailpromptForUser($userId);
 		$userPrompt = "Subject: " . trim($subject) . "\n\nBody: " . trim($body);
 
-		$aiService = $GLOBALS["AI_SORT"]["SERVICE"] ?? 'AIGroq';
+		// Use chat model/service for routing decisions
+		$aiService = $GLOBALS["AI_CHAT"]["SERVICE"] ?? 'AIGoogle';
 		if (!class_exists($aiService)) {
 			return "Error: AI service not available: " . $aiService;
 		}
