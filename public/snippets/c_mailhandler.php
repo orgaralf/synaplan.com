@@ -68,6 +68,8 @@
                     </div>
                 </div>
 
+                
+
                 <div class="row mb-3">
                     <label for="mailCheckInterval" class="col-sm-2 col-form-label"><strong>Check Interval:</strong></label>
                     <div class="col-sm-4">
@@ -94,7 +96,7 @@
 
                 <div class="row">
                     <div class="col-sm-10 offset-sm-2">
-                        <button type="button" class="btn btn-outline-primary" onclick="testMailConnection()">
+                        <button type="button" id="testConnectionBtn" class="btn btn-outline-primary" onclick="testMailConnection()">
                             <i class="fas fa-plug"></i> Test Connection
                         </button>
                         <button type="button" class="btn btn-outline-info" onclick="showMailHelp()">
@@ -193,7 +195,7 @@
                 document.getElementById('mailPassword').value = c.mailPassword || '';
                 document.getElementById('mailCheckInterval').value = c.mailCheckInterval || '10';
                 document.getElementById('mailDeleteAfter').checked = (c.mailDeleteAfter === '1' || c.mailDeleteAfter === 1);
-
+                
                 // departments
                 const departmentsContainer = document.getElementById('mailDepartments');
                 departmentsContainer.innerHTML = '';
@@ -212,6 +214,8 @@
                 if (departmentsContainer.children.length === 0) { addMailDepartment(); }
             });
     }
+
+    
 
     function addMailDepartmentPrefill(email, description, defaultIdx, currentIdx) {
         if (departmentCount >= maxDepartments) { return; }
@@ -347,17 +351,96 @@
         const server = document.getElementById('mailServer').value;
         const port = document.getElementById('mailPort').value;
         const protocol = document.getElementById('mailProtocol').value;
+        const security = document.getElementById('mailSecurity').value;
         const username = document.getElementById('mailUsername').value;
         const password = document.getElementById('mailPassword').value;
 
-        if (!server || !port || !username || !password) {
-            alert('Please fill in all required mail server fields before testing connection.');
+        if (!server || !port || !username) {
+            alert('Please fill in server, port and username before testing connection.');
             return;
         }
 
-        // TODO: Implement connection test
-        console.log('Testing mail connection...');
-        alert('Connection test feature will be implemented in the backend.');
+        // set loading state on the button
+        const btn = document.getElementById('testConnectionBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.setAttribute('data-prev', btn.innerHTML);
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-primary');
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Testing…';
+        }
+
+        const formData = new FormData();
+        formData.append('mailServer', server);
+        formData.append('mailPort', port);
+        formData.append('mailProtocol', protocol);
+        formData.append('mailSecurity', security);
+        formData.append('mailUsername', username);
+        formData.append('mailPassword', password);
+        // include current authMethod if present in DOM
+        const authEl = document.querySelector('[name="authMethod"]');
+        if (authEl && authEl.value) { formData.append('authMethod', authEl.value); }
+
+        fetch('api.php?action=mailTestConnection', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        }).then(r => r.json()).then(data => {
+            renderTestConnectionResult(data);
+        }).catch(err => {
+            console.error(err);
+            alert('Connection test failed to run.');
+        }).finally(() => {
+            if (btn) {
+                btn.disabled = false;
+                const prev = btn.getAttribute('data-prev');
+                if (prev !== null) { btn.innerHTML = prev; btn.removeAttribute('data-prev'); }
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-primary');
+            }
+        });
+    }
+
+    function renderTestConnectionResult(data) {
+        const lines = [];
+        const ok = !!(data && data.success);
+        lines.push(`Result: ${ok ? 'SUCCESS' : 'FAILURE'}`);
+        if (data && data.error) { lines.push(`Error: ${data.error}`); }
+        const c = (data && data.connection) ? data.connection : {};
+        const d = (data && data.details) ? data.details : {};
+        const usernameMasked = c.username_masked || c.username || '';
+        lines.push('Connection');
+        lines.push(`- Host: ${c.host || ''}`);
+        lines.push(`- Port: ${c.port || ''}`);
+        lines.push(`- Protocol: ${c.protocol || ''}`);
+        lines.push(`- Security: ${c.encryption || ''}`);
+        lines.push(`- Validate TLS cert: ${c.validate_cert ? 'yes' : 'no'}`);
+        lines.push(`- Auth method: ${c.authMethod || 'password'}`);
+        lines.push(`- Username: ${usernameMasked}`);
+        if (d && (d.connected !== undefined || d.inboxAccessible !== undefined || d.foldersCount !== undefined)) {
+            lines.push('Diagnostics');
+            if (d.connected !== undefined) { lines.push(`- Connected: ${d.connected ? 'yes' : 'no'}`); }
+            if (d.inboxAccessible !== undefined) { lines.push(`- INBOX accessible: ${d.inboxAccessible ? 'yes' : 'no'}`); }
+            if (d.foldersCount !== undefined && d.foldersCount !== null) { lines.push(`- Folders: ${d.foldersCount}`); }
+        }
+
+        // Prefer generic modal from parent page; fallback to alert
+        openGenericModal('Mail Server Test', lines);
+    }
+
+    function openGenericModal(title, lines) {
+        const modalEl = document.getElementById('genericModal');
+        const titleEl = document.getElementById('genericModalLabel');
+        const bodyEl = document.getElementById('genericModalBody');
+        if (!modalEl || !titleEl || !bodyEl || !(window.bootstrap && bootstrap.Modal)) {
+            alert(lines.join('\n'));
+            return;
+        }
+        titleEl.textContent = title || 'Info';
+        const content = '<pre class="mb-0" style="white-space: pre-wrap">' + (lines || []).join('\n') + '</pre>';
+        bodyEl.innerHTML = content;
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
     }
 
     // Function to show mail help

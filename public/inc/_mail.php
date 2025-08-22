@@ -33,10 +33,17 @@ function _mymail($strFrom, $strTo, $subject, $htmltext, $plaintext, $strReplyTo=
         $mail->addReplyTo($strFrom, "Forjo Mail Service");
     }
 
-    if(strlen($strFileAttach)>5)
-    {
-        if(file_exists($strFileAttach))
-            $mail->addAttachment($strFileAttach);
+    // support single string path or array of paths
+    if (is_array($strFileAttach)) {
+        foreach ($strFileAttach as $path) {
+            if (is_string($path) && strlen($path) > 5 && file_exists($path)) {
+                $mail->addAttachment($path);
+            }
+        }
+    } else {
+        if(strlen($strFileAttach)>5) {
+            if(file_exists($strFileAttach)) $mail->addAttachment($strFileAttach);
+        }
     }
 
     $mail->CharSet = 'UTF-8';
