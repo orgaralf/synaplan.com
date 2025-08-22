@@ -170,7 +170,12 @@ $authenticatedOnlyEndpoints = [
     'setApiKeyStatus',
     'deleteApiKey',
     'getMailhandler',
-    'saveMailhandler'
+    'saveMailhandler',
+    'mailTestConnection',
+    'mailOAuthStart',
+    'mailOAuthCallback',
+    'mailOAuthStatus',
+    'mailOAuthDisconnect'
 ];
 
 // Check authentication for the requested action
@@ -325,6 +330,33 @@ switch($apiAction) {
         break;
     case 'saveMailhandler':
         $resArr = Frontend::saveMailhandler();
+        break;
+    case 'mailOAuthStart':
+        $resArr = Frontend::mailOAuthStart();
+        break;
+    case 'mailOAuthCallback':
+        // Handle OAuth callback and then redirect back to the UI by default
+        $result = Frontend::mailOAuthCallback();
+        if (!isset($_REQUEST['ui']) || $_REQUEST['ui'] !== 'json') {
+            // Override content type and redirect
+            $target = $GLOBALS['baseUrl'] . 'index.php/mailhandler';
+            if (!empty($result['success'])) { $target .= '?oauth=ok'; }
+            else { $target .= '?oauth=error'; }
+            header('Content-Type: text/html; charset=UTF-8');
+            header('Location: ' . $target);
+            echo '<html><head><meta http-equiv="refresh" content="0;url='.$target.'"></head><body>Redirecting...</body></html>';
+            exit;
+        }
+        $resArr = $result;
+        break;
+    case 'mailOAuthStatus':
+        $resArr = Frontend::mailOAuthStatus();
+        break;
+    case 'mailOAuthDisconnect':
+        $resArr = Frontend::mailOAuthDisconnect();
+        break;
+    case 'mailTestConnection':
+        $resArr = Frontend::mailTestConnection();
         break;
     default:
         $resArr = ['error' => 'Invalid action'];

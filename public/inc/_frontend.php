@@ -1104,7 +1104,8 @@ Class Frontend {
             'mailUsername' => '',
             'mailPassword' => '',
             'mailCheckInterval' => '10',
-            'mailDeleteAfter' => '0'
+            'mailDeleteAfter' => '0',
+            'authMethod' => 'password'
         ];
         
         // Load saved config
@@ -1120,8 +1121,13 @@ Class Frontend {
                 case 'password': $config['mailPassword'] = $row['BVALUE']; break;
                 case 'checkInterval': $config['mailCheckInterval'] = $row['BVALUE']; break;
                 case 'deleteAfter': $config['mailDeleteAfter'] = $row['BVALUE']; break;
+                case 'authMethod': $config['authMethod'] = $row['BVALUE']; break;
             }
         }
+
+        // Compute server-side redirect URIs for UI display (avoid origin mismatches)
+        $config['googleRedirectUri'] = $GLOBALS['baseUrl'] . 'api.php?action=mailOAuthCallback&provider=google';
+        $config['microsoftRedirectUri'] = $GLOBALS['baseUrl'] . 'api.php?action=mailOAuthCallback&provider=microsoft';
         
         // Load departments
         $deptSQL = "SELECT BSETTING, BVALUE FROM BCONFIG WHERE BOWNERID = " . $userId . " AND BGROUP = 'mailhandler_dept' ORDER BY CAST(BSETTING AS UNSIGNED) ASC";
@@ -1137,6 +1143,14 @@ Class Frontend {
             ];
         }
         
+        // OAuth status
+        try {
+            $status = mailHandler::oauthStatus($userId);
+            $retArr['oauthStatus'] = $status;
+        } catch (\Throwable $e) {
+            $retArr['oauthStatus'] = ['success' => false];
+        }
+
         $retArr['success'] = true;
         $retArr['config'] = $config;
         $retArr['departments'] = $departments;
@@ -1165,6 +1179,8 @@ Class Frontend {
         $password = db::EscString($_REQUEST['mailPassword'] ?? '');
         $checkInterval = intval($_REQUEST['mailCheckInterval'] ?? 10);
         $deleteAfter = isset($_REQUEST['mailDeleteAfter']) && ($_REQUEST['mailDeleteAfter'] === 'on' || $_REQUEST['mailDeleteAfter'] === '1') ? 1 : 0;
+        $authMethod = isset($_REQUEST['authMethod']) ? db::EscString($_REQUEST['authMethod']) : 'password';
+        if (!in_array($authMethod, ['password','oauth_google','oauth_microsoft'])) { $authMethod = 'password'; }
         
         // Basic validation
         if ($server === '' || $port < 1 || $port > 65535 || $username === '') {
@@ -1181,7 +1197,8 @@ Class Frontend {
             'username' => $username,
             'password' => $password,
             'checkInterval' => (string)$checkInterval,
-            'deleteAfter' => (string)$deleteAfter
+            'deleteAfter' => (string)$deleteAfter,
+            'authMethod' => $authMethod
         ];
         
         foreach ($settings as $setting => $value) {
@@ -1195,6 +1212,8 @@ Class Frontend {
                 DB::Query($insertSQL);
             }
         }
+
+        // No per-user OAuth apps on shared platform
         
         // Departments
         $emails = isset($_REQUEST['departmentEmail']) ? $_REQUEST['departmentEmail'] : [];
@@ -1221,9 +1240,87 @@ Class Frontend {
             $count++;
         }
         
+        // Persist authMethod also through mailHandler helper for consistency
+        try { mailHandler::setAuthMethodForUser($userId, $authMethod); } catch (\Throwable $e) {}
+
         $retArr['success'] = true;
         $retArr['message'] = 'Mail handler configuration saved';
         return $retArr;
+    }
+
+    // ****************************************************************************************************** 
+    // Mail OAuth API delegations
+    // ****************************************************************************************************** 
+
+    public static function mailOAuthStart(): array {
+        if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            return ['success' => false, 'error' => 'User not logged in'];
+        }
+        $userId = intval($_SESSION["USERPROFILE"]["BID"]);
+        $provider = isset($_REQUEST['provider']) ? trim(strtolower($_REQUEST['provider'])) : '';
+        $email = isset($_REQUEST['email']) ? trim($_REQUEST['email']) : '';
+        if (!in_array($provider, ['google','microsoft'])) { return ['success' => false, 'error' => 'Invalid provider']; }
+        $redirectUri = $GLOBALS['baseUrl'] . "api.php?action=mailOAuthCallback&provider=".$provider;
+        return mailHandler::oauthStart($provider, $redirectUri, $userId, $email);
+    }
+
+    public static function mailOAuthCallback(): array {
+        if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            return ['success' => false, 'error' => 'User not logged in'];
+        }
+        $userId = intval($_SESSION["USERPROFILE"]["BID"]);
+        $provider = isset($_REQUEST['provider']) ? trim(strtolower($_REQUEST['provider'])) : '';
+        $code = isset($_REQUEST['code']) ? $_REQUEST['code'] : '';
+        if (!in_array($provider, ['google','microsoft'])) { return ['success' => false, 'error' => 'Invalid provider']; }
+        if (strlen($code) < 5) { return ['success' => false, 'error' => 'Missing code']; }
+        $redirectUri = $GLOBALS['baseUrl'] . "api.php?action=mailOAuthCallback&provider=".$provider;
+        return mailHandler::oauthCallback($provider, $code, $redirectUri, $userId);
+    }
+
+    public static function mailOAuthStatus(): array {
+        if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            return ['success' => false, 'error' => 'User not logged in'];
+        }
+        $userId = intval($_SESSION["USERPROFILE"]["BID"]);
+        return mailHandler::oauthStatus($userId);
+    }
+
+    public static function mailOAuthDisconnect(): array {
+        if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            return ['success' => false, 'error' => 'User not logged in'];
+        }
+        $userId = intval($_SESSION["USERPROFILE"]["BID"]);
+        return mailHandler::oauthDisconnect($userId);
+    }
+
+    /**
+     * Test IMAP/POP connection using current form values (does not persist)
+     */
+    public static function mailTestConnection(): array {
+        if (!isset($_SESSION["USERPROFILE"]) || !isset($_SESSION["USERPROFILE"]["BID"])) {
+            return ['success' => false, 'error' => 'User not logged in'];
+        }
+        $userId = intval($_SESSION["USERPROFILE"]["BID"]);
+        $params = [
+            'server' => isset($_REQUEST['mailServer']) ? trim($_REQUEST['mailServer']) : '',
+            'port' => isset($_REQUEST['mailPort']) ? intval($_REQUEST['mailPort']) : 993,
+            'protocol' => isset($_REQUEST['mailProtocol']) ? trim($_REQUEST['mailProtocol']) : 'imap',
+            'security' => isset($_REQUEST['mailSecurity']) ? trim($_REQUEST['mailSecurity']) : 'ssl',
+            'username' => isset($_REQUEST['mailUsername']) ? trim($_REQUEST['mailUsername']) : '',
+            'password' => isset($_REQUEST['mailPassword']) ? (string)$_REQUEST['mailPassword'] : '',
+            'authMethod' => isset($_REQUEST['authMethod']) ? trim($_REQUEST['authMethod']) : ''
+        ];
+        $result = mailHandler::imapTestConnection($userId, $params);
+        // Add simple mask for username in echo
+        if (isset($result['connection']['username'])) {
+            $u = $result['connection']['username'];
+            if (strlen($u) > 4) {
+                $result['connection']['username_masked'] = substr($u, 0, 2) . '***' . substr($u, -2);
+            } else {
+                $result['connection']['username_masked'] = '***';
+            }
+        }
+        return $result;
     }
     
     /**

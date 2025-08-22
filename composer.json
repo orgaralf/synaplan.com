@@ -13,7 +13,8 @@
         "google/apiclient": "^2.18.0",
         "gemini-api-php/client": "^1.7",
         "erusev/parsedown": "^1.7",
-        "webklex/php-imap": "^6.2"
+        "webklex/php-imap": "^6.2",
+        "stevenmaguire/oauth2-microsoft": "^2.2"
     },
     "scripts": {
         "pre-autoload-dump": "Google\\Task\\Composer::cleanup"
