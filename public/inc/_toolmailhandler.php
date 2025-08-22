@@ -893,24 +893,44 @@ class mailHandler {
 			$stateRow = DB::FetchArr($stateRes);
 			$lastSeenTs = 0;
 			if ($stateRow && is_numeric($stateRow['BVALUE'])) { $lastSeenTs = (int)$stateRow['BVALUE']; }
+			Tools::debugCronLog("[IMAP] processNewEmailsForUser userId=".$userId." last_seen=".$lastSeenTs." maxOnFirstRun=".$maxOnFirstRun."\n");
 			$messages = null;
-			if ($lastSeenTs > 0) {
-				$since = Carbon::createFromTimestamp($lastSeenTs);
-				$messages = $folder->messages()->since($since)->leaveUnread()->get();
-			} else {
-				$messages = $folder->messages()->leaveUnread()->get();
+			try {
+				// Use the simplest compatible query for Gmail: ALL
+				$messages = $folder->messages()->all()->get();
+				try { $cnt = method_exists($messages,'count') ? $messages->count() : (is_array($messages)?count($messages):0); } catch (\Throwable $eCnt) { $cnt = 0; }
+				Tools::debugCronLog("[IMAP] Primary fetch: all()->get() count=".$cnt."\n");
+			} catch (\Throwable $e) {
+				Tools::debugCronLog("[IMAP] Fetch error (primary all): ".$e->getMessage()."\n");
+				try {
+					// Minimalistic fallback
+					$messages = $folder->messages()->get();
+					try { $cnt = method_exists($messages,'count') ? $messages->count() : (is_array($messages)?count($messages):0); } catch (\Throwable $eCnt) { $cnt = 0; }
+					Tools::debugCronLog("[IMAP] Fallback fetch: messages()->get() count=".$cnt."\n");
+				} catch (\Throwable $e2) {
+					Tools::debugCronLog("[IMAP] Fetch error (fallback get): ".$e2->getMessage()."\n");
+					return ['success' => false, 'processed' => 0, 'errors' => ['fetch_all: '.$e->getMessage(), 'fetch_get: '.$e2->getMessage()]];
+				}
 			}
 			if (!$messages) { return ['success' => true, 'processed' => 0, 'errors' => []]; }
-			// Collect and sort newest first, then apply first-run limit if needed
+			// Collect and ensure newest first; apply last_seen filter in PHP to avoid server-specific syntax issues
 			$collected = [];
 			foreach ($messages as $m) { $collected[] = $m; }
+			if ($lastSeenTs > 0) {
+				$collected = array_values(array_filter($collected, function($msg) use ($lastSeenTs) {
+					return self::getMessageUnixTime($msg) > $lastSeenTs;
+				}));
+			}
 			usort($collected, function($a, $b) { return self::getMessageUnixTime($b) <=> self::getMessageUnixTime($a); });
+			// If first run and we couldn't apply a limit on server side, apply here
 			if ($lastSeenTs <= 0 && $maxOnFirstRun > 0 && count($collected) > $maxOnFirstRun) {
 				$collected = array_slice($collected, 0, $maxOnFirstRun);
 			}
+			Tools::debugCronLog("[IMAP] Collected messages after sort/limit: ".count($collected)."\n");
 			$departments = self::getDepartmentsForUser($userId);
 			$allowedEmails = array_map(function($d){ return strtolower($d['email']); }, $departments);
 			$defaultEmail = self::getDefaultDepartmentEmail($departments);
+			Tools::debugCronLog("[ROUTING] Allowed targets: ".implode(',', $allowedEmails)." default=".strtolower($defaultEmail)."\n");
 			$latestTs = $lastSeenTs;
 			$processed = 0;
 			foreach ($collected as $msg) {
@@ -928,26 +948,32 @@ class mailHandler {
 					if (count($attachNames) > 0) {
 						$attachmentSection = "\n\nAttachments (".count($attachNames)."):\n- ".implode("\n- ", $attachNames);
 					}
-					$aiBody = "SENDER: ".$sender."\nSUBJECT: ".$subject."\n\nBODY:\n".$body.$attachmentSection;
+					$aiBody = "SENDER: ".$sender."\nSUBJECT: ".$subject."\n\n".$body.$attachmentSection;
+					Tools::debugCronLog("[MSG] subject=\"".substr($subject,0,120)."\" from=\"".substr($sender,0,120)."\" attachments=".count($attachNames)."\n");
 					// Run routing AI
 					$aiAnswer = self::runRoutingForUser($userId, $subject, $aiBody);
 					$chosen = self::extractEmailFromText(is_array($aiAnswer) ? json_encode($aiAnswer) : (string)$aiAnswer);
 					$chosen = strtolower($chosen);
+					Tools::debugCronLog("[ROUTING] aiAnswer=\"".substr((string)$aiAnswer,0,160)."\" parsed=\"".$chosen."\"\n");
 					if ($chosen === '' || !in_array($chosen, $allowedEmails, true)) { $chosen = strtolower($defaultEmail); }
+					Tools::debugCronLog("[ROUTING] chosenTarget=\"".$chosen."\"\n");
 					// Forward with all attachments
 					$sentOk = self::imapForwardMessageAll($msg, $chosen, '');
+					Tools::debugCronLog("[FORWARD] sent=".($sentOk?'1':'0')." to=\"".$chosen."\"\n");
 					// Mark read rules: mark as read unless default was selected
 					if ($chosen !== '' && $chosen !== strtolower($defaultEmail)) {
 						try {
+							// set seen via flags API; ignore failures
 							if (method_exists($msg, 'setFlag')) { $msg->setFlag('Seen'); }
-							elseif (method_exists($msg, 'setFlags')) { $msg->setFlags(['Seen']); }
+							if (method_exists($msg, 'setFlags')) { $msg->setFlags(['Seen']); }
+							if (method_exists($msg, 'markAsRead')) { $msg->markAsRead(); }
 						} catch (\Throwable $e) {}
 					}
 					$ts = self::getMessageUnixTime($msg);
 					if ($ts > $latestTs) { $latestTs = $ts; }
 					$processed++;
 				} catch (\Throwable $e) {
-					$ret['errors'][] = $e->getMessage();
+					$ret['errors'][] = 'process_message: '.$e->getMessage();
 				}
 			}
 			if ($processed > 0 && $latestTs > 0) {
@@ -960,13 +986,14 @@ class mailHandler {
 				} else {
 					DB::Query("INSERT INTO BCONFIG (BOWNERID, BGROUP, BSETTING, BVALUE) VALUES (".$userId.", 'mailhandler_state', 'last_seen', '".$latestTs."')");
 				}
+				Tools::debugCronLog("[STATE] Updated last_seen to ".$latestTs."\n");
 			}
 			try { $client->disconnect(); } catch (\Throwable $e) {}
 			$ret['success'] = true;
 			$ret['processed'] = $processed;
 			return $ret;
 		} catch (\Throwable $e) {
-			$ret['errors'][] = $e->getMessage();
+			$ret['errors'][] = 'fatal: '.$e->getMessage();
 			return $ret;
 		}
 	}
