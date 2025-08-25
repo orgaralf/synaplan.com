@@ -493,13 +493,13 @@ function handleSendMessage() {
                         <span class="badge bg-secondary">${data.time}</span>
                         <span class="badge bg-success model-tag-placeholder text-truncate" style="max-width: 200px;">Antwort von ...</span>
                       </div>
-                      <div class="d-flex gap-1">
+                      <div class="d-flex gap-2 align-items-start flex-wrap">
                         <button class="btn btn-outline-secondary btn-sm copy-btn" title="Text kopieren" onclick="copyMessageText('${AItextBlock}')">
                           <i class="fas fa-copy"></i>
                         </button>
                         <button class="btn btn-success btn-sm again-btn" title="${getTranslation('again_button_tooltip')}">
                           <i class="fas fa-redo"></i>
-                          <span>Again mit <span class="next-model-name">...</span></span>
+                          <span>Again mit </span><span class="next-model-name">...</span>
                         </button>
                         <div class="dropdown">
                           <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" onclick="toggleModelDropdown('temp')">
@@ -603,7 +603,26 @@ function sseStream(data, outputObject) {
     if(eventMessage.status == 'done') {
       stopWaitingLoader(outputObject);
       eventSource.close(); // Optional
-      aiRender(outputObject);
+
+      const isPlaceholder = (txt) => {
+        if (!txt) return true;
+        return /that should end the stream/i.test(txt.trim());
+      };
+
+      // Prefer streamed content; if absent or placeholder, use final message if provided
+      if (!aiTextBuffer[outputObject] || aiTextBuffer[outputObject].length === 0 || isPlaceholder(aiTextBuffer[outputObject])) {
+        if (typeof eventMessage.message === 'string' && !isPlaceholder(eventMessage.message)) {
+          aiTextBuffer[outputObject] = eventMessage.message.replace(/\\"/g, '"');
+          aiRender(outputObject);
+        } else if (eventMessage.aiResponseId) {
+          // Fallback: fetch final text from history for this message id
+          fetchAndRenderMessageById(eventMessage.aiResponseId, outputObject, () => {});
+        } else {
+          aiRender(outputObject);
+        }
+      } else {
+        aiRender(outputObject);
+      }
       
       // Setup Again button with persistierte DB-BID after streaming is complete
       setupAgainButtonAfterStreaming(outputObject, eventMessage);
@@ -623,14 +642,58 @@ function sseStream(data, outputObject) {
 // function AI RENDER
 function aiRender(targetId) {
   if (typeof window.md !== 'undefined') {
-    mdText = window.md.render(aiTextBuffer[targetId]) + "<br>";
+    mdText = window.md.render(aiTextBuffer[targetId] || '') + "<br>";
     $("#"+targetId).html(mdText);
   } else {
     // Fallback if markdown-it is not available
-    mdText = aiTextBuffer[targetId].replace(/\n/g, '<br>');
-    $("#ai_processing").html(mdText);
+    mdText = (aiTextBuffer[targetId] || '').replace(/\n/g, '<br>');
+    // Write into the actual streaming target container
+    $("#" + targetId).html(mdText);
   }
+  // After rendering, attach retry handlers for media assets created just now
+  try {
+    const container = document.getElementById(targetId);
+    if (container) {
+      const attachRetry = (elList) => {
+        elList.forEach((el) => {
+          let attempts = 0;
+          const originalSrc = el.currentSrc || el.src;
+          const retry = () => {
+            if (attempts >= 5) return;
+            attempts += 1;
+            const bust = (originalSrc.includes('?') ? '&' : '?') + 't=' + Date.now();
+            setTimeout(() => { el.src = originalSrc + bust; }, attempts * 300);
+          };
+          el.addEventListener('error', retry, { once: false });
+        });
+      };
+      attachRetry(container.querySelectorAll('img'));
+      attachRetry(container.querySelectorAll('video'));
+      attachRetry(container.querySelectorAll('audio'));
+    }
+  } catch (_) {}
   aiTextBuffer[targetId] = '';
+}
+
+// Fetch the final AI message text from history and render it
+function fetchAndRenderMessageById(messageId, targetId, onDone) {
+  fetch('api.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'action=loadChatHistory&amount=20'
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data && data.success && Array.isArray(data.messages)) {
+      const msg = data.messages.find(m => m.BID == messageId);
+      if (msg) {
+        const text = (msg.displayText || msg.BTEXT || '').toString();
+        aiTextBuffer[targetId] = text;
+      }
+    }
+  })
+  .catch(() => {})
+  .finally(() => { try { aiRender(targetId); } catch (e) {} if (typeof onDone === 'function') onDone(); });
 }
 
 // Global model cache (shared with chathistory.js)
@@ -657,12 +720,12 @@ function getTranslation(key) {
 // Helper function to shorten long model names
 function shortenModelName(modelName) {
     if (!modelName) return modelName;
-    
-     // If too long (> 14 chars), truncate and add ellipsis
-     if (modelName.length > 14) {
-      return modelName.substring(0, 12) + '...';
-  }
-    
+    const isMobile = window.matchMedia && window.matchMedia('(max-width: 575.98px)').matches;
+    if (!isMobile) return modelName;
+    const maxLen = 14;
+    if (modelName.length > maxLen) {
+        return modelName.substring(0, maxLen - 2) + '...';
+    }
     return modelName;
 }
 

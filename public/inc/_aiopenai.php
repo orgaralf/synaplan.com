@@ -493,22 +493,25 @@ class AIOpenAI {
         // hive: $fileUrl = $arrRes['output'][0]['url'];
         $fileOutput = substr($usrArr["BPROVIDERID"], -5, 3) . '/' . substr($usrArr["BPROVIDERID"], -2, 2) . '/' . date("Ym");
         $filePath = $fileOutput . '/oai_' . $msgArr['BID'] . '.' . $fileType;
-        // create the directory if it doesn't exist
-        if(!is_dir('up/'.$fileOutput)) {
-            mkdir('up/'.$fileOutput, 0777, true);
+        // Create the public/up directory path (DocumentRoot is public)
+        $publicUpDir = __DIR__ . '/../up/' . $fileOutput;
+        if (!is_dir($publicUpDir)) {
+            mkdir($publicUpDir, 0755, true);
         }
         $msgArr['BFILE'] = 1;
         $msgArr['BFILETEXT'] = 'OK: OpenAI Image'; //json_encode($msgArr['input']);
         $msgArr['BFILEPATH'] = $filePath;
         $msgArr['BFILETYPE'] = $fileType;    
 
-        try {
-            file_put_contents('up/'.$filePath, $imageData);
-            // when URL is available, copy($fileUrl, 'up/'.$filePath);
-        } catch (Exception $e) {
+        // Write image file and verify success
+        $absoluteFile = __DIR__ . '/../up/' . $filePath;
+        $writeOk = @file_put_contents($absoluteFile, $imageData);
+        if ($writeOk === false || !file_exists($absoluteFile)) {
             $msgArr['BFILE'] = 0;
             $msgArr['BFILEPATH'] = '';
-            $msgArr['BFILETEXT'] = "Error: " . $e->getMessage();
+            $msgArr['BFILETEXT'] = 'Error: could not write image file';
+        } else {
+            @chmod($absoluteFile, 0644);
         }
         // return the message array
         return $msgArr;

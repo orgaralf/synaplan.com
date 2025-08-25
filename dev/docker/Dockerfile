@@ -1,7 +1,7 @@
 # Use PHP 8.3 with Apache
 FROM php:8.3-apache
 
-# Install system dependencies including FFmpeg and whisper.cpp dependencies
+# Install system dependencies including FFmpeg, whisper.cpp, and mail dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -45,6 +45,10 @@ RUN apt-get update && apt-get install -y \
     libfontconfig1-dev \
     libfribidi-dev \
     libharfbuzz-dev \
+    # Mail and SSL dependencies
+    ca-certificates \
+    openssl \
+    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

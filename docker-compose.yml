@@ -20,6 +20,14 @@ services:
       - DB_USER=synaplan_user
       - DB_PASSWORD=synaplan_password
       - OLLAMA_SERVER=ollama:11434
+      # Mail configuration for development
+      - MAIL_HOST=mailhog
+      - MAIL_PORT=1025
+      - MAIL_USERNAME=
+      - MAIL_PASSWORD=
+      - MAIL_ENCRYPTION=
+      - MAIL_FROM_ADDRESS=noreply@synaplan.local
+      - MAIL_FROM_NAME="Synaplan Development"
     depends_on:
       db:
         condition: service_healthy
@@ -192,6 +200,21 @@ services:
     volumes:
       - whisper_models:/models
     restart: "no"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - synaplan-network
+
+  # MailHog for email testing and development
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: synaplan-mailhog
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    restart: unless-stopped
     logging:
       options:
         max-size: "10m"

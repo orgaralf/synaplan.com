@@ -163,13 +163,13 @@ function renderChatHistory(messages) {
                                         ${chat.BTOPIC && chat.BTOPIC !== 'general' ? `<span class="badge bg-info">${escapeHtml(chat.BTOPIC)}</span>` : ''}
                                     </div>
                                     ${!isAgained ? `
-                                    <div class="d-flex gap-1">
+                                    <div class="d-flex gap-2 align-items-start flex-wrap">
                                         <button class="btn btn-outline-secondary btn-sm copy-btn" data-message-id="${chat.BID}" title="Text kopieren" onclick="copyMessageText(${chat.BID})">
                                             <i class="fas fa-copy"></i>
                                         </button>
                                         <button class="btn btn-success btn-sm again-btn" data-message-id="${chat.BID}" title="${getTranslation('again_button_tooltip')}" onclick="handleAgainRequest(${chat.BID})">
                                             <i class="fas fa-redo"></i>
-                                            <span>Again mit <span class="next-model-name">...</span></span>
+                                            <span>Again mit </span><span class="next-model-name">...</span>
                                         </button>
                                         <div class="dropdown">
                                             <button class="btn btn-outline-secondary btn-sm dropdown-toggle dropdown-disabled" type="button" disabled title="Nur bei neuester Nachricht verfügbar">
@@ -204,6 +204,26 @@ function renderChatHistory(messages) {
             window.hljs.highlightElement(block);
         });
     }
+
+    // Attach retry handlers for media that might not be available immediately
+    try {
+        const attachRetry = (elList) => {
+            elList.forEach((el) => {
+                let attempts = 0;
+                const originalSrc = el.currentSrc || el.src;
+                const retry = () => {
+                    if (attempts >= 5) return;
+                    attempts += 1;
+                    const bust = (originalSrc.includes('?') ? '&' : '?') + 't=' + Date.now();
+                    setTimeout(() => { el.src = originalSrc + bust; }, attempts * 300);
+                };
+                el.addEventListener('error', retry, { once: false });
+            });
+        };
+        attachRetry(chatHistory.querySelectorAll('img'));
+        attachRetry(chatHistory.querySelectorAll('video'));
+        attachRetry(chatHistory.querySelectorAll('audio'));
+    } catch (e) { /* noop */ }
     
     // Enable dropdown only for the newest non-agained message, disable all others
     const allMessages = chatHistory.querySelectorAll('.message-item.ai-message:not(.message-agained)');
@@ -249,12 +269,12 @@ function escapeHtml(text) {
 // Helper function to shorten long model names
 function shortenModelName(modelName) {
     if (!modelName) return modelName;
-    
-     // If too long (> 14 chars), truncate and add ellipsis
-     if (modelName.length > 14) {
-        return modelName.substring(0, 12) + '...';
+    const isMobile = window.matchMedia && window.matchMedia('(max-width: 575.98px)').matches;
+    if (!isMobile) return modelName;
+    const maxLen = 14;
+    if (modelName.length > maxLen) {
+        return modelName.substring(0, maxLen - 2) + '...';
     }
-    
     return modelName;
 }
 
@@ -379,13 +399,13 @@ function handleAgainRequest(messageId, overrideModelBid = null) {
                                         <span class="badge bg-secondary">${retryData.time}</span>
                                         <span class="badge bg-success text-truncate" style="max-width: 200px;" title="${data.retry_model}">Antwort von ${data.retry_model}</span>
                                     </div>
-                                    <div class="d-flex gap-1">
+                                    <div class="d-flex gap-2 align-items-start flex-wrap">
                                         <button class="btn btn-outline-secondary btn-sm copy-btn" title="Text kopieren" onclick="copyMessageText('${AItextBlock}')">
                                             <i class="fas fa-copy"></i>
                                         </button>
                                         <button class="btn btn-success btn-sm again-btn" data-message-id="${data.retry_message_id}" title="${getTranslation('again_button_tooltip')}" onclick="handleAgainRequest(${data.retry_message_id})">
                                             <i class="fas fa-redo"></i>
-                                            <span>Again mit <span class="next-model-name">...</span></span>
+                                            <span>Again mit </span><span class="next-model-name">...</span>
                                         </button>
                                         <div class="dropdown">
                                             <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-message-id="${data.retry_message_id}" onclick="toggleModelDropdown(${data.retry_message_id})">
@@ -765,8 +785,23 @@ function trackAgainEvent(eventType, messageId, modelBid = null, errorCode = null
 
 // Copy message text function
 function copyMessageText(messageId) {
-    const messageElement = document.querySelector(`li[data-message-id="${messageId}"] .message-content, #${messageId}`);
-    if (!messageElement) return;
+    let messageElement;
+    
+    // Try to find by data-message-id first
+    const messageItem = document.querySelector(`li[data-message-id="${messageId}"]`);
+    if (messageItem) {
+        messageElement = messageItem.querySelector('.message-content');
+    }
+    
+    // If not found, try by ID
+    if (!messageElement) {
+        messageElement = document.getElementById(messageId);
+    }
+    
+    if (!messageElement) {
+        console.error('Message element not found for ID:', messageId);
+        return;
+    }
     
     const textContent = messageElement.textContent || messageElement.innerText;
     
