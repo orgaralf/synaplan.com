@@ -1,5 +1,5 @@
-# Use PHP 8.3 with Apache
-FROM php:8.3-apache
+# Use FrankenPHP with PHP 8.4
+FROM dunglas/frankenphp:php8.4
 
 # Install system dependencies including FFmpeg and whisper.cpp dependencies
 RUN apt-get update && apt-get install -y \
@@ -67,78 +67,24 @@ RUN cd /tmp && \
     chmod +x /usr/local/bin/whisper /usr/local/bin/whisper-quantize && \
     cd / && rm -rf /tmp/whisper.cpp
 
-# Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install -j$(nproc) \
+# Install additional PHP extensions (some are already included in FrankenPHP)
+RUN install-php-extensions \
         pdo_mysql \
         mysqli \
-        mbstring \
         exif \
         pcntl \
         bcmath \
         gd \
         zip \
         sodium \
-        ffi
+        ffi \
+        xdebug
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Enable Apache modules (headers first for CSP)
-RUN a2enmod headers rewrite
+# Expose ports (HTTP and HTTPS)
+EXPOSE 80 443
 
-# Configure Apache document root to point to public directory
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf \
-    && sed -i 's|<Directory /var/www/>|<Directory /var/www/html/public>|g' /etc/apache2/apache2.conf \
-    && echo '<Directory /var/www/html/public>\n\
-    Options Indexes FollowSymLinks\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>\n\
-\n\
-<FilesMatch \.php$>\n\
-    SetHandler application/x-httpd-php\n\
-</FilesMatch>\n\
-\n\
-DirectoryIndex index.php index.html' > /etc/apache2/conf-available/docker-php.conf \
-    && a2enconf docker-php \
-    && echo 'DocumentRoot /var/www/html/public' >> /etc/apache2/apache2.conf
-
-# Block access to sensitive files
-RUN echo '<FilesMatch "^\.">\n\
-    Require all denied\n\
-</FilesMatch>\n\
-\n\
-<FilesMatch "\.(env|htaccess|htpasswd|ini|log|sh|sql|conf|bak|backup|swp|swo|tmp|temp)$">\n\
-    Require all denied\n\
-</FilesMatch>\n\
-\n\
-<FilesMatch "(composer\.(json|lock)|package\.json|package-lock\.json|yarn\.lock|README\.md|CHANGELOG\.md|LICENSE|\.gitignore)$">\n\
-    Require all denied\n\
-</FilesMatch>\n\
-\n\
-<FilesMatch "(Dockerfile|docker-compose\.yml|\.dockerignore)$">\n\
-    Require all denied\n\
-</FilesMatch>\n\
-\n\
-<FilesMatch "(\.(git|svn|hg|bzr|cvs))">\n\
-    Require all denied\n\
-</FilesMatch>' > /etc/apache2/conf-available/security-headers.conf \
-    && a2enconf security-headers
-
-# Security headers with CSP
-RUN echo 'Header always set X-Content-Type-Options nosniff' > /etc/apache2/conf-available/secure-basics.conf \
-    && echo 'Header always set Referrer-Policy "strict-origin-when-cross-origin"' >> /etc/apache2/conf-available/secure-basics.conf \
-    && echo 'Header always set Permissions-Policy "camera=(),microphone=(),geolocation=()"' >> /etc/apache2/conf-available/secure-basics.conf \
-    && a2enconf secure-basics
-
-# CSP Report-Only für DEV
-RUN echo 'Header always set Content-Security-Policy-Report-Only "default-src '"'"'self'"'"'; script-src '"'"'self'"'"' '"'"'unsafe-inline'"'"'; style-src '"'"'self'"'"' '"'"'unsafe-inline'"'"'; img-src '"'"'self'"'"' data: blob:; font-src '"'"'self'"'"' data:; connect-src '"'"'self'"'"' wss: https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.thehive.ai https://api.search.brave.com https://graph.search.brave.com https://graph.facebook.com; worker-src '"'"'self'"'"' blob:; media-src '"'"'self'"'"' blob:; manifest-src '"'"'self'"'"'; frame-src '"'"'self'"'"'; object-src '"'"'none'"'"'; base-uri '"'"'self'"'"'; form-action '"'"'self'"'"'; frame-ancestors '"'"'none'"'"'"' > /etc/apache2/conf-available/csp-reportonly.conf \
-    && a2enconf csp-reportonly
-
-
-# Expose port 80
-EXPOSE 80
-
-# Start Apache
-CMD ["apache2-foreground"] 
+# Start FrankenPHP
+CMD ["frankenphp", "php-server", "--listen", "0.0.0.0:80", "--root", "public/"]
