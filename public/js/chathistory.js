@@ -134,14 +134,15 @@ function renderChatHistory(messages) {
             // Get model info for avatar and display
             const modelService = chat.aiService || '';
             const modelName = chat.aiModel || '';
+            const modelProviderRaw = chat.aiModelProvider || '';
             // Remove 'AI' prefix from service name for avatar class
             const cleanService = modelService.replace('AI', '');
             const avatarClass = getModelAvatarClass(cleanService);
             
             messageHtml = `
                 <li class="message-item ai-message${againedClass}" data-message-id="${chat.BID}">
-                    <div class="ai-avatar ${avatarClass}">
-                        ${chat.aiService ? getAIIcon(chat.aiService) : '<i class="fas fa-robot text-white"></i>'}
+                    <div class="ai-avatar ${avatarClass} d-none d-md-flex">
+                        ${chat.aiService ? (typeof getAIIconByModel === 'function' ? getAIIconByModel(modelProviderRaw || modelName, chat.aiService) : getAIIcon(chat.aiService)) : '<i class="fas fa-robot text-white"></i>'}
                     </div>
                     <div class="message-content">
                         <span id="system${chat.BID}" class="system-message"></span>
@@ -151,13 +152,13 @@ function renderChatHistory(messages) {
                                 ${mdText}
                             </div>
                             <div class="card-footer bg-light border-0 mt-2">
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex flex-column gap-2">
                                     <div class="d-flex flex-wrap gap-1">
                                         <span class="badge bg-secondary">${formatDateTime(chat.BDATETIME)}</span>
                                         ${chat.aiModel ? `
-                                            <span class="badge bg-success">${getTranslation('answer_from')} ${escapeHtml(chat.aiModel)}</span>
+                                            <span class="badge bg-success text-truncate" style="max-width: 200px;" title="${escapeHtml(chat.aiModel)}">${getTranslation('answer_from')} ${escapeHtml(chat.aiModel)}</span>
                                         ` : chat.aiService ? `
-                                            <span class="badge bg-success">${getTranslation('answer_from')} ${escapeHtml(chat.aiService.replace('AI', ''))}</span>
+                                            <span class="badge bg-success text-truncate" style="max-width: 200px;" title="${escapeHtml(chat.aiService.replace('AI', ''))}">${getTranslation('answer_from')} ${escapeHtml(chat.aiService.replace('AI', ''))}</span>
                                         ` : ''}
                                         ${chat.BTOPIC && chat.BTOPIC !== 'general' ? `<span class="badge bg-info">${escapeHtml(chat.BTOPIC)}</span>` : ''}
                                     </div>
@@ -168,7 +169,7 @@ function renderChatHistory(messages) {
                                         </button>
                                         <button class="btn btn-success btn-sm again-btn" data-message-id="${chat.BID}" title="${getTranslation('again_button_tooltip')}" onclick="handleAgainRequest(${chat.BID})">
                                             <i class="fas fa-redo"></i>
-                                            <span class="d-none d-md-inline">Again mit <span class="next-model-name">...</span></span>
+                                            <span>Again mit <span class="next-model-name">...</span></span>
                                         </button>
                                         <div class="dropdown">
                                             <button class="btn btn-outline-secondary btn-sm dropdown-toggle dropdown-disabled" type="button" disabled title="Nur bei neuester Nachricht verfügbar">
@@ -224,12 +225,16 @@ function renderChatHistory(messages) {
             dropdownBtn.classList.remove('dropdown-disabled');
             dropdownBtn.title = 'Modell wählen';
             dropdownBtn.setAttribute('onclick', `toggleModelDropdown(${newestMessage.dataset.messageId})`);
+            dropdownBtn.setAttribute('data-message-id', newestMessage.dataset.messageId);
             
             // Update dropdown content
             const dropdown = newestMessage.querySelector('.dropdown-menu');
             if (dropdown) {
                 dropdown.innerHTML = '<li><span class="dropdown-item-text text-center"><i class="fas fa-spinner fa-spin"></i> Lade Modelle...</span></li>';
             }
+            
+            // Load next model name for the newest message
+            updateAgainButtonLabel(newestMessage.dataset.messageId);
         }
     }
 }
@@ -239,6 +244,18 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Helper function to shorten long model names
+function shortenModelName(modelName) {
+    if (!modelName) return modelName;
+    
+     // If too long (> 14 chars), truncate and add ellipsis
+     if (modelName.length > 14) {
+        return modelName.substring(0, 12) + '...';
+    }
+    
+    return modelName;
 }
 
 // Get model-specific avatar class
@@ -350,31 +367,31 @@ function handleAgainRequest(messageId, overrideModelBid = null) {
             const AItextBlock = `START_${data.retry_message_id}`;
             $("#chatHistory").append(`
                 <li class="message-item ai-message" data-streaming-id="${data.retry_message_id}">
-                    <div class="ai-avatar ai-avatar-${data.retry_model_service.toLowerCase()}">
+                    <div class="ai-avatar ai-avatar-${data.retry_model_service.toLowerCase()} d-none d-md-flex">
                         ${getAIIcon('AI' + data.retry_model_service)}
                     </div>
                     <div class="message-content">
                         <div class="message-bubble ai-bubble">
                             <div id="${AItextBlock}" class="message-content"></div>
                             <div class="card-footer bg-light border-0 mt-2" style="display: none;">
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex flex-column gap-2">
                                     <div class="d-flex flex-wrap gap-1">
                                         <span class="badge bg-secondary">${retryData.time}</span>
-                                        <span class="badge bg-success">Antwort von ${data.retry_model}</span>
+                                        <span class="badge bg-success text-truncate" style="max-width: 200px;" title="${data.retry_model}">Antwort von ${data.retry_model}</span>
                                     </div>
                                     <div class="d-flex gap-1">
                                         <button class="btn btn-outline-secondary btn-sm copy-btn" title="Text kopieren" onclick="copyMessageText('${AItextBlock}')">
                                             <i class="fas fa-copy"></i>
                                         </button>
-                                        <button class="btn btn-success btn-sm again-btn">
+                                        <button class="btn btn-success btn-sm again-btn" data-message-id="${data.retry_message_id}" title="${getTranslation('again_button_tooltip')}" onclick="handleAgainRequest(${data.retry_message_id})">
                                             <i class="fas fa-redo"></i>
-                                            <span class="d-none d-md-inline">Again mit ...</span>
+                                            <span>Again mit <span class="next-model-name">...</span></span>
                                         </button>
                                         <div class="dropdown">
-                                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button">
+                                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-message-id="${data.retry_message_id}" onclick="toggleModelDropdown(${data.retry_message_id})">
                                                 <i class="fas fa-chevron-down"></i>
                                             </button>
-                                            <ul class="dropdown-menu">
+                                            <ul class="dropdown-menu" id="model-dropdown-${data.retry_message_id}">
                                                 <li><span class="dropdown-item-text text-center">
                                                     <i class="fas fa-spinner fa-spin"></i> Lade Modelle...
                                                 </span></li>
@@ -391,6 +408,41 @@ function handleAgainRequest(messageId, overrideModelBid = null) {
             startWaitingLoader(AItextBlock);
             sseStream(retryData, AItextBlock);
             $("#chatModalBody").scrollTop($("#chatModalBody").prop("scrollHeight"));
+            
+            // Load next model name for the new retry message
+            setTimeout(() => {
+                updateAgainButtonLabel(data.retry_message_id);
+                
+                // Disable all other dropdowns and enable only the newest one
+                const allMessages = document.querySelectorAll('.message-item.ai-message:not(.message-agained)');
+                
+                // First disable all dropdowns
+                document.querySelectorAll('.dropdown-toggle').forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('dropdown-disabled');
+                    btn.title = 'Nur bei neuester Nachricht verfügbar';
+                    btn.removeAttribute('onclick');
+                });
+                
+                // Then enable only the newest one
+                if (allMessages.length > 0) {
+                    const newestMessage = allMessages[allMessages.length - 1];
+                    const dropdownBtn = newestMessage.querySelector('.dropdown-toggle');
+                    if (dropdownBtn) {
+                        dropdownBtn.disabled = false;
+                        dropdownBtn.classList.remove('dropdown-disabled');
+                        dropdownBtn.title = 'Modell wählen';
+                        dropdownBtn.setAttribute('onclick', `toggleModelDropdown(${newestMessage.dataset.messageId})`);
+                        dropdownBtn.setAttribute('data-message-id', newestMessage.dataset.messageId);
+                        
+                        // Update dropdown content
+                        const dropdown = newestMessage.querySelector('.dropdown-menu');
+                        if (dropdown) {
+                            dropdown.innerHTML = '<li><span class="dropdown-item-text text-center"><i class="fas fa-spinner fa-spin"></i> Lade Modelle...</span></li>';
+                        }
+                    }
+                }
+            }, 100);
             
         } else {
             // Show specific error message based on error code
@@ -486,10 +538,10 @@ function updateAgainButtonLabel(messageId) {
     
     // Check if user has selected a specific model
     if (selectedModelOverrides[messageId]) {
-        const selectedModelName = getModelNameById(selectedModelOverrides[messageId]);
-        const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+        const selectedModelName = shortenModelName(getModelNameById(selectedModelOverrides[messageId]));
+        const btnText = button.querySelector('.next-model-name');
         if (btnText) {
-            btnText.innerHTML = `Again mit ${selectedModelName}`;
+            btnText.textContent = selectedModelName;
         }
         return;
     }
@@ -505,32 +557,25 @@ function updateAgainButtonLabel(messageId) {
     .then(response => response.json())
     .then(data => {
         if (data.success && data.next_model) {
-            const nextModelName = data.next_model.tag;
-            const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+            const nextModelName = shortenModelName(data.next_model.tag);
+            const btnText = button.querySelector('.next-model-name');
             if (btnText) {
-                btnText.innerHTML = `Again mit ${nextModelName}`;
+                btnText.textContent = nextModelName;
             }
         } else {
-            // Fallback
-            const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
-            if (btnText) {
-                btnText.innerHTML = 'Again';
-            }
+            // Fallback - keep "..." as placeholder
         }
     })
     .catch(error => {
         console.error('Failed to load next model:', error);
-        const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
-        if (btnText) {
-            btnText.innerHTML = 'Again';
-        }
+        // Keep "..." as fallback on error
     });
 }
 
 // Toggle model dropdown
 function toggleModelDropdown(messageId) {
     const dropdown = document.getElementById(`model-dropdown-${messageId}`);
-    const button = document.querySelector(`button[data-message-id="${messageId}"].dropdown-toggle`);
+    const button = document.querySelector(`button[onclick*="toggleModelDropdown(${messageId})"]`);
     
     if (!dropdown || !button) {
         console.error('Dropdown or button not found:', messageId);
@@ -545,16 +590,38 @@ function toggleModelDropdown(messageId) {
     });
     
     if (!isOpen) {
-        // Position dropdown outside chat container
         const rect = button.getBoundingClientRect();
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        
-        dropdown.style.left = (rect.right - 280) + 'px'; // Position from right edge
-        dropdown.style.top = (rect.bottom + scrollTop + 5) + 'px';
-        
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+        // Default position below button
+        let top = rect.bottom + 6;
+        let maxHeight = viewportHeight - rect.bottom - 16; // space below
+
+        // If there is not enough space below, open upwards
+        if (maxHeight < 160) { // 160px minimal dropdown height
+            maxHeight = rect.top - 16; // space above
+            top = rect.top - Math.min(400, maxHeight) - 6;
+            dropdown.classList.add('dropup');
+        } else {
+            dropdown.classList.remove('dropup');
+        }
+
+        // Align within viewport width and set fixed positioning for overlay
+        const menuWidth = 280;
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+        let left = rect.right - menuWidth;
+        left = Math.max(12, Math.min(left, viewportWidth - menuWidth - 12));
+
+        dropdown.style.position = 'fixed';
+        dropdown.style.left = left + 'px';
+        dropdown.style.top = top + 'px';
+        dropdown.style.maxHeight = Math.max(160, maxHeight) + 'px';
+        dropdown.style.overflowY = 'auto';
+        dropdown.style.minWidth = menuWidth + 'px';
+        dropdown.style.zIndex = 2000;
+
         dropdown.classList.add('show');
         loadModelsForDropdown(messageId);
-        console.log('Dropdown opened for messageId:', messageId);
     }
 }
 
@@ -612,11 +679,15 @@ function renderModelDropdown(messageId, models) {
         const isSelected = selectedBid == model.bid;
         html += `
             <li><a class="dropdown-item ${isSelected ? 'active' : ''}" href="#" onclick="window.selectModel(${messageId}, ${model.bid}, '${model.tag}'); return false;">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="ai-icon">${getAIIcon('AI' + model.service)}</span>
-                    <span>${model.tag}</span>
-                    <small class="text-muted ms-auto">${model.quality}</small>
-                    ${isSelected ? '<i class="fas fa-check text-success ms-1"></i>' : ''}
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="ai-icon">${(typeof getAIIconByModel === 'function') ? getAIIconByModel(model.provider, 'AI' + model.service) : getAIIcon('AI' + model.service)}</span>
+                        <span class="fw-medium">${model.tag}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <small class="text-muted">${model.quality}</small>
+                        ${isSelected ? '<i class="fas fa-check text-success"></i>' : ''}
+                    </div>
                 </div>
             </a></li>
         `;

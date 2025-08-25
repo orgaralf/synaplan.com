@@ -620,13 +620,29 @@ Class Frontend {
         // now work on the message itself, sort it and process it
         $aiResponseId = self::createAnswer($msgId);
         
+        // Resolve final AI service/model from persisted AI response message (not globals)
+        $finalService = '';
+        $finalModelProvider = '';
+        if ($aiResponseId) {
+            $svcRes = db::Query("SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($aiResponseId)." AND BTOKEN = 'AISERVICE' ORDER BY BID ASC LIMIT 1");
+            if ($svcArr = db::FetchArr($svcRes)) {
+                $finalService = $svcArr['BVALUE'];
+            }
+            $mdlRes = db::Query("SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($aiResponseId)." AND BTOKEN = 'AIMODEL' ORDER BY BID ASC LIMIT 1");
+            if ($mdlArr = db::FetchArr($mdlRes)) {
+                $finalModelProvider = $mdlArr['BVALUE'];
+            }
+        }
+        if ($finalService === '') $finalService = $GLOBALS["AI_CHAT"]["SERVICE"] ?? '';
+        if ($finalModelProvider === '') $finalModelProvider = $GLOBALS["AI_CHAT"]["MODEL"] ?? '';
+
         $update = [
             'msgId' => $msgId,
             'aiResponseId' => $aiResponseId, // The actual AI response ID for Again button
             'status' => 'done',
             'message' => 'That should end the stream. ',
-            'aiModel' => $GLOBALS["AI_CHAT"]["MODEL"] ?? '',
-            'aiService' => $GLOBALS["AI_CHAT"]["SERVICE"] ?? ''
+            'aiModel' => $finalModelProvider,
+            'aiService' => $finalService
         ];
         self::printToStream($update);
 
@@ -930,6 +946,8 @@ Class Frontend {
                     'BFILETYPE' => $chat['BFILETYPE'],
                     'aiService' => $aiService,
                     'aiModel' => $aiModel,
+                    // expose raw provider to front-end for provider-specific icon logic (e.g., DeepSeek via Groq)
+                    'aiModelProvider' => isset($modelProvider) ? $modelProvider : '',
                     'againStatus' => $againStatus
                 ];
                 

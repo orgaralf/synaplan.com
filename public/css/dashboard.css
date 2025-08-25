@@ -1080,6 +1080,20 @@ CHAT INTERFACE STYLES
   overflow-x: auto;
 }
 
+/* Make AI messages wider on desktop */
+@media (min-width: 768px) {
+  .ai-bubble {
+    max-width: 95%;
+  }
+}
+
+/* Even wider on large screens */
+@media (min-width: 1200px) {
+  .ai-bubble {
+    max-width: 92%;
+  }
+}
+
 .message-bubble.user-bubble {
   background: linear-gradient(135deg, #007bff, #0056b3);
   color: white;
@@ -1449,7 +1463,8 @@ CHAT INTERFACE STYLES
 }
 
 .ai-avatar-openai {
-  background: linear-gradient(135deg, #00a67e, #00d4aa) !important;
+  /* Brighten for white/green OpenAI mark to be clearly visible */
+  background: linear-gradient(135deg, #19cba0, #39e2bd) !important;
 }
 
 .ai-avatar-claude {
@@ -1533,10 +1548,12 @@ CHAT INTERFACE STYLES
   }
   
   .dropdown-menu {
+    position: fixed !important;
     right: auto;
     left: 50%;
     transform: translateX(-50%);
     min-width: 280px;
+    z-index: 1060;
   }
   
   .again-status {
@@ -1582,6 +1599,24 @@ CHAT INTERFACE STYLES
   width: 16px;
   height: 16px;
   display: inline-block;
+}
+
+/* Mobile-friendly dropdown list items: stack icon, name, meta untereinander */
+@media (max-width: 480px) {
+  .dropdown-menu .dropdown-item .d-flex.justify-content-between.align-items-center {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 6px;
+  }
+  .dropdown-menu .dropdown-item .d-flex.align-items-center.gap-2 {
+    gap: 8px !important;
+  }
+  .dropdown-menu .dropdown-item .fw-medium {
+    font-size: 0.95rem;
+  }
+  .dropdown-menu .dropdown-item small.text-muted {
+    font-size: 0.8rem;
+  }
 }
 
 .ai-icon svg {
@@ -1881,11 +1916,21 @@ CHAT INTERFACE STYLES
   .message-bubble {
     max-width: 90%;
   }
+  
+  /* AI messages get more space on mobile */
+  .ai-bubble {
+    max-width: 94%;
+  }
 }
 
 @media (max-width: 575.98px) {
   .message-bubble {
     max-width: 95%;
+  }
+  
+  /* AI messages get even more space on small mobile */
+  .ai-bubble {
+    max-width: 97%;
   }
 }
 

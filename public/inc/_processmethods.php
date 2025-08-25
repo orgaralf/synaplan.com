@@ -770,21 +770,19 @@ class ProcessMethods {
 
 
         // Store AI service and model information for AI messages
-        // DON'T store AI info for Again messages - they already have correct info
-        $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
-        if (!db::FetchArr(db::Query($againCheck))) {
-            // For normal messages, use the FIRST AI information
-            $serviceSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AISERVICE' ORDER BY BID ASC LIMIT 1";
-            $serviceRes = db::Query($serviceSQL);
-            if($serviceArr = db::FetchArr($serviceRes)) {
-                XSControl::storeAIDetails($aiAnswer, 'AISERVICE', $serviceArr['BVALUE'], self::$stream);
-            }
-            
-            $modelSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AIMODEL' ORDER BY BID ASC LIMIT 1";
-            $modelRes = db::Query($modelSQL);
-            if($modelArr = db::FetchArr($modelRes)) {
-                XSControl::storeAIDetails($aiAnswer, 'AIMODEL', $modelArr['BVALUE'], self::$stream);
-            }
+        // Always copy the chosen AI (service/model) from the triggering user message (self::$msgArr)
+        // This works for both normal and Again flows, because Again logic persists the correct
+        // choice on the user message beforehand.
+        $serviceSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AISERVICE' ORDER BY BID ASC LIMIT 1";
+        $serviceRes = db::Query($serviceSQL);
+        if($serviceArr = db::FetchArr($serviceRes)) {
+            XSControl::storeAIDetails($aiAnswer, 'AISERVICE', $serviceArr['BVALUE'], self::$stream);
+        }
+        
+        $modelSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AIMODEL' ORDER BY BID ASC LIMIT 1";
+        $modelRes = db::Query($modelSQL);
+        if($modelArr = db::FetchArr($modelRes)) {
+            XSControl::storeAIDetails($aiAnswer, 'AIMODEL', $modelArr['BVALUE'], self::$stream);
         }
         // **************************************************************************************************
         // **************************************************************************************************

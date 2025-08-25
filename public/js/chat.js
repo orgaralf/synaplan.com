@@ -480,7 +480,7 @@ function handleSendMessage() {
           let AItextBlock = `START_${data.lastIds[0]}`;
           $("#chatHistory").append(`
             <li class="message-item ai-message" data-streaming-id="${data.lastIds[0]}">
-              <div class="ai-avatar" id="avatar-${data.lastIds[0]}">
+              <div class="ai-avatar d-none d-md-flex" id="avatar-${data.lastIds[0]}">
                 <i class="fas fa-robot text-white"></i>
               </div>
               <div class="message-content">
@@ -488,10 +488,10 @@ function handleSendMessage() {
                 <div class="message-bubble ai-bubble">
                   <div id="${AItextBlock}" class="message-content"></div>
                   <div class="card-footer bg-light border-0 mt-2" style="display: none;">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex flex-column gap-2">
                       <div class="d-flex flex-wrap gap-1">
                         <span class="badge bg-secondary">${data.time}</span>
-                        <span class="badge bg-success model-tag-placeholder">Antwort von ...</span>
+                        <span class="badge bg-success model-tag-placeholder text-truncate" style="max-width: 200px;">Antwort von ...</span>
                       </div>
                       <div class="d-flex gap-1">
                         <button class="btn btn-outline-secondary btn-sm copy-btn" title="Text kopieren" onclick="copyMessageText('${AItextBlock}')">
@@ -499,7 +499,7 @@ function handleSendMessage() {
                         </button>
                         <button class="btn btn-success btn-sm again-btn" title="${getTranslation('again_button_tooltip')}">
                           <i class="fas fa-redo"></i>
-                          <span class="d-none d-md-inline">Again mit <span class="next-model-name">...</span></span>
+                          <span>Again mit <span class="next-model-name">...</span></span>
                         </button>
                         <div class="dropdown">
                           <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" onclick="toggleModelDropdown('temp')">
@@ -654,6 +654,18 @@ function getTranslation(key) {
     return translations[key] || key;
 }
 
+// Helper function to shorten long model names
+function shortenModelName(modelName) {
+    if (!modelName) return modelName;
+    
+     // If too long (> 14 chars), truncate and add ellipsis
+     if (modelName.length > 14) {
+      return modelName.substring(0, 12) + '...';
+  }
+    
+    return modelName;
+}
+
 // Setup Again button after streaming with persistierte DB-BID
 function setupAgainButtonAfterStreaming(outputObject, eventMessage) {
   // Extract streaming ID from outputObject (format: "START_123")
@@ -724,15 +736,18 @@ function setupAgainButtonAfterStreaming(outputObject, eventMessage) {
             const placeholder = messageElement.querySelector('.model-tag-placeholder');
             if (placeholder) {
               placeholder.textContent = `Antwort von ${modelDisplayName}`;
+              placeholder.title = modelDisplayName;
               placeholder.classList.remove('model-tag-placeholder');
             }
             
-            // Update avatar with service icon
+            // Update avatar with service/model-aware icon (DeepSeek via Groq, etc.)
             const avatar = messageElement.querySelector('.ai-avatar');
             if (avatar && eventMessage.aiService) {
-              avatar.innerHTML = getAIIcon(eventMessage.aiService);
+              avatar.innerHTML = (typeof getAIIconByModel === 'function')
+                ? getAIIconByModel(eventMessage.aiModel, eventMessage.aiService)
+                : getAIIcon(eventMessage.aiService);
               const cleanService = eventMessage.aiService.replace('AI', '').toLowerCase();
-              avatar.className = `ai-avatar ai-avatar-${cleanService}`;
+              avatar.className = `ai-avatar ai-avatar-${cleanService} d-none d-md-flex`;
             }
             
             // Load next model for button
@@ -766,22 +781,22 @@ function loadNextModelForButton(messageId) {
   .then(response => response.json())
   .then(data => {
     if (data.success && data.next_model) {
-      const nextModelName = data.next_model.tag;
+      const nextModelName = shortenModelName(data.next_model.tag);
       
       const button = document.querySelector(`button.again-btn[data-message-id="${messageId}"]`);
       if (button) {
-        const btnText = button.querySelector('.d-none.d-md-inline');
+        const btnText = button.querySelector('.next-model-name');
         if (btnText) {
-          btnText.innerHTML = `Again mit ${nextModelName}`;
+          btnText.textContent = nextModelName;
         }
       }
     } else {
       // Fallback
       const button = document.querySelector(`button.again-btn[data-message-id="${messageId}"]`);
       if (button) {
-        const btnText = button.querySelector('.d-none.d-md-inline');
+        const btnText = button.querySelector('.next-model-name');
         if (btnText) {
-          btnText.innerHTML = 'Again';
+          // Keep "..." as fallback
         }
       }
     }
@@ -886,16 +901,43 @@ function showAgainStatus(message, type) {
 // Toggle model dropdown (also in chathistory.js)
 function toggleModelDropdown(messageId) {
   const dropdown = document.getElementById(`model-dropdown-${messageId}`);
-  if (!dropdown) return;
-  
+  const button = document.querySelector(`button[data-message-id="${messageId}"].dropdown-toggle`);
+  if (!dropdown || !button) return;
+
   const isOpen = dropdown.classList.contains('show');
-  
+
   // Close all other dropdowns
   document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
     menu.classList.remove('show');
   });
-  
+
   if (!isOpen) {
+    const rect = button.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+    let top = rect.bottom + scrollTop + 6;
+    let maxHeight = viewportHeight - rect.bottom - 16;
+    if (maxHeight < 160) {
+      top = rect.top + scrollTop - 6; // open upward
+      dropdown.classList.add('dropup');
+    } else {
+      dropdown.classList.remove('dropup');
+    }
+
+    const menuWidth = 280;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    let left = rect.right - menuWidth;
+    left = Math.max(12, Math.min(left, viewportWidth - menuWidth - 12));
+
+    dropdown.style.position = 'fixed';
+    dropdown.style.left = left + 'px';
+    dropdown.style.top = top + 'px';
+    dropdown.style.maxHeight = Math.max(160, maxHeight) + 'px';
+    dropdown.style.overflowY = 'auto';
+    dropdown.style.minWidth = menuWidth + 'px';
+    dropdown.style.zIndex = 2000;
+
     dropdown.classList.add('show');
     loadModelsForDropdown(messageId);
   }
@@ -951,7 +993,7 @@ function renderModelDropdown(messageId, models) {
       <li><a class="dropdown-item ${isSelected ? 'active' : ''}" href="#" onclick="selectModel(${messageId}, ${model.bid}, '${model.tag}'); return false;">
         <div class="d-flex justify-content-between align-items-center">
           <div class="d-flex align-items-center gap-2">
-            <span class="ai-icon">${getAIIcon('AI' + model.service)}</span>
+            <span class="ai-icon">${(typeof getAIIconByModel === 'function') ? getAIIconByModel(model.provider, 'AI' + model.service) : getAIIcon('AI' + model.service)}</span>
             <span class="fw-medium">${model.tag}</span>
           </div>
           <div class="d-flex align-items-center gap-2">
@@ -994,10 +1036,10 @@ function updateAgainButtonLabel(messageId) {
   
   // Check if user has selected a specific model
   if (selectedModelOverrides[messageId]) {
-    const selectedModelName = getModelNameById(selectedModelOverrides[messageId]);
-    const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+        const selectedModelName = shortenModelName(getModelNameById(selectedModelOverrides[messageId]));
+    const btnText = button.querySelector('.next-model-name');
     if (btnText) {
-      btnText.innerHTML = `Again mit ${selectedModelName}`;
+      btnText.textContent = selectedModelName;
     }
     return;
   }
@@ -1013,14 +1055,14 @@ function updateAgainButtonLabel(messageId) {
   .then(response => response.json())
   .then(data => {
     if (data.success && data.next_model) {
-      const nextModelName = data.next_model.tag;
-      const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+      const nextModelName = shortenModelName(data.next_model.tag);
+      const btnText = button.querySelector('.next-model-name');
       if (btnText) {
-        btnText.innerHTML = `Again mit ${nextModelName}`;
+        btnText.textContent = nextModelName;
       }
     } else {
       // Fallback
-      const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+      const btnText = button.querySelector('.next-model-name');
       if (btnText) {
         btnText.innerHTML = 'Again';
       }
@@ -1028,7 +1070,7 @@ function updateAgainButtonLabel(messageId) {
   })
   .catch(error => {
     console.error('Failed to load next model:', error);
-    const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+    const btnText = button.querySelector('.next-model-name');
     if (btnText) {
       btnText.innerHTML = 'Again';
     }

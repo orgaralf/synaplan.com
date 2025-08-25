@@ -10,7 +10,8 @@ function getAIIcon(service, size = 16) {
     'google': 'fa/svgs/brands/google-ai-1.svg',
     'groq': 'fa/svgs/brands/groq.svg',
     'ollama': 'fa/svgs/brands/ollama.svg',
-    'deepseek': 'fa/svgs/brands/deepseek-color.svg'
+    'deepseek': 'fa/svgs/brands/deepseek-color.svg',
+    'mistral': 'fa/svgs/brands/mistral-color.svg'
   };
   
   if (iconMap[cleanService]) {
@@ -20,6 +21,19 @@ function getAIIcon(service, size = 16) {
   
   // Fallback to FontAwesome
   return `<i class="fas fa-robot" style="font-size: ${size}px;"></i>`;
+}
+
+// Prefer model-specific icons when we can detect them (e.g., DeepSeek via Groq)
+// If model name suggests deepseek, show deepseek; otherwise fall back to service icon.
+function getAIIconByModel(modelProviderOrName, service, size = 16) {
+  const model = (modelProviderOrName || '').toLowerCase();
+  if (model.includes('deepseek')) {
+    return getAIIcon('AIdeepseek', size);
+  }
+  if (model.includes('mistral')) {
+    return getAIIcon('AImistral', size);
+  }
+  return getAIIcon(service || 'AI', size);
 }
 
 
