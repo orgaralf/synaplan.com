@@ -186,8 +186,12 @@ class ProcessMethods {
                 }
                 // count bytes
                 XSControl::countBytes(self::$msgArr, 'SORT', self::$stream);
-                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $AIGENERAL, self::$stream);
-                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $AIGENERALmodel, self::$stream);
+                // DON'T overwrite AI info for Again messages
+                $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
+                if (!db::FetchArr(db::Query($againCheck))) {
+                    XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $AIGENERAL, self::$stream);
+                    XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $AIGENERALmodel, self::$stream);
+                }
                 XSControl::storeAIDetails(self::$msgArr, 'AIMODELID', $AIGENERALmodelId, self::$stream);
             }
         }
@@ -374,8 +378,12 @@ class ProcessMethods {
                 }
             }
             
-            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $usedService, self::$stream);
-            XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $usedModel, self::$stream);
+            // DON'T store AI info for Again messages - they already have correct info
+            $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
+            if (!db::FetchArr(db::Query($againCheck))) {
+                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $usedService, self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $usedModel, self::$stream);
+            }
             $previousCall = true;
         } else {
             if(self::$stream) {
@@ -410,8 +418,12 @@ class ProcessMethods {
                 }
             }
             
-            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $usedService, self::$stream);
-            XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $usedModel, self::$stream);
+            // DON'T store AI info for Again messages - they already have correct info
+            $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
+            if (!db::FetchArr(db::Query($againCheck))) {
+                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $usedService, self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $usedModel, self::$stream);
+            }
             $previousCall = true;
 
             // DEBUG: Log the raw response for troubleshooting
@@ -495,7 +507,11 @@ class ProcessMethods {
                 $answerSorted = BasicAI::toolPrompt($answerSorted, self::$threadArr);
             }
             if(substr($answerSorted['BTEXT'], 0, 1) == '/') {
-                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $task, self::$stream);
+                // DON'T overwrite AI info for Again messages
+                $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
+                if (!db::FetchArr(db::Query($againCheck))) {
+                    XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $task, self::$stream);
+                }
 
                 self::$msgArr = self::preserveEssentialFields($answerSorted);
                 self::sortMessage();
@@ -543,8 +559,12 @@ class ProcessMethods {
                     //error_log('result: '.print_r($result, true));
                     Frontend::statusToStream(self::$msgId, 'pre', $feNote);
                 }
-                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIOpenAI', self::$stream);
-                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'CreateOfficeFile', self::$stream);
+                // DON'T overwrite AI info for Again messages
+                $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
+                if (!db::FetchArr(db::Query($againCheck))) {
+                    XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIOpenAI', self::$stream);
+                    XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'CreateOfficeFile', self::$stream);
+                }
                 XSControl::storeAIDetails(self::$msgArr, 'AIMODELID', '0', self::$stream);
             }
             // $answerSorted['BTEXT'] = Tools::addMediaToText($answerSorted);
@@ -573,8 +593,12 @@ class ProcessMethods {
             $answerSorted['BFILETYPE'] = '';
             $answerSorted['BTEXT'] = Tools::processComplexHtml($answerSorted['BFILETEXT']);
             $answerSorted['BFILETEXT'] = '';
-            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIGoogle', self::$stream);
-            XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'AnalyzeFile', self::$stream);
+            // DON'T overwrite AI info for Again messages
+            $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
+            if (!db::FetchArr(db::Query($againCheck))) {
+                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIGoogle', self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'AnalyzeFile', self::$stream);
+            }
             XSControl::storeAIDetails(self::$msgArr, 'AIMODELID', '0', self::$stream);
         }
 
@@ -742,24 +766,33 @@ class ProcessMethods {
         // **************************************************************************************************
         // **************************************************************************************************
         XSControl::storeAIDetails($aiAnswer, 'AISYSPROMPT', self::$msgArr['BTOPIC'], self::$stream);
+        
 
-        // Fetch AI service and model information for AI messages
-        $serviceSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($incomingId)." AND BTOKEN = 'AISERVICE' ORDER BY BID DESC LIMIT 1";
-        $serviceRes = db::Query($serviceSQL);
-        if($serviceArr = db::FetchArr($serviceRes)) {
-            XSControl::storeAIDetails($aiAnswer, 'AISERVICE', $serviceArr['BVALUE'], self::$stream);
-        }
-        //
-        $modelSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($incomingId)." AND BTOKEN = 'AIMODEL' ORDER BY BID DESC LIMIT 1";
-        $modelRes = db::Query($modelSQL);
-        if($modelArr = db::FetchArr($modelRes)) {
-            XSControl::storeAIDetails($aiAnswer, 'AIMODEL', $modelArr['BVALUE'], self::$stream);
+
+        // Store AI service and model information for AI messages
+        // DON'T store AI info for Again messages - they already have correct info
+        $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
+        if (!db::FetchArr(db::Query($againCheck))) {
+            // For normal messages, use the FIRST AI information
+            $serviceSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AISERVICE' ORDER BY BID ASC LIMIT 1";
+            $serviceRes = db::Query($serviceSQL);
+            if($serviceArr = db::FetchArr($serviceRes)) {
+                XSControl::storeAIDetails($aiAnswer, 'AISERVICE', $serviceArr['BVALUE'], self::$stream);
+            }
+            
+            $modelSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AIMODEL' ORDER BY BID ASC LIMIT 1";
+            $modelRes = db::Query($modelSQL);
+            if($modelArr = db::FetchArr($modelRes)) {
+                XSControl::storeAIDetails($aiAnswer, 'AIMODEL', $modelArr['BVALUE'], self::$stream);
+            }
         }
         // **************************************************************************************************
         // **************************************************************************************************
 
         return $aiLastId;
     }
+
+
 
     /**
      * Preserve essential fields when replacing message array

@@ -469,6 +469,9 @@ function handleSendMessage() {
               ${fileAttachmentHtml}
               <span class="message-time user-time">${data.time}</span>
             </div>
+            <div class="user-avatar">
+              <img src="api.php?action=getUserAvatar&t=${Date.now()}" class="rounded-circle" width="32" height="32" alt="User" onerror="this.src='up/avatars/default.png'">
+            </div>
           </li>
         `);
         
@@ -476,15 +479,41 @@ function handleSendMessage() {
         if(Array.isArray(data.lastIds)) {
           let AItextBlock = `START_${data.lastIds[0]}`;
           $("#chatHistory").append(`
-            <li class="message-item ai-message">
-              <div class="ai-avatar">
+            <li class="message-item ai-message" data-streaming-id="${data.lastIds[0]}">
+              <div class="ai-avatar" id="avatar-${data.lastIds[0]}">
                 <i class="fas fa-robot text-white"></i>
               </div>
               <div class="message-content">
                 <span id="system${AItextBlock}" class="system-message"></span>
                 <div class="message-bubble ai-bubble">
                   <div id="${AItextBlock}" class="message-content"></div>
-                  <span class="message-time ai-time">${data.time}</span>
+                  <div class="card-footer bg-light border-0 mt-2" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div class="d-flex flex-wrap gap-1">
+                        <span class="badge bg-secondary">${data.time}</span>
+                        <span class="badge bg-success model-tag-placeholder">Antwort von ...</span>
+                      </div>
+                      <div class="d-flex gap-1">
+                        <button class="btn btn-outline-secondary btn-sm copy-btn" title="Text kopieren" onclick="copyMessageText('${AItextBlock}')">
+                          <i class="fas fa-copy"></i>
+                        </button>
+                        <button class="btn btn-success btn-sm again-btn" title="${getTranslation('again_button_tooltip')}">
+                          <i class="fas fa-redo"></i>
+                          <span class="d-none d-md-inline">Again mit <span class="next-model-name">...</span></span>
+                        </button>
+                        <div class="dropdown">
+                          <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" onclick="toggleModelDropdown('temp')">
+                            <i class="fas fa-chevron-down"></i>
+                          </button>
+                          <ul class="dropdown-menu" id="model-dropdown-temp">
+                            <li><span class="dropdown-item-text text-center">
+                              <i class="fas fa-spinner fa-spin"></i> ${getTranslation('loading_models')}
+                            </span></li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </li>
@@ -575,6 +604,9 @@ function sseStream(data, outputObject) {
       stopWaitingLoader(outputObject);
       eventSource.close(); // Optional
       aiRender(outputObject);
+      
+      // Setup Again button with persistierte DB-BID after streaming is complete
+      setupAgainButtonAfterStreaming(outputObject, eventMessage);
     }
   };
 
@@ -599,6 +631,415 @@ function aiRender(targetId) {
     $("#ai_processing").html(mdText);
   }
   aiTextBuffer[targetId] = '';
+}
+
+// Global model cache (shared with chathistory.js)
+if (typeof selectableModels === 'undefined') {
+  var selectableModels = null;
+}
+if (typeof selectedModelOverrides === 'undefined') {
+  var selectedModelOverrides = {};
+}
+
+// Simple translation function (duplicate from chathistory.js for consistency)
+function getTranslation(key) {
+    const translations = {
+        'again_button_tooltip': 'Nochmal versuchen',
+        'again_generating': 'Neue Antwort wird generiert...',
+        'again_error': 'Fehler beim erneuten Versuch',
+        'again_network_error': 'Netzwerkfehler. Bitte versuchen Sie es erneut.',
+        'again_locked': 'Ein anderer Retry läuft bereits für diese Nachricht',
+        'answer_from': 'Antwort von'
+    };
+    return translations[key] || key;
+}
+
+// Setup Again button after streaming with persistierte DB-BID
+function setupAgainButtonAfterStreaming(outputObject, eventMessage) {
+  // Extract streaming ID from outputObject (format: "START_123")
+  const streamingId = outputObject.replace('START_', '');
+  const messageElement = document.querySelector(`li[data-streaming-id="${streamingId}"]`);
+  
+  if (messageElement && eventMessage.aiResponseId) {
+    // Use the AI Response ID (not the user message ID)
+    const aiResponseBID = eventMessage.aiResponseId;
+    messageElement.setAttribute('data-message-id', aiResponseBID);
+    
+    console.log('Setting up Again button for AI Response ID:', aiResponseBID);
+    
+    // Setup Again button with correct message ID
+    const againBtn = messageElement.querySelector('.again-btn');
+    const dropdownBtn = messageElement.querySelector('.dropdown-toggle');
+    const dropdown = messageElement.querySelector('.dropdown-menu');
+    
+    if (againBtn && dropdownBtn && dropdown) {
+      againBtn.setAttribute('data-message-id', aiResponseBID);
+      againBtn.setAttribute('onclick', `window.handleAgainRequest(${aiResponseBID})`);
+      
+      dropdownBtn.setAttribute('data-message-id', aiResponseBID);
+      dropdownBtn.setAttribute('onclick', `toggleModelDropdown(${aiResponseBID})`);
+      
+      dropdown.id = `model-dropdown-${aiResponseBID}`;
+      
+      // Show action bar
+      const actionBar = messageElement.querySelector('.card-footer');
+      if (actionBar) {
+        actionBar.style.display = 'block';
+      }
+      
+      // Add model tag and load models immediately
+      const tagsContainer = messageElement.querySelector('.d-flex.flex-wrap');
+      if (tagsContainer && eventMessage.aiModel) {
+        console.log('Adding model tag for:', eventMessage.aiModel);
+        
+        // Load models first, then update UI
+        fetch('api.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'action=getSelectableModels'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.models) {
+            selectableModels = data.models;
+            console.log('Loaded models:', data.models);
+            
+            // Find current model display name
+            console.log('Looking for model with provider:', eventMessage.aiModel);
+            console.log('Available models:', data.models.map(m => m.provider));
+            const currentModel = data.models.find(m => m.provider === eventMessage.aiModel);
+            
+            // Use the model's actual name from database, not just provider
+            let modelDisplayName = eventMessage.aiModel;
+            if (currentModel && currentModel.tag && currentModel.tag !== 'chat') {
+                modelDisplayName = currentModel.tag;
+            }
+            
+            console.log('Found model:', currentModel);
+            console.log('Display name:', modelDisplayName);
+            
+            // Replace placeholder with actual model tag
+            const placeholder = messageElement.querySelector('.model-tag-placeholder');
+            if (placeholder) {
+              placeholder.textContent = `Antwort von ${modelDisplayName}`;
+              placeholder.classList.remove('model-tag-placeholder');
+            }
+            
+            // Update avatar with service icon
+            const avatar = messageElement.querySelector('.ai-avatar');
+            if (avatar && eventMessage.aiService) {
+              avatar.innerHTML = getAIIcon(eventMessage.aiService);
+              const cleanService = eventMessage.aiService.replace('AI', '').toLowerCase();
+              avatar.className = `ai-avatar ai-avatar-${cleanService}`;
+            }
+            
+            // Load next model for button
+            loadNextModelForButton(aiResponseBID);
+          }
+        })
+        .catch(error => {
+          console.error('Failed to load models:', error);
+          // Fallback with raw model name
+          const placeholder = messageElement.querySelector('.model-tag-placeholder');
+          if (placeholder) {
+            placeholder.textContent = `Antwort von ${eventMessage.aiModel}`;
+            placeholder.classList.remove('model-tag-placeholder');
+          }
+        });
+      }
+    }
+  }
+}
+
+// Load next model and update button label
+function loadNextModelForButton(messageId) {
+  // Get predicted next model from backend
+  fetch('api.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `action=getNextModel&messageId=${messageId}`
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success && data.next_model) {
+      const nextModelName = data.next_model.tag;
+      
+      const button = document.querySelector(`button.again-btn[data-message-id="${messageId}"]`);
+      if (button) {
+        const btnText = button.querySelector('.d-none.d-md-inline');
+        if (btnText) {
+          btnText.innerHTML = `Again mit ${nextModelName}`;
+        }
+      }
+    } else {
+      // Fallback
+      const button = document.querySelector(`button.again-btn[data-message-id="${messageId}"]`);
+      if (button) {
+        const btnText = button.querySelector('.d-none.d-md-inline');
+        if (btnText) {
+          btnText.innerHTML = 'Again';
+        }
+      }
+    }
+  })
+  .catch(error => {
+    console.error('Failed to load next model:', error);
+  });
+}
+
+
+
+// Handle Again request (delegate to chathistory.js if available)
+function handleAgainRequest(messageId, overrideModelBid = null) {
+  // Use chathistory.js function if available
+  if (typeof window.handleAgainRequest === 'function' && window.handleAgainRequest !== handleAgainRequest) {
+    return window.handleAgainRequest(messageId, overrideModelBid);
+  }
+  
+  // Prevent double-clicks
+  const button = document.querySelector(`button[data-message-id="${messageId}"]`);
+  if (button.disabled) {
+    return;
+  }
+  
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  
+  // Send Again request to API
+  fetch('api.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `action=againMessage&messageId=${messageId}`
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Mark original message as "agained"
+      const messageElement = document.querySelector(`li[data-message-id="${messageId}"]`);
+      if (messageElement) {
+        messageElement.classList.add('message-agained');
+        // Remove the again button
+        const againBtn = messageElement.querySelector('.again-btn');
+        if (againBtn) {
+          againBtn.remove();
+        }
+      }
+      
+      // Show success message briefly
+      showAgainStatus(getTranslation('again_generating'), 'success');
+      
+      // Scroll to bottom to see new message
+      setTimeout(() => {
+        $("#chatModalBody").scrollTop( $("#chatModalBody").prop("scrollHeight") );
+      }, 1000);
+      
+    } else {
+      // Show specific error message based on error code
+      let errorMessage = data.error || getTranslation('again_error');
+      if (data.error_code === 'LOCKED') {
+        errorMessage = getTranslation('again_locked');
+      }
+      
+      showAgainStatus(errorMessage, 'error');
+      
+      // Re-enable button
+      button.disabled = false;
+      button.innerHTML = '<i class="fas fa-redo"></i>';
+    }
+  })
+  .catch(error => {
+    console.error('Again request failed:', error);
+    showAgainStatus(getTranslation('again_network_error'), 'error');
+    
+    // Re-enable button
+    button.disabled = false;
+    button.innerHTML = '<i class="fas fa-redo"></i>';
+  });
+}
+
+// Show status message for Again operations
+function showAgainStatus(message, type) {
+  // Create or update status element
+  let statusEl = document.getElementById('again-status');
+  if (!statusEl) {
+    statusEl = document.createElement('div');
+    statusEl.id = 'again-status';
+    statusEl.className = 'again-status';
+    document.body.appendChild(statusEl);
+  }
+  
+  statusEl.textContent = message;
+  statusEl.className = `again-status ${type} show`;
+  
+  // Auto-hide after 3 seconds
+  setTimeout(() => {
+    statusEl.classList.remove('show');
+      }, 3000);
+}
+
+// Toggle model dropdown (also in chathistory.js)
+function toggleModelDropdown(messageId) {
+  const dropdown = document.getElementById(`model-dropdown-${messageId}`);
+  if (!dropdown) return;
+  
+  const isOpen = dropdown.classList.contains('show');
+  
+  // Close all other dropdowns
+  document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+    menu.classList.remove('show');
+  });
+  
+  if (!isOpen) {
+    dropdown.classList.add('show');
+    loadModelsForDropdown(messageId);
+  }
+}
+
+// Load models for dropdown (also in chathistory.js)
+function loadModelsForDropdown(messageId) {
+  const dropdown = document.getElementById(`model-dropdown-${messageId}`);
+  if (!dropdown) return;
+  
+  if (selectableModels) {
+    renderModelDropdown(messageId, selectableModels);
+    return;
+  }
+  
+  // Show loading state
+  dropdown.innerHTML = `<li><span class="dropdown-item-text text-center"><i class="fas fa-spinner fa-spin"></i> Lade Modelle...</span></li>`;
+  
+  // Fetch models from API
+  fetch('api.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'action=getSelectableModels'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success && data.models) {
+      selectableModels = data.models;
+      renderModelDropdown(messageId, data.models);
+    } else {
+      dropdown.innerHTML = '<li><span class="dropdown-item-text text-center text-danger">Fehler beim Laden</span></li>';
+    }
+  })
+  .catch(error => {
+    console.error('Failed to load models:', error);
+    dropdown.innerHTML = '<li><span class="dropdown-item-text text-center text-danger">Netzwerkfehler</span></li>';
+  });
+}
+
+// Render model dropdown content (also in chathistory.js)
+function renderModelDropdown(messageId, models) {
+  const dropdown = document.getElementById(`model-dropdown-${messageId}`);
+  if (!dropdown) return;
+  
+  const selectedBid = selectedModelOverrides[messageId];
+  
+  let html = '<li><h6 class="dropdown-header">Modell wählen</h6></li>';
+  models.forEach(model => {
+    const isSelected = selectedBid == model.bid;
+    html += `
+      <li><a class="dropdown-item ${isSelected ? 'active' : ''}" href="#" onclick="selectModel(${messageId}, ${model.bid}, '${model.tag}'); return false;">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <span class="ai-icon">${getAIIcon('AI' + model.service)}</span>
+            <span class="fw-medium">${model.tag}</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <small class="text-muted">${model.quality}</small>
+            ${isSelected ? '<i class="fas fa-check text-success"></i>' : ''}
+          </div>
+        </div>
+      </a></li>
+    `;
+  });
+  
+  dropdown.innerHTML = html;
+}
+
+// Select model from dropdown (also in chathistory.js)
+function selectModel(messageId, modelBid, modelName) {
+  selectedModelOverrides[messageId] = modelBid;
+  
+  // Update button label
+  updateAgainButtonLabel(messageId);
+  
+  // Close dropdown
+  const dropdown = document.getElementById(`model-dropdown-${messageId}`);
+  if (dropdown) {
+    dropdown.classList.remove('show');
+  }
+  
+  // Store in localStorage for persistence
+  try {
+    localStorage.setItem('lastSelectedModel', modelBid);
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+}
+
+// Update Again button label with next model name (also in chathistory.js)
+function updateAgainButtonLabel(messageId) {
+  const button = document.querySelector(`button.again-btn[data-message-id="${messageId}"]`);
+  if (!button) return;
+  
+  // Check if user has selected a specific model
+  if (selectedModelOverrides[messageId]) {
+    const selectedModelName = getModelNameById(selectedModelOverrides[messageId]);
+    const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+    if (btnText) {
+      btnText.innerHTML = `Again mit ${selectedModelName}`;
+    }
+    return;
+  }
+  
+  // Get predicted next model from backend Round-Robin logic
+  fetch('api.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `action=getNextModel&messageId=${messageId}`
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success && data.next_model) {
+      const nextModelName = data.next_model.tag;
+      const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+      if (btnText) {
+        btnText.innerHTML = `Again mit ${nextModelName}`;
+      }
+    } else {
+      // Fallback
+      const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+      if (btnText) {
+        btnText.innerHTML = 'Again';
+      }
+    }
+  })
+  .catch(error => {
+    console.error('Failed to load next model:', error);
+    const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+    if (btnText) {
+      btnText.innerHTML = 'Again';
+    }
+  });
+}
+
+// Get model name by BID (also in chathistory.js)
+function getModelNameById(modelBid) {
+  if (!selectableModels) return 'Modell';
+  const model = selectableModels.find(m => m.bid == modelBid);
+  return model ? model.tag : 'Modell';
 }
 
 // Function to show file details for a specific message

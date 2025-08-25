@@ -147,7 +147,12 @@ $anonymousAllowedEndpoints = [
     'messageNew',
     'chatStream',
     'getMessageFiles',
-    'userRegister'
+    'userRegister',
+    'againMessage',
+    'getSelectableModels',
+    'getNextModel',
+    'getMessageModel',
+    'getUserAvatar'
 ];
 
 // Define which endpoints require authenticated user sessions
@@ -358,6 +363,21 @@ switch($apiAction) {
     case 'mailTestConnection':
         $resArr = Frontend::mailTestConnection();
         break;
+    case 'againMessage':
+        $resArr = Frontend::againMessage();
+        break;
+    case 'getSelectableModels':
+        $resArr = Frontend::getSelectableModels();
+        break;
+    case 'getNextModel':
+        $resArr = Frontend::getNextModel();
+        break;
+    case 'getMessageModel':
+        $resArr = Frontend::getMessageModel();
+        break;
+    case 'getUserAvatar':
+        Frontend::getUserAvatar();
+        exit;
     default:
         $resArr = ['error' => 'Invalid action'];
         break;

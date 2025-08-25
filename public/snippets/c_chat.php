@@ -22,6 +22,7 @@ $widgetAutoMessage = $_SESSION['WIDGET_AUTO_MESSAGE'] ?? '';
 // Check if this is anonymous widget mode
 $isAnonymousWidget = isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true;
 ?>
+
 <link rel="stylesheet" href="fa/css/all.min.css">
 <!-- Add highlight.js CSS -->
 <link rel="stylesheet" href="node_modules/@highlightjs/cdn-assets/styles/googlecode.min.css">
@@ -180,6 +181,7 @@ $isAnonymousWidget = isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] ===
 <script src="node_modules/@highlightjs/cdn-assets/languages/sql.min.js"></script>
 <script src="node_modules/@highlightjs/cdn-assets/languages/go.min.js"></script>
 <script src="js/speech.js"></script>
+<script src="js/ai-icons.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/chathistory.js"></script>
 

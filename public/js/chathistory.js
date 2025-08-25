@@ -31,6 +31,7 @@ function loadChatHistory(amount) {
     const formData = new FormData();
     formData.append('action', 'loadChatHistory');
     formData.append('amount', amount);
+    formData.append('timestamp', Date.now()); // Add timestamp to prevent caching
     
     fetch('api.php', {
         method: 'POST',
@@ -126,10 +127,21 @@ function renderChatHistory(messages) {
                 }
             }
             
+            // Check if message is "agained" (marked as replaced)
+            const isAgained = chat.againStatus === 'AGAINED';
+            const againedClass = isAgained ? ' message-agained' : '';
+            
+            // Get model info for avatar and display
+            const modelService = chat.aiService || '';
+            const modelName = chat.aiModel || '';
+            // Remove 'AI' prefix from service name for avatar class
+            const cleanService = modelService.replace('AI', '');
+            const avatarClass = getModelAvatarClass(cleanService);
+            
             messageHtml = `
-                <li class="message-item ai-message">
-                    <div class="ai-avatar">
-                        <i class="fas fa-robot text-white"></i>
+                <li class="message-item ai-message${againedClass}" data-message-id="${chat.BID}">
+                    <div class="ai-avatar ${avatarClass}">
+                        ${chat.aiService ? getAIIcon(chat.aiService) : '<i class="fas fa-robot text-white"></i>'}
                     </div>
                     <div class="message-content">
                         <span id="system${chat.BID}" class="system-message"></span>
@@ -138,16 +150,44 @@ function renderChatHistory(messages) {
                                 ${fileHtml}
                                 ${mdText}
                             </div>
-                            <span class="ai-details ai-time">
-                                <span class="message-time">${escapeHtml(chat.BTOPIC)}</span>
-                                ${chat.aiService || chat.aiModel ? `
-                                    ${chat.aiService ? `<span class="ai-service">${escapeHtml(chat.aiService)}</span>` : ''}
-                                    ${chat.aiModel ? `<span class="ai-model">${escapeHtml(chat.aiModel)}</span>` : ''}
-                                    <span class="message-time">${formatDateTime(chat.BDATETIME)}</span>
-                                ` : `
-                                    <span class="message-time">${formatDateTime(chat.BDATETIME)}</span>
-                                `}
-                            </span>
+                            <div class="card-footer bg-light border-0 mt-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge bg-secondary">${formatDateTime(chat.BDATETIME)}</span>
+                                        ${chat.aiModel ? `
+                                            <span class="badge bg-success">${getTranslation('answer_from')} ${escapeHtml(chat.aiModel)}</span>
+                                        ` : chat.aiService ? `
+                                            <span class="badge bg-success">${getTranslation('answer_from')} ${escapeHtml(chat.aiService.replace('AI', ''))}</span>
+                                        ` : ''}
+                                        ${chat.BTOPIC && chat.BTOPIC !== 'general' ? `<span class="badge bg-info">${escapeHtml(chat.BTOPIC)}</span>` : ''}
+                                    </div>
+                                    ${!isAgained ? `
+                                    <div class="d-flex gap-1">
+                                        <button class="btn btn-outline-secondary btn-sm copy-btn" data-message-id="${chat.BID}" title="Text kopieren" onclick="copyMessageText(${chat.BID})">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                        <button class="btn btn-success btn-sm again-btn" data-message-id="${chat.BID}" title="${getTranslation('again_button_tooltip')}" onclick="handleAgainRequest(${chat.BID})">
+                                            <i class="fas fa-redo"></i>
+                                            <span class="d-none d-md-inline">Again mit <span class="next-model-name">...</span></span>
+                                        </button>
+                                        <div class="dropdown">
+                                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle dropdown-disabled" type="button" disabled title="Nur bei neuester Nachricht verfügbar">
+                                                <i class="fas fa-chevron-down"></i>
+                                            </button>
+                                            <ul class="dropdown-menu" id="model-dropdown-${chat.BID}">
+                                                <li><span class="dropdown-item-text text-center text-muted">
+                                                    Nur bei neuester Nachricht verfügbar
+                                                </span></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    ` : `
+                                    <div>
+                                        <span class="badge bg-warning text-dark">${getTranslation('marked_as_inappropriate')}</span>
+                                    </div>
+                                    `}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </li>
@@ -163,6 +203,35 @@ function renderChatHistory(messages) {
             window.hljs.highlightElement(block);
         });
     }
+    
+    // Enable dropdown only for the newest non-agained message, disable all others
+    const allMessages = chatHistory.querySelectorAll('.message-item.ai-message:not(.message-agained)');
+    
+    // First disable all dropdowns
+    chatHistory.querySelectorAll('.dropdown-toggle').forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add('dropdown-disabled');
+        btn.title = 'Nur bei neuester Nachricht verfügbar';
+        btn.removeAttribute('onclick');
+    });
+    
+    // Then enable only the newest one
+    if (allMessages.length > 0) {
+        const newestMessage = allMessages[allMessages.length - 1];
+        const dropdownBtn = newestMessage.querySelector('.dropdown-toggle');
+        if (dropdownBtn) {
+            dropdownBtn.disabled = false;
+            dropdownBtn.classList.remove('dropdown-disabled');
+            dropdownBtn.title = 'Modell wählen';
+            dropdownBtn.setAttribute('onclick', `toggleModelDropdown(${newestMessage.dataset.messageId})`);
+            
+            // Update dropdown content
+            const dropdown = newestMessage.querySelector('.dropdown-menu');
+            if (dropdown) {
+                dropdown.innerHTML = '<li><span class="dropdown-item-text text-center"><i class="fas fa-spinner fa-spin"></i> Lade Modelle...</span></li>';
+            }
+        }
+    }
 }
 
 // Helper function to escape HTML
@@ -171,6 +240,501 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// Get model-specific avatar class
+function getModelAvatarClass(service) {
+    // Normalize service name (remove AI prefix and convert to uppercase)
+    const normalizedService = service.replace('AI', '').toUpperCase();
+    
+    const serviceMap = {
+        'GROQ': 'ai-avatar-groq',
+        'OPENAI': 'ai-avatar-openai',
+        'ANTHROPIC': 'ai-avatar-claude',
+        'GOOGLE': 'ai-avatar-google',
+        'OLLAMA': 'ai-avatar-ollama',
+        'DEEPSEEK': 'ai-avatar-deepseek'
+    };
+    return serviceMap[normalizedService] || 'ai-avatar-default';
+}
+
+// Simple translation function
+function getTranslation(key) {
+    const translations = {
+        'again_button_tooltip': 'Nochmal versuchen',
+        'again_generating': 'Neue Antwort wird generiert...',
+        'again_error': 'Fehler beim erneuten Versuch',
+        'again_network_error': 'Netzwerkfehler. Bitte versuchen Sie es erneut.',
+        'again_locked': 'Ein anderer Retry läuft bereits für diese Nachricht',
+        'answer_from': 'Antwort von',
+        'marked_as_inappropriate': 'als unpassend markiert',
+        'loading_models': 'Lade Modelle...',
+        'select_model': 'Modell wählen'
+    };
+    return translations[key] || key;
+}
+
+// Global model cache (check if already defined)
+if (typeof selectableModels === 'undefined') {
+    var selectableModels = null;
+}
+if (typeof selectedModelOverrides === 'undefined') {
+    var selectedModelOverrides = {};
+}
+
+// Make functions globally available
+window.handleAgainRequest = handleAgainRequest;
+window.toggleModelDropdown = toggleModelDropdown;
+window.selectModel = selectModel;
+window.updateAgainButtonLabel = updateAgainButtonLabel;
+window.setAgainButtonState = setAgainButtonState;
+
+// Handle Again request with optional model override
+function handleAgainRequest(messageId, overrideModelBid = null) {
+    // Use override from dropdown if not explicitly provided
+    if (!overrideModelBid && selectedModelOverrides[messageId]) {
+        overrideModelBid = selectedModelOverrides[messageId];
+    }
+    
+    // Prevent double-clicks
+    const button = document.querySelector(`button.again-btn[data-message-id="${messageId}"]`);
+    if (button && button.disabled) {
+        return;
+    }
+    
+    // Track analytics
+    trackAgainEvent('again_clicked', messageId, overrideModelBid);
+    
+    // Set pending state
+    setAgainButtonState(messageId, 'pending');
+    
+    // Prepare request body
+    let requestBody = `action=againMessage&messageId=${messageId}`;
+    if (overrideModelBid) {
+        requestBody += `&modelBid=${overrideModelBid}`;
+    }
+    
+    // Send Again request to API
+    fetch('api.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: requestBody
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mark original message as "agained"
+            const messageElement = document.querySelector(`li[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                messageElement.classList.add('message-agained');
+                // Remove the again button
+                const againBtn = messageElement.querySelector('.again-btn');
+                if (againBtn) {
+                    againBtn.remove();
+                }
+            }
+            
+            // Track success
+            trackAgainEvent('again_succeeded', messageId, data.retry_model_bid);
+            
+            // Show success message briefly
+            showAgainStatus(getTranslation('again_generating'), 'success');
+            
+            // Trigger SSE stream for the retry message
+            const retryData = {
+                lastIds: [data.retry_message_id],
+                time: new Date().toLocaleString('de-DE')
+            };
+            
+            const AItextBlock = `START_${data.retry_message_id}`;
+            $("#chatHistory").append(`
+                <li class="message-item ai-message" data-streaming-id="${data.retry_message_id}">
+                    <div class="ai-avatar ai-avatar-${data.retry_model_service.toLowerCase()}">
+                        ${getAIIcon('AI' + data.retry_model_service)}
+                    </div>
+                    <div class="message-content">
+                        <div class="message-bubble ai-bubble">
+                            <div id="${AItextBlock}" class="message-content"></div>
+                            <div class="card-footer bg-light border-0 mt-2" style="display: none;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge bg-secondary">${retryData.time}</span>
+                                        <span class="badge bg-success">Antwort von ${data.retry_model}</span>
+                                    </div>
+                                    <div class="d-flex gap-1">
+                                        <button class="btn btn-outline-secondary btn-sm copy-btn" title="Text kopieren" onclick="copyMessageText('${AItextBlock}')">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                        <button class="btn btn-success btn-sm again-btn">
+                                            <i class="fas fa-redo"></i>
+                                            <span class="d-none d-md-inline">Again mit ...</span>
+                                        </button>
+                                        <div class="dropdown">
+                                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button">
+                                                <i class="fas fa-chevron-down"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><span class="dropdown-item-text text-center">
+                                                    <i class="fas fa-spinner fa-spin"></i> Lade Modelle...
+                                                </span></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+            `);
+            
+            startWaitingLoader(AItextBlock);
+            sseStream(retryData, AItextBlock);
+            $("#chatModalBody").scrollTop($("#chatModalBody").prop("scrollHeight"));
+            
+        } else {
+            // Show specific error message based on error code
+            let errorMessage = data.error || getTranslation('again_error');
+            const errorMappings = {
+                'LOCKED': 'wird bereits verarbeitet',
+                'NO_ALTERNATIVE_MODEL': 'Kein alternatives Modell verfügbar',
+                'MESSAGE_NOT_FOUND': 'Nachricht nicht gefunden',
+                'RETRY_FAILED': 'Retry nicht möglich'
+            };
+            
+            if (data.error_code && errorMappings[data.error_code]) {
+                errorMessage = errorMappings[data.error_code];
+            }
+            
+            // Track failure
+            trackAgainEvent('again_failed', messageId, null, data.error_code);
+            
+            showAgainStatus(errorMessage, 'error');
+            
+            // Reset button state
+            setAgainButtonState(messageId, 'error', errorMessage);
+        }
+    })
+    .catch(error => {
+        console.error('Again request failed:', error);
+        trackAgainEvent('again_failed', messageId, null, 'NETWORK_ERROR');
+        showAgainStatus(getTranslation('again_network_error'), 'error');
+        
+        // Reset button state
+        setAgainButtonState(messageId, 'error', getTranslation('again_network_error'));
+    });
+}
+
+// Show status message for Again operations
+function showAgainStatus(message, type) {
+    // Create or update status element
+    let statusEl = document.getElementById('again-status');
+    if (!statusEl) {
+        statusEl = document.createElement('div');
+        statusEl.id = 'again-status';
+        statusEl.className = 'again-status';
+        document.body.appendChild(statusEl);
+    }
+    
+    statusEl.textContent = message;
+    statusEl.className = `again-status ${type} show`;
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+        statusEl.classList.remove('show');
+    }, 3000);
+}
+
+// Set Again button state (idle/pending/error)
+function setAgainButtonState(messageId, state, errorMessage = '') {
+    const button = document.querySelector(`button.again-btn[data-message-id="${messageId}"]`);
+    const dropdown = document.querySelector(`.btn-group button[data-message-id="${messageId}"]`);
+    
+    if (!button) return;
+    
+    switch (state) {
+                        case 'pending':
+            button.disabled = true;
+            dropdown && (dropdown.disabled = true);
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="d-none d-md-inline">Wird bearbeitet...</span>';
+            break;
+        case 'error':
+            button.disabled = false;
+            dropdown && (dropdown.disabled = false);
+            button.className = 'btn btn-warning btn-sm again-btn';
+            button.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span class="d-none d-md-inline">${errorMessage}</span>`;
+            // Reset to normal after 3 seconds
+            setTimeout(() => {
+                button.className = 'btn btn-success btn-sm again-btn';
+                setAgainButtonState(messageId, 'idle');
+            }, 3000);
+            break;
+        case 'idle':
+        default:
+            button.disabled = false;
+            dropdown && (dropdown.disabled = false);
+            button.className = 'btn btn-success btn-sm again-btn';
+            updateAgainButtonLabel(messageId);
+            break;
+    }
+}
+
+// Update Again button label with next model name
+function updateAgainButtonLabel(messageId) {
+    const button = document.querySelector(`button.again-btn[data-message-id="${messageId}"]`);
+    if (!button) return;
+    
+    // Check if user has selected a specific model
+    if (selectedModelOverrides[messageId]) {
+        const selectedModelName = getModelNameById(selectedModelOverrides[messageId]);
+        const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+        if (btnText) {
+            btnText.innerHTML = `Again mit ${selectedModelName}`;
+        }
+        return;
+    }
+    
+    // Get predicted next model from backend Round-Robin logic
+    fetch('api.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `action=getNextModel&messageId=${messageId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.next_model) {
+            const nextModelName = data.next_model.tag;
+            const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+            if (btnText) {
+                btnText.innerHTML = `Again mit ${nextModelName}`;
+            }
+        } else {
+            // Fallback
+            const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+            if (btnText) {
+                btnText.innerHTML = 'Again';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Failed to load next model:', error);
+        const btnText = button.querySelector('.d-none.d-md-inline, .btn-text');
+        if (btnText) {
+            btnText.innerHTML = 'Again';
+        }
+    });
+}
+
+// Toggle model dropdown
+function toggleModelDropdown(messageId) {
+    const dropdown = document.getElementById(`model-dropdown-${messageId}`);
+    const button = document.querySelector(`button[data-message-id="${messageId}"].dropdown-toggle`);
+    
+    if (!dropdown || !button) {
+        console.error('Dropdown or button not found:', messageId);
+        return;
+    }
+    
+    const isOpen = dropdown.classList.contains('show');
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+        menu.classList.remove('show');
+    });
+    
+    if (!isOpen) {
+        // Position dropdown outside chat container
+        const rect = button.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        dropdown.style.left = (rect.right - 280) + 'px'; // Position from right edge
+        dropdown.style.top = (rect.bottom + scrollTop + 5) + 'px';
+        
+        dropdown.classList.add('show');
+        loadModelsForDropdown(messageId);
+        console.log('Dropdown opened for messageId:', messageId);
+    }
+}
+
+// Load models for dropdown
+function loadModelsForDropdown(messageId) {
+    const dropdown = document.getElementById(`model-dropdown-${messageId}`);
+    if (!dropdown) return;
+    
+    if (selectableModels) {
+        renderModelDropdown(messageId, selectableModels);
+        return;
+    }
+    
+    // Show loading state only if not already loaded
+    if (!selectableModels) {
+        dropdown.innerHTML = `<li><span class="dropdown-item-text text-center"><i class="fas fa-spinner fa-spin"></i> ${getTranslation('loading_models')}</span></li>`;
+    }
+    
+    // Fetch models from API
+    fetch('api.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=getSelectableModels'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.models) {
+            selectableModels = data.models;
+            renderModelDropdown(messageId, data.models);
+        } else {
+            dropdown.innerHTML = '<li><span class="dropdown-item-text text-center text-danger">Fehler beim Laden der Modelle</span></li>';
+        }
+    })
+    .catch(error => {
+        console.error('Failed to load models:', error);
+        dropdown.innerHTML = '<li><span class="dropdown-item-text text-center text-danger">Netzwerkfehler</span></li>';
+    });
+}
+
+// Render model dropdown content
+function renderModelDropdown(messageId, models) {
+    const dropdown = document.getElementById(`model-dropdown-${messageId}`);
+    if (!dropdown) {
+        console.error('Dropdown not found for messageId:', messageId);
+        return;
+    }
+    
+    const selectedBid = selectedModelOverrides[messageId];
+    console.log('Rendering dropdown for messageId:', messageId, 'with models:', models.length);
+    
+    let html = '<li><h6 class="dropdown-header">Modell wählen</h6></li>';
+    models.forEach(model => {
+        const isSelected = selectedBid == model.bid;
+        html += `
+            <li><a class="dropdown-item ${isSelected ? 'active' : ''}" href="#" onclick="window.selectModel(${messageId}, ${model.bid}, '${model.tag}'); return false;">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="ai-icon">${getAIIcon('AI' + model.service)}</span>
+                    <span>${model.tag}</span>
+                    <small class="text-muted ms-auto">${model.quality}</small>
+                    ${isSelected ? '<i class="fas fa-check text-success ms-1"></i>' : ''}
+                </div>
+            </a></li>
+        `;
+    });
+    
+    dropdown.innerHTML = html;
+    console.log('Dropdown rendered with HTML:', html);
+}
+
+// Select model from dropdown
+function selectModel(messageId, modelBid, modelName) {
+    selectedModelOverrides[messageId] = modelBid;
+    
+    // Update button label
+    updateAgainButtonLabel(messageId);
+    
+    // Close dropdown
+    const dropdown = document.getElementById(`model-dropdown-${messageId}`);
+    if (dropdown) {
+        dropdown.classList.remove('show');
+    }
+    
+    // Update dropdown display to show selected model
+    renderModelDropdown(messageId, selectableModels);
+    
+    // Store in localStorage for persistence
+    try {
+        localStorage.setItem('lastSelectedModel', modelBid);
+    } catch (e) {
+        // Ignore localStorage errors
+    }
+}
+
+// Get model name by BID
+function getModelNameById(modelBid) {
+    if (!selectableModels) return 'Modell';
+    const model = selectableModels.find(m => m.bid == modelBid);
+    return model ? model.tag : 'Modell';
+}
+
+// Scroll to message with highlight
+function scrollToMessage(messageId) {
+    const messageElement = document.querySelector(`li[data-message-id="${messageId}"]`);
+    if (messageElement) {
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        messageElement.classList.add('highlight');
+        setTimeout(() => messageElement.classList.remove('highlight'), 2000);
+    }
+}
+
+// Track analytics events
+function trackAgainEvent(eventType, messageId, modelBid = null, errorCode = null) {
+    // Simple client-side analytics (no PII)
+    const eventData = {
+        event: eventType,
+        messageId: messageId, // This is just a telemetry ID
+        timestamp: Date.now()
+    };
+    
+    if (modelBid) eventData.modelBid = modelBid;
+    if (errorCode) eventData.errorCode = errorCode;
+    
+    // Log to console for debugging (replace with actual analytics service)
+    console.log('AgainAnalytics:', eventData);
+    
+    // Store in session for potential batch sending
+    try {
+        const events = JSON.parse(sessionStorage.getItem('againEvents') || '[]');
+        events.push(eventData);
+        sessionStorage.setItem('againEvents', JSON.stringify(events));
+    } catch (e) {
+        // Ignore storage errors
+    }
+}
+
+// Copy message text function
+function copyMessageText(messageId) {
+    const messageElement = document.querySelector(`li[data-message-id="${messageId}"] .message-content, #${messageId}`);
+    if (!messageElement) return;
+    
+    const textContent = messageElement.textContent || messageElement.innerText;
+    
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(textContent).then(() => {
+            showAgainStatus('Text kopiert!', 'success');
+        }).catch(err => {
+            console.error('Failed to copy text:', err);
+            fallbackCopyText(textContent);
+        });
+    } else {
+        fallbackCopyText(textContent);
+    }
+}
+
+// Fallback copy function
+function fallbackCopyText(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+        document.execCommand('copy');
+        showAgainStatus('Text kopiert!', 'success');
+    } catch (err) {
+        console.error('Fallback copy failed:', err);
+        showAgainStatus('Kopieren fehlgeschlagen', 'error');
+    }
+    document.body.removeChild(textArea);
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
+});
 
 // Helper function to format datetime
 function formatDateTime(dateTimeStr) {

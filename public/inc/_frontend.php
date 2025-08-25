@@ -618,12 +618,15 @@ Class Frontend {
         self::printToStream($update);
         // ------------------------------------------------------------
         // now work on the message itself, sort it and process it
-        self::createAnswer($msgId);
+        $aiResponseId = self::createAnswer($msgId);
         
         $update = [
             'msgId' => $msgId,
+            'aiResponseId' => $aiResponseId, // The actual AI response ID for Again button
             'status' => 'done',
-            'message' => 'That should end the stream. '
+            'message' => 'That should end the stream. ',
+            'aiModel' => $GLOBALS["AI_CHAT"]["MODEL"] ?? '',
+            'aiService' => $GLOBALS["AI_CHAT"]["SERVICE"] ?? ''
         ];
         self::printToStream($update);
 
@@ -837,6 +840,8 @@ Class Frontend {
             $amount = 10; // Default to 10 if invalid
         }
         
+
+        
         $historyChatArr = self::getLatestChats($amount);
         
         if(count($historyChatArr) > 0) {
@@ -845,17 +850,71 @@ Class Frontend {
                 $aiService = '';
                 $aiModel = '';
                 if($chat['BDIRECT'] == 'OUT') {
-                    $serviceSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($chat['BID'])." AND BTOKEN = 'AISERVICE' ORDER BY BID DESC LIMIT 1";
-                    $serviceRes = DB::Query($serviceSQL);
-                    if($serviceArr = DB::FetchArr($serviceRes)) {
-                        $aiService = $serviceArr['BVALUE'];
+                    // For AI responses, get the AI information from the previous user message (which has the correct AI info)
+                    // Find the previous user message (BDIRECT = 'IN') that triggered this AI response
+                    $prevUserSQL = "SELECT BID FROM BMESSAGES WHERE BID < ".intval($chat['BID'])." AND BUSERID = ".intval($chat['BUSERID'])." AND BDIRECT = 'IN' ORDER BY BID DESC LIMIT 1";
+                    $prevUserRes = DB::Query($prevUserSQL);
+                    $prevUserBID = null;
+                    if($prevUserArr = DB::FetchArr($prevUserRes)) {
+                        $prevUserBID = $prevUserArr['BID'];
                     }
                     
-                    $modelSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($chat['BID'])." AND BTOKEN = 'AIMODEL' ORDER BY BID DESC LIMIT 1";
-                    $modelRes = DB::Query($modelSQL);
-                    if($modelArr = DB::FetchArr($modelRes)) {
-                        $aiModel = $modelArr['BVALUE'];
+                    if($prevUserBID) {
+                        // Check if the user message is an "Again" message (has AGAIN_STATUS = 'RETRY')
+                        $againCheckSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($prevUserBID)." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
+                        $againCheckRes = DB::Query($againCheckSQL);
+                        $isAgainMessage = (DB::FetchArr($againCheckRes) !== false);
+                        
+                        // For both normal and Again messages, use the FIRST (correct) AI information
+                        // The Again logic sets the correct AI info first, before any potential overwrites
+                        $serviceSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($prevUserBID)." AND BTOKEN = 'AISERVICE' ORDER BY BID ASC LIMIT 1";
+                        $modelSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($prevUserBID)." AND BTOKEN = 'AIMODEL' ORDER BY BID ASC LIMIT 1";
+                        
+                        $serviceRes = DB::Query($serviceSQL);
+                        if($serviceArr = DB::FetchArr($serviceRes)) {
+                            $aiService = $serviceArr['BVALUE'];
+                        }
+                        
+                        $modelRes = DB::Query($modelSQL);
+                    } else {
+                        // Fallback: use AI response metadata (though this might be wrong)
+                        $serviceSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($chat['BID'])." AND BTOKEN = 'AISERVICE' ORDER BY BID ASC LIMIT 1";
+                        $serviceRes = DB::Query($serviceSQL);
+                        if($serviceArr = DB::FetchArr($serviceRes)) {
+                            $aiService = $serviceArr['BVALUE'];
+                        }
+                        
+                        $modelSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($chat['BID'])." AND BTOKEN = 'AIMODEL' ORDER BY BID ASC LIMIT 1";
+                        $modelRes = DB::Query($modelSQL);
                     }
+                    if($modelArr = DB::FetchArr($modelRes)) {
+                        $modelProvider = $modelArr['BVALUE'];
+                        
+                        // Get display name from BMODELS
+                        $modelDetailsSQL = "SELECT BTAG, BNAME, BPROVID FROM BMODELS WHERE BPROVID = '" . db::EscString($modelProvider) . "' LIMIT 1";
+                        $modelDetailsRes = db::Query($modelDetailsSQL);
+                        $modelDetails = db::FetchArr($modelDetailsRes);
+                        
+                        if ($modelDetails) {
+                            // Use BNAME if it's meaningful and specific, otherwise use provider
+                            if (!empty($modelDetails['BNAME']) && $modelDetails['BNAME'] !== 'chat' && strlen($modelDetails['BNAME']) > 3) {
+                                $aiModel = $modelDetails['BNAME'];
+                            } else {
+                                $aiModel = $modelProvider; // Use actual provider like "o3", "gpt-4.1", "claude-opus-4-20250514"
+                            }
+                        } else {
+                            $aiModel = $modelProvider;
+                        }
+                    }
+                }
+                
+                // Check if message is "agained"
+                $againStatus = null;
+                $againMetaSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = " . intval($chat['BID']) . " AND BTOKEN = 'AGAIN_STATUS'";
+                $againMetaRes = db::Query($againMetaSQL);
+                $againMetaData = db::FetchArr($againMetaRes);
+                if ($againMetaData) {
+                    $againStatus = $againMetaData['BVALUE'];
                 }
                 
                 // Process message data
@@ -870,8 +929,11 @@ Class Frontend {
                     'BFILEPATH' => $chat['BFILEPATH'],
                     'BFILETYPE' => $chat['BFILETYPE'],
                     'aiService' => $aiService,
-                    'aiModel' => $aiModel
+                    'aiModel' => $aiModel,
+                    'againStatus' => $againStatus
                 ];
+                
+
                 
                 // Process display text for AI messages
                 if($chat['BDIRECT'] == 'OUT') {
@@ -904,6 +966,7 @@ Class Frontend {
         $retArr['success'] = true;
         $retArr['count'] = count($retArr['messages']);
         $retArr['amount'] = $amount;
+        $retArr['timestamp'] = time(); // Add timestamp to prevent caching
         
         return $retArr;
     }
@@ -1581,6 +1644,422 @@ Class Frontend {
                 error_log("Failed to send registration email: " . $e->getMessage());
             }
             return false;
+        }
+    }
+
+    /**
+     * Handle "Again" request for AI message retry
+     * 
+     * Implements Round-Robin model selection per thread:
+     * - Global model ranking from BMODELS (BQUALITY DESC, BID ASC)
+     * - Round-Robin logic: exclude used models, reset when exhausted
+     * - Avoid direct repetition of last used model
+     * - Lock-based concurrency control (no rate limiting)
+     * - Transactional processing with proper error handling
+     * 
+     * @return array Response with success/error status and model BIDs
+     */
+    public static function againMessage(): array {
+        $retArr = ["error" => "", "success" => false, "error_code" => ""];
+        
+        // Get message ID from request
+        $messageId = isset($_REQUEST['messageId']) ? intval($_REQUEST['messageId']) : 0;
+        
+        if (!$messageId) {
+            $retArr["error"] = "Message ID required";
+            $retArr["error_code"] = "INVALID_REQUEST";
+            return $retArr;
+        }
+        
+        // Get optional model override from request
+        $overrideModelId = isset($_REQUEST['modelBid']) ? intval($_REQUEST['modelBid']) : null;
+        
+        // Get user ID (handle both authenticated and anonymous widget sessions)
+        $userId = 0;
+        if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+            // Anonymous widget session
+            $userId = $_SESSION["widget_owner_id"];
+        } elseif (isset($_SESSION["USERPROFILE"]["BID"])) {
+            // Authenticated user session
+            $userId = intval($_SESSION["USERPROFILE"]["BID"]);
+        } else {
+            $retArr["error"] = "Authentication required";
+            $retArr["error_code"] = "UNAUTHORIZED";
+            return $retArr;
+        }
+        
+        // Check if message can be "agained" (only lock check)
+        $canAgain = AgainLogic::canAgainMessage($messageId);
+        if (!$canAgain['allowed']) {
+            $retArr["error"] = self::getErrorMessage($canAgain['error_code']);
+            $retArr["error_code"] = $canAgain['error_code'];
+            AgainLogic::storeErrorAnalytics($messageId, $canAgain['error_code']);
+            return $retArr;
+        }
+        
+        // Get original message details with fallback
+        $originalMessageSQL = "SELECT * FROM BMESSAGES WHERE BID = " . intval($messageId) . " AND BDIRECT = 'OUT'";
+        $originalMessageRes = db::Query($originalMessageSQL);
+        $originalMessage = db::FetchArr($originalMessageRes);
+        
+        if (!$originalMessage) {
+            // Debug logging
+            if($GLOBALS["debug"]) {
+                error_log("AgainMessage: Direct message lookup failed for ID " . $messageId);
+                
+                // Check if message exists at all
+                $debugSQL = "SELECT BID, BDIRECT, BUNIXTIMES FROM BMESSAGES WHERE BID = " . intval($messageId);
+                $debugRes = db::Query($debugSQL);
+                $debugData = db::FetchArr($debugRes);
+                if ($debugData) {
+                    error_log("AgainMessage: Message exists but BDIRECT = " . $debugData['BDIRECT'] . ", BUNIXTIMES = " . $debugData['BUNIXTIMES']);
+                } else {
+                    error_log("AgainMessage: Message with ID " . $messageId . " does not exist in database");
+                }
+            }
+            
+            $retArr["error"] = "Original message not found (ID: " . $messageId . ")";
+            $retArr["error_code"] = "MESSAGE_NOT_FOUND";
+            AgainLogic::storeErrorAnalytics($messageId, "MESSAGE_NOT_FOUND");
+            return $retArr;
+        }
+        
+        // Get original model details
+        $originalModel = AgainLogic::getOriginalModelFromMessage($messageId);
+        if (!$originalModel) {
+            $retArr["error"] = "Could not determine original model";
+            $retArr["error_code"] = "MODEL_NOT_FOUND";
+            return $retArr;
+        }
+        
+        // Get next best model using topic-aware Round-Robin logic (with optional override)
+        $topic = $originalMessage['BTOPIC'] ?: 'chat';
+        $nextModel = AgainLogic::getNextBestModel($originalModel['bid'], $originalMessage['BTRACKID'], $overrideModelId, $topic);
+        if (!$nextModel) {
+            $retArr["error"] = "No alternative model available";
+            $retArr["error_code"] = "NO_ALTERNATIVE_MODEL";
+            AgainLogic::storeErrorAnalytics($messageId, "NO_ALTERNATIVE_MODEL");
+            return $retArr;
+        }
+        
+        // Lock the message for processing
+        if (!AgainLogic::lockMessage($messageId)) {
+            $retArr["error"] = "Could not lock message for processing";
+            $retArr["error_code"] = "LOCK_FAILED";
+            return $retArr;
+        }
+        
+        try {
+            // Store original GLOBALS for restoration
+            $originalGlobals = [
+                'SERVICE' => $GLOBALS["AI_CHAT"]["SERVICE"] ?? null,
+                'MODEL' => $GLOBALS["AI_CHAT"]["MODEL"] ?? null,
+                'MODELID' => $GLOBALS["AI_CHAT"]["MODELID"] ?? null
+            ];
+            
+            // Find the last user message before the agained AI response (robust filtering)
+            $originalUserMessageSQL = "SELECT * FROM BMESSAGES WHERE BTRACKID = " . intval($originalMessage['BTRACKID']) . " AND BDIRECT = 'IN' AND (BUNIXTIMES < " . intval($originalMessage['BUNIXTIMES']) . " OR (BUNIXTIMES = " . intval($originalMessage['BUNIXTIMES']) . " AND BID < " . intval($messageId) . ")) ORDER BY BUNIXTIMES DESC, BID DESC LIMIT 1";
+            $originalUserMessageRes = db::Query($originalUserMessageSQL);
+            $originalUserMessage = db::FetchArr($originalUserMessageRes);
+            
+            if (!$originalUserMessage) {
+                throw new Exception("Could not find original user message");
+            }
+            
+            // Create retry message array
+            $retryMessage = $originalUserMessage;
+            $retryMessage['BID'] = 'DEFAULT';
+            $retryMessage['BUNIXTIMES'] = time();
+            $retryMessage['BDATETIME'] = date("YmdHis");
+            $retryMessage['BSTATUS'] = 'AGAIN_RETRY';
+            
+            // Save retry message to database
+            $retryResult = Central::handleInMessage($retryMessage);
+            if (!$retryResult || $retryResult['error'] || !$retryResult['lastId']) {
+                throw new Exception("Failed to create retry message: " . $retryResult['error']);
+            }
+            
+            $retryMessageId = $retryResult['lastId'];
+            
+            // Don't process immediately - just prepare for streaming
+            // The frontend will trigger a separate SSE stream
+            
+            // Override the model selection for this specific request
+            $GLOBALS["AI_CHAT"]["SERVICE"] = "AI" . $nextModel['BSERVICE'];
+            $GLOBALS["AI_CHAT"]["MODEL"] = $nextModel['BPROVID'];
+            $GLOBALS["AI_CHAT"]["MODELID"] = $nextModel['BID'];
+            
+            // Store model selection for the retry message
+            XSControl::storeAIDetails(['BID' => $retryMessageId], 'AIMODEL', $nextModel['BPROVID'], false);
+            XSControl::storeAIDetails(['BID' => $retryMessageId], 'AISERVICE', 'AI' . $nextModel['BSERVICE'], false);
+            
+            $aiRetryId = $retryMessageId; // Use the user message ID as placeholder
+            
+            // Mark original message as "agained" and store metadata with BIDs
+            if (!AgainLogic::markMessageAsAgained($messageId, $retryMessageId, $originalModel['bid'], intval($nextModel['BID']), $nextModel['BPROVID'], $nextModel['BSERVICE'])) {
+                throw new Exception("Failed to mark message as agained");
+            }
+            
+            // Success response
+            $retArr["success"] = true;
+            $retArr["original_message_id"] = $messageId;
+            $retArr["retry_message_id"] = $aiRetryId;
+            $retArr["original_model"] = $originalModel['provider'];
+            $retArr["original_model_bid"] = $originalModel['bid'];
+            $retArr["retry_model"] = $nextModel['BPROVID'];
+            $retArr["retry_model_bid"] = intval($nextModel['BID']);
+            $retArr["retry_model_service"] = $nextModel['BSERVICE'];
+            $retArr["was_override"] = ($overrideModelId !== null && intval($nextModel['BID']) == $overrideModelId);
+            
+            // Don't include content - let SSE streaming handle it
+            // $retArr["retry_content"] will be empty to trigger streaming
+            
+        } catch (Exception $e) {
+            // Error occurred - clean up and return error
+            if($GLOBALS["debug"]) {
+                error_log("AgainMessage failed: " . $e->getMessage());
+            }
+            
+            $retArr["error"] = "Retry failed: " . $e->getMessage();
+            $retArr["error_code"] = "RETRY_FAILED";
+            AgainLogic::storeErrorAnalytics($messageId, "RETRY_FAILED");
+            
+        } finally {
+            // Restore original GLOBALS
+            if (isset($originalGlobals)) {
+                foreach ($originalGlobals as $key => $value) {
+                    if ($value !== null) {
+                        $GLOBALS["AI_CHAT"][$key] = $value;
+                    } else {
+                        unset($GLOBALS["AI_CHAT"][$key]);
+                    }
+                }
+            }
+            
+            // Always unlock the message
+            AgainLogic::unlockMessage($messageId);
+        }
+        
+        return $retArr;
+    }
+    
+    /**
+     * Get user-friendly error message for error codes
+     * 
+     * @param string $errorCode Error code
+     * @return string User-friendly error message
+     */
+    private static function getErrorMessage(string $errorCode): string {
+        switch ($errorCode) {
+            case 'LOCKED':
+                return 'Another retry is already in progress for this message';
+            case 'NO_ALTERNATIVE_MODEL':
+                return 'No alternative AI model available for retry';
+            case 'RETRY_FAILED':
+                return 'The retry attempt failed. Please try again later';
+            case 'MESSAGE_NOT_FOUND':
+                return 'The original message could not be found';
+            case 'MODEL_NOT_FOUND':
+                return 'Could not determine the original AI model';
+            case 'UNAUTHORIZED':
+                return 'Authentication required';
+            case 'INVALID_REQUEST':
+                return 'Invalid request parameters';
+            case 'INTERNAL':
+                return 'An internal error occurred';
+            default:
+                return 'An unexpected error occurred';
+        }
+    }
+    
+    /**
+     * Get selectable models for Again dropdown
+     * 
+     * @return array Array with models data or error
+     */
+    public static function getSelectableModels(): array {
+        $retArr = ["error" => "", "success" => false];
+        
+        try {
+            // Get topic from request for filtering
+            $topic = isset($_REQUEST['topic']) ? db::EscString($_REQUEST['topic']) : 'chat';
+            $models = AgainLogic::getSelectableModels($topic);
+            $retArr["success"] = true;
+            $retArr["models"] = $models;
+        } catch (Exception $e) {
+            $retArr["error"] = "Failed to load models: " . $e->getMessage();
+            $retArr["error_code"] = "INTERNAL";
+        }
+        
+        return $retArr;
+    }
+    
+    /**
+     * Get next model prediction for Again button label
+     * 
+     * @return array Array with next model info or error
+     */
+    public static function getNextModel(): array {
+        $retArr = ["error" => "", "success" => false];
+        
+        // Get message ID from request
+        $messageId = isset($_REQUEST['messageId']) ? intval($_REQUEST['messageId']) : 0;
+        
+        if (!$messageId) {
+            $retArr["error"] = "Message ID required";
+            return $retArr;
+        }
+        
+        try {
+            // Get original message details
+            $originalMessageSQL = "SELECT * FROM BMESSAGES WHERE BID = " . intval($messageId) . " AND BDIRECT = 'OUT'";
+            $originalMessageRes = db::Query($originalMessageSQL);
+            $originalMessage = db::FetchArr($originalMessageRes);
+            
+            if (!$originalMessage) {
+                $retArr["error"] = "Message not found";
+                return $retArr;
+            }
+            
+            // Get original model details
+            $originalModel = AgainLogic::getOriginalModelFromMessage($messageId);
+            if (!$originalModel) {
+                $retArr["error"] = "Could not determine original model";
+                return $retArr;
+            }
+            
+            // Get next best model using topic-aware Round-Robin logic
+            $topic = 'chat'; // Default for getNextModel API
+            if (isset($_REQUEST['topic'])) {
+                $topic = db::EscString($_REQUEST['topic']);
+            }
+            $nextModel = AgainLogic::getNextBestModel($originalModel['bid'], $originalMessage['BTRACKID'], null, $topic);
+            
+            if ($nextModel) {
+                // Get proper display name - use BNAME if meaningful, otherwise provider
+                if (!empty($nextModel['BNAME']) && $nextModel['BNAME'] !== 'chat' && strlen($nextModel['BNAME']) > 3) {
+                    $displayName = $nextModel['BNAME'];
+                } else {
+                    $displayName = $nextModel['BPROVID']; // Use provider ID like "o3", "gpt-4.1"
+                }
+                
+                $retArr["success"] = true;
+                $retArr["next_model"] = [
+                    'bid' => intval($nextModel['BID']),
+                    'tag' => $displayName,
+                    'provider' => $nextModel['BPROVID'],
+                    'service' => $nextModel['BSERVICE']
+                ];
+            } else {
+                $retArr["error"] = "No alternative model available";
+            }
+            
+        } catch (Exception $e) {
+            $retArr["error"] = "Failed to get next model: " . $e->getMessage();
+        }
+        
+        return $retArr;
+    }
+    
+    /**
+     * Get model information for a specific message
+     * 
+     * @return array Array with model info or error
+     */
+    public static function getMessageModel(): array {
+        $retArr = ["error" => "", "success" => false];
+        
+        // Get message ID from request
+        $messageId = isset($_REQUEST['messageId']) ? intval($_REQUEST['messageId']) : 0;
+        
+        if (!$messageId) {
+            $retArr["error"] = "Message ID required";
+            return $retArr;
+        }
+        
+        try {
+            // Get AIMODEL and AISERVICE from BMESSAGEMETA
+            $modelSQL = "SELECT BTOKEN, BVALUE FROM BMESSAGEMETA WHERE BMESSID = " . intval($messageId) . " AND BTOKEN IN ('AIMODEL', 'AISERVICE')";
+            $modelRes = db::Query($modelSQL);
+            
+            $modelData = [];
+            while ($row = db::FetchArr($modelRes)) {
+                $modelData[$row['BTOKEN']] = $row['BVALUE'];
+            }
+            
+            if (isset($modelData['AIMODEL'])) {
+                // Get display name from BMODELS
+                $modelDetailsSQL = "SELECT BTAG, BNAME, BPROVID FROM BMODELS WHERE BPROVID = '" . db::EscString($modelData['AIMODEL']) . "' LIMIT 1";
+                $modelDetailsRes = db::Query($modelDetailsSQL);
+                $modelDetails = db::FetchArr($modelDetailsRes);
+                
+                if ($modelDetails) {
+                    // Use BNAME if it's meaningful and specific, otherwise use provider
+                    if (!empty($modelDetails['BNAME']) && $modelDetails['BNAME'] !== 'chat' && strlen($modelDetails['BNAME']) > 3) {
+                        $displayName = $modelDetails['BNAME'];
+                    } else {
+                        $displayName = $modelData['AIMODEL']; // Use actual provider
+                    }
+                } else {
+                    $displayName = $modelData['AIMODEL'];
+                }
+                
+                $retArr["success"] = true;
+                $retArr["model"] = $displayName;
+                $retArr["service"] = $modelData['AISERVICE'] ?? '';
+            } else {
+                $retArr["error"] = "Model information not found";
+            }
+            
+        } catch (Exception $e) {
+            $retArr["error"] = "Failed to get model info: " . $e->getMessage();
+        }
+        
+        return $retArr;
+    }
+    
+    /**
+     * Get user avatar (Gravatar)
+     */
+    public static function getUserAvatar() {
+        $email = '';
+        
+        if (isset($_SESSION["USERPROFILE"]["BMAIL"])) {
+            $email = $_SESSION["USERPROFILE"]["BMAIL"];
+        } elseif (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+            $email = 'widget@synaplan.com'; // Default for widget users
+        }
+        
+        $defaultPath = __DIR__ . '/../up/avatars/default.png';
+        
+        if ($email) {
+            $avatarPath = Gravatar::getCachedGravatar($email, 64);
+            
+            // If cached file exists, serve it
+            if (strpos($avatarPath, 'up/avatars/') === 0) {
+                $fullPath = __DIR__ . '/../' . $avatarPath;
+                if (file_exists($fullPath)) {
+                    $ext = pathinfo($fullPath, PATHINFO_EXTENSION);
+                    $contentType = $ext === 'png' ? 'image/png' : 'image/jpeg';
+                    header('Content-Type: ' . $contentType);
+                    header('Cache-Control: public, max-age=604800');
+                    readfile($fullPath);
+                    return;
+                }
+            }
+        }
+        
+        // Always serve default.png
+        if (file_exists($defaultPath)) {
+            header('Content-Type: image/png');
+            header('Cache-Control: public, max-age=604800');
+            readfile($defaultPath);
+        } else {
+            // Create default if not exists
+            Gravatar::createDefaultAvatar($defaultPath);
+            header('Content-Type: image/png');
+            header('Cache-Control: public, max-age=604800');
+            readfile($defaultPath);
         }
     }
 }	

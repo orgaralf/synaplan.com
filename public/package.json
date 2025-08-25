@@ -10,6 +10,17 @@
     "feather-icons": "^4.29.2",
     "genai": "^0.0.18",
     "jquery": "^3.7.1",
-    "markdown-it": "^14.1.0"
-  }
+    "markdown-it": "^14.1.0",
+    "simple-icons": "^15.11.0"
+  },
+  "name": "public",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }
