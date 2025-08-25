@@ -95,7 +95,7 @@
 <script>
 (function() {
     var script = document.createElement('script');
-    script.src = window.location.protocol + '//' + window.location.host + '/web/widget.php?uid=${userId}&widgetid=${widgetId}';
+    script.src = '<?php echo $GLOBALS["baseUrl"]; ?>widget.php?uid=${userId}&widgetid=${widgetId}';
     script.async = true;
     document.head.appendChild(script);
 })();
@@ -406,7 +406,7 @@
             '<script>\n' +
             '(function() {\n' +
             '    var script = document.createElement(\'script\');\n' +
-            '    script.src = window.location.protocol + \'//\' + window.location.host + \'/web/widget.php?uid=' + userId + '&widgetid=' + widgetId + '\';\n' +
+            '    script.src = \'<?php echo $GLOBALS["baseUrl"]; ?>widget.php?uid=' + userId + '&widgetid=' + widgetId + '\';\n' +
             '    script.async = true;\n' +
             '    document.head.appendChild(script);\n' +
             '})();\n' +
