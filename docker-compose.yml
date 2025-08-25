@@ -5,6 +5,8 @@ services:
       context: .
       dockerfile: dev/docker/Dockerfile
     container_name: synaplan-app
+    extra_hosts:
+      - host.docker.internal:${DOCKER_HOST:-host-gateway}
     ports:
       - "8080:80"
     volumes:
@@ -20,6 +22,8 @@ services:
       - DB_USER=synaplan_user
       - DB_PASSWORD=synaplan_password
       - OLLAMA_SERVER=ollama:11434
+      - XDEBUG_MODE=debug
+      - XDEBUG_CONFIG=client_host=host.docker.internal client_port=9003
     depends_on:
       db:
         condition: service_healthy
@@ -47,7 +51,9 @@ services:
 
   # Composer Dependencies Installer
   composer-install:
-    image: composer:2
+    build:
+      context: .
+      dockerfile: dev/docker/Dockerfile
     container_name: synaplan-composer-install
     working_dir: /var/www/html
     environment:
