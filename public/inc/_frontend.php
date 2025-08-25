@@ -274,7 +274,7 @@ Class Frontend {
         if(!empty($_FILES['files'])) {
             foreach ($_FILES['files']['tmp_name'] as $i => $tmpName) {
                 if (!is_uploaded_file($tmpName)) {
-                    $retArr['error'] .= "Invalid upload: ".$originalName."\n";
+                    $retArr['error'] .= "Invalid upload: ".$_FILES['files']['name'][$i]."\n";
                     continue; // skip invalid upload
                 }
                 

@@ -141,8 +141,13 @@ RUN echo 'Header always set Content-Security-Policy-Report-Only "default-src '"'
     && a2enconf csp-reportonly
 
 
+# Ensure public/up exists with proper permissions at build-time and runtime
+RUN install -d -m 2775 -o www-data -g www-data /var/www/html/public/up \
+    && printf '#!/bin/bash\nset -e\nmkdir -p /var/www/html/public/up\nchown -R www-data:www-data /var/www/html/public/up || true\nfind /var/www/html/public/up -type d -exec chmod 2775 {} \\; || true\nfind /var/www/html/public/up -type f -exec chmod 664 {} \\; || true\n' > /usr/local/bin/ensure-up-perms.sh \
+    && chmod +x /usr/local/bin/ensure-up-perms.sh
+
 # Expose port 80
 EXPOSE 80
 
-# Start Apache
-CMD ["apache2-foreground"] 
+# Start Apache (ensure /public/up is writable each start)
+CMD ["bash","-lc","/usr/local/bin/ensure-up-perms.sh && apache2-foreground"] 

@@ -463,6 +463,8 @@ class AIOpenAI {
                 'status' => 'pre_processing',
                 'message' => 'Generation started... '
             ];
+            Frontend::statusToStream($msgArr["BID"], 'pre', __FILE__.':'.__LINE__.' - PRE!!!!');
+
             Frontend::printToStream($update);
         }
 
@@ -491,7 +493,9 @@ class AIOpenAI {
 
         // save file to
         // hive: $fileUrl = $arrRes['output'][0]['url'];
-        $fileOutput = substr($usrArr["BPROVIDERID"], -5, 3) . '/' . substr($usrArr["BPROVIDERID"], -2, 2) . '/' . date("Ym");
+        // Build user-based storage path like uploads do (use BID, not provider)
+        $userIdForPath = isset($usrArr['BID']) ? (string)$usrArr['BID'] : '0';
+        $fileOutput = substr($userIdForPath, -5, 3) . '/' . substr($userIdForPath, -2, 2) . '/' . date("Ym");
         $filePath = $fileOutput . '/oai_' . $msgArr['BID'] . '.' . $fileType;
         // Create the public/up directory path (DocumentRoot is public)
         $publicUpDir = __DIR__ . '/../up/' . $fileOutput;
@@ -510,8 +514,6 @@ class AIOpenAI {
             $msgArr['BFILE'] = 0;
             $msgArr['BFILEPATH'] = '';
             $msgArr['BFILETEXT'] = 'Error: could not write image file';
-        } else {
-            @chmod($absoluteFile, 0644);
         }
         // return the message array
         return $msgArr;

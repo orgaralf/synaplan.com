@@ -106,6 +106,7 @@ class ProcessMethods {
     public static function sortMessage(): void {
         // -----------------------------------------------------
         // -----------------------------------------------------
+        Frontend::statusToStream(self::$msgId, 'pre', __FILE__.':'.__LINE__.' - sortMessage');
         if(substr(self::$msgArr['BTEXT'], 0, 1) != '/') {
             // -----------------------------------------------------
             // it is NOT a tool request
@@ -199,6 +200,8 @@ class ProcessMethods {
         // -----------------------------------------------------
         // ----------------------------------------------------- has it added a tool?
         if(substr(self::$msgArr['BTEXT'], 0, 1) == '/') {
+            Frontend::statusToStream(self::$msgId, 'pre', __FILE__.':'.__LINE__.' - slash ist da');
+
             // -----------------------------------------------------
             // it is a tool request
             // -----------------------------------------------------
@@ -208,6 +211,7 @@ class ProcessMethods {
 
             // ************************* CALL THE TOOL *************
             self::$toolAnswer = BasicAI::toolPrompt(self::$msgArr, self::$stream);
+            Frontend::statusToStream(self::$msgId, 'pre', __FILE__.':'.__LINE__.' - tool gecalled');
             
             // Preserve essential fields from original message when merging tool answer
             /*
@@ -225,6 +229,8 @@ class ProcessMethods {
             // Restore essential fields if they're missing in the tool answer            
             // For tool responses, ensure BTOPIC is not a tools: prefixed value to prevent duplication
             if (substr(self::$msgArr['BTOPIC'], 0, 1) == '/') {
+                Frontend::statusToStream(self::$msgId, 'pre', __FILE__.':'.__LINE__.' - nochmal tool zeug');
+
                 // Mark that a tool was processed
                 self::$toolProcessed = true;
                 self::$msgArr['BTOPIC'] = substr(self::$msgArr['BTOPIC'], 1);
@@ -243,6 +249,8 @@ class ProcessMethods {
         // -----------------------------------------------------
         // ----------------------------------------------------- maybe process it
         if(substr(self::$msgArr['BTEXT'], 0, 1) != '/') {
+            Frontend::statusToStream(self::$msgId, 'pre', __FILE__.':'.__LINE__.' - nix slash');
+
             self::processMessage();
         }
         return;
@@ -510,7 +518,19 @@ class ProcessMethods {
                 // DON'T overwrite AI info for Again messages
                 $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
                 if (!db::FetchArr(db::Query($againCheck))) {
-                    XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $task, self::$stream);
+                    // Mediamaker uses specific tools; set correct service/model for icons
+                    if ($task === 'image') {
+                        XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIOpenAI', self::$stream);
+                        XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'images-1', self::$stream);
+                    } elseif ($task === 'video') {
+                        XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIOpenAI', self::$stream);
+                        XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'video', self::$stream);
+                    } elseif ($task === 'audio') {
+                        XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIOpenAI', self::$stream);
+                        XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'audio', self::$stream);
+                    } else {
+                        XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $task, self::$stream);
+                    }
                 }
 
                 self::$msgArr = self::preserveEssentialFields($answerSorted);
@@ -783,6 +803,19 @@ class ProcessMethods {
         $modelRes = db::Query($modelSQL);
         if($modelArr = db::FetchArr($modelRes)) {
             XSControl::storeAIDetails($aiAnswer, 'AIMODEL', $modelArr['BVALUE'], self::$stream);
+        }
+        
+        // If this was a media generation (image/video/audio), force the correct service/model
+        // so history and live view show the right provider (e.g., OpenAI Images)
+        if ((self::$msgArr['BTOPIC'] ?? '') === 'mediamaker') {
+            $isImage = (isset($aiAnswer['BFILETYPE']) && in_array(strtolower($aiAnswer['BFILETYPE']), ['png','jpg','jpeg']));
+            $isVideo = (isset($aiAnswer['BFILETYPE']) && in_array(strtolower($aiAnswer['BFILETYPE']), ['mp4','webm']));
+            $isAudio = (isset($aiAnswer['BFILETYPE']) && strtolower($aiAnswer['BFILETYPE']) === 'mp3');
+            $explicitTool = isset(self::$msgArr['BTEXT']) && is_string(self::$msgArr['BTEXT']) && strlen(self::$msgArr['BTEXT']) > 0 && self::$msgArr['BTEXT'][0] === '/';
+            if ($isImage || $isVideo || $isAudio || $explicitTool) {
+                XSControl::storeAIDetails($aiAnswer, 'AISERVICE', 'AIOpenAI', self::$stream);
+                XSControl::storeAIDetails($aiAnswer, 'AIMODEL', $isImage ? 'images-1' : ($isVideo ? 'video' : ($isAudio ? 'audio' : 'images-1')), self::$stream);
+            }
         }
         // **************************************************************************************************
         // **************************************************************************************************

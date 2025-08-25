@@ -4,6 +4,7 @@
 // - Microphone functionality disabled
 // - Chat history loading disabled
 // - Rate limiting applied
+// V100
 const isAnonymousWidget = typeof window.isAnonymousWidget !== 'undefined' ? window.isAnonymousWidget : false;
 
 // Keep track of user-attached files (pasted or manually selected).
@@ -580,7 +581,7 @@ function sseStream(data, outputObject) {
       aiTextBuffer[outputObject] += outMessage;
       $("#" + outputObject).html(aiTextBuffer[outputObject]);
       $("#chatModalBody").scrollTop( $("#chatModalBody").prop("scrollHeight") );
-      //console.log('Processing:', eventMessage.step);
+      console.log('Processing:', eventMessage.step);
     }
 
     if(eventMessage.status == 'pre_processing') {
