@@ -3,6 +3,28 @@
 // Offer basic AI functionalities
 
 Class BasicAI {
+    
+    /**
+     * Get Model ID from BMODELS table by provider name
+     */
+    public static function getModelIdByProvider($providerName, $serviceName = null): string {
+        if (empty($providerName)) {
+            return '0';
+        }
+        
+        $sql = "SELECT BID FROM BMODELS WHERE BPROVID = '" . db::EscString($providerName) . "'";
+        if ($serviceName) {
+            $sql .= " AND BSERVICE = '" . db::EscString($serviceName) . "'";
+        }
+        $sql .= " ORDER BY BID ASC LIMIT 1";
+        
+        $result = db::Query($sql);
+        if ($row = db::FetchArr($result)) {
+            return $row['BID'];
+        }
+        return '0';
+    }
+    
     // ****************************************************************************************************** 
     // tool prompt
     // ****************************************************************************************************** 
@@ -58,9 +80,7 @@ Class BasicAI {
                     Frontend::statusToStream($msgArr['BID'], 'pre', ' - calling '.$AIT2P.' ');
                 }
                 $msgArr = $AIT2P::picPrompt($msgArr, $stream);
-                XSControl::storeAIDetails($msgArr, 'AISERVICE', $AIT2P, $stream);
-                XSControl::storeAIDetails($msgArr, 'AIMODEL', $AIT2Pmodel, $stream);
-                XSControl::storeAIDetails($msgArr, 'AIMODELID', $AIT2PmodelId, $stream);
+                // AI details are now stored via global variables in ProcessMethods::saveAnswerToDB()
                 break;
             case "/vid":
                 if($stream) {
@@ -102,9 +122,7 @@ Class BasicAI {
                     $msgArr['BFILE'] = 1;
                     $msgArr['BFILEPATH'] = $soundArr['BFILEPATH'];
                     $msgArr['BFILETYPE'] = $soundArr['BFILETYPE'];
-                    XSControl::storeAIDetails($msgArr, 'AISERVICE', $AIT2S, $stream);
-                    XSControl::storeAIDetails($msgArr, 'AIMODEL', $AIT2Smodel, $stream);
-                    XSControl::storeAIDetails($msgArr, 'AIMODELID', $AIT2SmodelId, $stream);
+                    // AI details are now stored via global variables in ProcessMethods::saveAnswerToDB()
                 }
                 break;
             default:

@@ -53,6 +53,10 @@ class AIGroq {
 
         $client = self::$client;
         
+        // Set globals for sorting
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_SORT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIGroq';
+        
         $arrMessages = [
             ['role' => 'system', 'content' => $systemPrompt['BPROMPT']],
         ];
@@ -161,6 +165,8 @@ class AIGroq {
         
         // which model on groq?
         $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+        $GLOBALS['USEDAIMODEL'] = $myModel;
+        $GLOBALS['USEDAISERVICE'] = 'AIGroq';
 
         try {
             $chat = $client->chat()->completions()->create([
@@ -230,6 +236,10 @@ class AIGroq {
         $systemPrompt = $arrPrompt['BPROMPT'];
         
         $client = self::$client;
+        
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_CHAT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIGroq';
 
         $arrMessages = [
             ['role' => 'system', 'content' => $systemPrompt],
@@ -270,6 +280,10 @@ class AIGroq {
 
         $imageURL = 'https://app.s/'.($imagePath);
         $client = self::$client;
+        
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_PIC2TEXT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIGroq';
 
         // Use the global prompt if available, otherwise use default
         $imgPrompt = isset($GLOBALS["AI_PIC2TEXT"]["PROMPT"]) 
@@ -297,6 +311,10 @@ class AIGroq {
      */
     public static function mp3ToText($arrMessage): array|string|bool {
         $client = self::$client;
+        
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_SOUND2TEXT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIGroq';
         try {
             $transcription = $client->audio()->transcriptions()->create([
                 'file' => './up/'.$arrMessage['BFILEPATH'],
@@ -338,6 +356,10 @@ class AIGroq {
         }
 
         $client = self::$client;
+        
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_CHAT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIGroq';
 
         $tPrompt = BasicAI::getAprompt('tools:lang');
         if($GLOBALS["debug"]) error_log("tPrompt: ".$tPrompt);
@@ -369,6 +391,10 @@ class AIGroq {
     */
     public static function summarizePrompt($text): string {
         $client = self::$client;
+        
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_SUMMARIZE"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIGroq';
         $arrMessages = [
             ['role' => 'system', 'content' => 'You summarize the text of the user to a short 2-3 sentence summary. Do not add any other text, just the essence of the text. Stay under 128 characters. Answer in the language of the text.'],
         ];
@@ -393,6 +419,10 @@ class AIGroq {
      */
     public static function simplePrompt($systemPrompt, $userPrompt): array {
         $client = self::$client;
+        
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_SUMMARIZE"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIGroq';
         
         $arrMessages = [
             ['role' => 'system', 'content' => $systemPrompt],

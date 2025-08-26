@@ -50,6 +50,10 @@ class AIGoogle {
         // Get the model from configuration
         $myModel = $GLOBALS["AI_SORT"]["MODEL"];
         
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $myModel;
+        $GLOBALS['USEDAISERVICE'] = 'AIGoogle';
+        
         // Prepare the API URL
         $url = "https://generativelanguage.googleapis.com/v1beta/models/" . $myModel . ":generateContent?key=" . self::$key;
         $headers = [
@@ -167,7 +171,9 @@ class AIGoogle {
         } else {
             $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
         }
-        
+        $GLOBALS['USEDAIMODEL'] = $myModel;
+        $GLOBALS['USEDAISERVICE'] = 'AIGoogle';
+
         // Prepare the API URL
         $url = "https://generativelanguage.googleapis.com/v1beta/models/" . $myModel . ":generateContent?key=" . self::$key;
         $headers = [
@@ -285,6 +291,10 @@ class AIGoogle {
      * @return array|string|bool Image description with updated BFILETEXT field or error message
      */
     public static function explainImage($arrMessage): array|string|bool {
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_PIC2TEXT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIGoogle';
+        
         // Check if we have a file path
         if (empty($arrMessage['BFILEPATH'])) {
             $arrMessage['BFILETEXT'] = "Error: No image file path provided";
@@ -477,6 +487,10 @@ class AIGoogle {
             // Get the model from configuration
             $myModel = $GLOBALS["AI_TEXT2PIC"]["MODEL"];
             
+            // Set globals
+            $GLOBALS['USEDAIMODEL'] = $myModel;
+            $GLOBALS['USEDAISERVICE'] = 'AIGoogle';
+            
             $url = "https://generativelanguage.googleapis.com/v1beta/models/" . $myModel . ":generateContent?key=" . self::$key;
             $headers = [
                 'Content-Type: application/json'
@@ -575,6 +589,10 @@ class AIGoogle {
         if (strlen($videoPrompt) > 1) {
             // Get the model from configuration
             $myModel = $GLOBALS["AI_TEXT2VID"]["MODEL"];
+            
+            // Set globals
+            $GLOBALS['USEDAIMODEL'] = $myModel;
+            $GLOBALS['USEDAISERVICE'] = 'AIGoogle';
             
             // Start video generation
             $url = "https://generativelanguage.googleapis.com/v1beta/models/" . $myModel . ":predictLongRunning?key=" . self::$key;
@@ -710,6 +728,10 @@ class AIGoogle {
      * @return array Updated message array with file analysis results or error details
      */
     public static function analyzeFile($msgArr, $stream = false): array {
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_CHAT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIGoogle';
+        
         // Check if file exists and is actually a file
         $filePath = __DIR__ . '/../up/' . $msgArr['BFILEPATH'];
 
@@ -1006,6 +1028,10 @@ class AIGoogle {
     public static function simplePrompt($systemPrompt, $userPrompt): array {
         // Get the model from configuration
         $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
+        
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $myModel;
+        $GLOBALS['USEDAISERVICE'] = 'AIGoogle';
         
         // Prepare the API URL
         $url = "https://generativelanguage.googleapis.com/v1beta/models/" . $myModel . ":generateContent?key=" . self::$key;

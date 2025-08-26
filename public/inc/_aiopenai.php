@@ -49,6 +49,11 @@ class AIOpenAI {
 
         $client = self::$client;
         
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_SORT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIOpenAI';
+        $GLOBALS['USEDAIMODELID'] = BasicAI::getModelIdByProvider($GLOBALS["AI_SORT"]["MODEL"], 'OpenAI');
+        
         $arrMessages = [
             ['role' => 'system', 'content' => $systemPrompt['BPROMPT']],
         ];
@@ -166,7 +171,9 @@ class AIOpenAI {
         } else {
             $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
         }
-
+        $GLOBALS['USEDAIMODEL'] = $myModel;
+        $GLOBALS['USEDAISERVICE'] = 'AIOpenAI';
+        $GLOBALS['USEDAIMODELID'] = BasicAI::getModelIdByProvider($myModel, 'OpenAI');
         //error_log(" *************** OPENAI call - response object:" . date("Y-m-d H:i:s"));        
         // now ask the AI and give the stream out or the result when done!
         try {
@@ -375,6 +382,11 @@ class AIOpenAI {
         $systemPrompt = $arrPrompt['BPROMPT'];
         
         $client = self::$client;
+        
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_CHAT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIOpenAI';
+        $GLOBALS['USEDAIMODELID'] = BasicAI::getModelIdByProvider($GLOBALS["AI_CHAT"]["MODEL"], 'OpenAI');
 
         $arrMessages = [
             ['role' => 'system', 'content' => $systemPrompt],
@@ -406,6 +418,11 @@ class AIOpenAI {
     public static function textToSpeech($msgArr, $usrArr): array | bool {
         // https://github.com/openai-php/client/issues/30
         $client = OpenAI::client(self::$key);
+
+        // Set globals for AI metadata tracking
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_TEXT2SOUND"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIOpenAI';
+        $GLOBALS['USEDAIMODELID'] = BasicAI::getModelIdByProvider($GLOBALS["AI_TEXT2SOUND"]["MODEL"], 'OpenAI');
 
         $response = $client->audio()->speech([
             'model' => $GLOBALS["AI_TEXT2SOUND"]["MODEL"],
@@ -445,6 +462,11 @@ class AIOpenAI {
     public static function picPrompt($msgArr, $stream = false): array {
         $usrArr = Central::getUsrById($msgArr['BUSERID']);
 
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = 'images-1';
+        $GLOBALS['USEDAISERVICE'] = 'AIOpenAI';
+        $GLOBALS['USEDAIMODELID'] = BasicAI::getModelIdByProvider('images-1', 'OpenAI');
+
         if(substr($msgArr['BTEXT'], 0, 1) == '/') {
             $picPrompt = substr($msgArr['BTEXT'], strpos($msgArr['BTEXT'], " "));
         } else {
@@ -463,7 +485,6 @@ class AIOpenAI {
                 'status' => 'pre_processing',
                 'message' => 'Generation started... '
             ];
-            Frontend::statusToStream($msgArr["BID"], 'pre', __FILE__.':'.__LINE__.' - PRE!!!!');
 
             Frontend::printToStream($update);
         }
@@ -503,7 +524,7 @@ class AIOpenAI {
             mkdir($publicUpDir, 0755, true);
         }
         $msgArr['BFILE'] = 1;
-        $msgArr['BFILETEXT'] = 'OK: OpenAI Image'; //json_encode($msgArr['input']);
+        $msgArr['BFILETEXT'] = $picPrompt; // Begleittext für History
         $msgArr['BFILEPATH'] = $filePath;
         $msgArr['BFILETYPE'] = $fileType;    
 
@@ -514,7 +535,7 @@ class AIOpenAI {
             $msgArr['BFILE'] = 0;
             $msgArr['BFILEPATH'] = '';
             $msgArr['BFILETEXT'] = 'Error: could not write image file';
-        }
+        } 
         // return the message array
         return $msgArr;
     }
@@ -1178,22 +1199,22 @@ class AIOpenAI {
      * @param bool $stream Whether to stream progress updates
      * @return array|string|bool Analysis result or error message
      */
-    public static function analyzeFile($msgArr, $stream = false): array|string|bool {
+    public static function analyzeFile($arrMessage, $stream = false): array|string|bool {
         // Check if file exists and is actually a file
-        $filePath = __DIR__ . '/../up/' . $msgArr['BFILEPATH'];
+        $filePath = __DIR__ . '/../up/' . $arrMessage['BFILEPATH'];
 
         $errorStop = '';       
         // Get absolute path to avoid any path issues
         $absolutePath = realpath($filePath);
         if (!$absolutePath) {
-            $errorStop .= "*API File Error - Cannot resolve file path: " . $msgArr['BFILEPATH'];
+            $errorStop .= "*API File Error - Cannot resolve file path: " . $arrMessage['BFILEPATH'];
         }
 
         if ($errorStop != '') {
             if($GLOBALS["debug"]) error_log($errorStop);
             if ($stream) {
                 $update = [
-                    'msgId' => $msgArr['BID'],
+                    'msgId' => $arrMessage['BID'],
                     'status' => 'pre_processing',
                     'message' => 'Error: ' . $errorStop.' '
                 ];
@@ -1205,6 +1226,8 @@ class AIOpenAI {
 
         $client = self::$client;
 
+        // TODO: implement real analysis here
+        return $arrMessage;
     }    
 
     /**
@@ -1219,6 +1242,11 @@ class AIOpenAI {
      */
     public static function simplePrompt($systemPrompt, $userPrompt): array {
         $client = self::$client;
+        
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_CHAT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIOpenAI';
+        $GLOBALS['USEDAIMODELID'] = BasicAI::getModelIdByProvider($GLOBALS["AI_CHAT"]["MODEL"], 'OpenAI');
         
         $arrMessages = [
             ['role' => 'system', 'content' => $systemPrompt],

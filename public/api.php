@@ -378,6 +378,9 @@ switch($apiAction) {
     case 'getUserAvatar':
         Frontend::getUserAvatar();
         exit;
+    case 'getMessageById':
+        Frontend::getMessageById();
+        exit;
     default:
         $resArr = ['error' => 'Invalid action'];
         break;

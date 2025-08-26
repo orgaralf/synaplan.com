@@ -7,6 +7,13 @@
 // V100
 const isAnonymousWidget = typeof window.isAnonymousWidget !== 'undefined' ? window.isAnonymousWidget : false;
 
+// Auto-load user avatars when script loads
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(loadUserAvatar, 100));
+} else {
+    setTimeout(loadUserAvatar, 100);
+}
+
 // Keep track of user-attached files (pasted or manually selected).
 let attachedFiles = [];
 
@@ -481,9 +488,9 @@ function handleSendMessage() {
           let AItextBlock = `START_${data.lastIds[0]}`;
           $("#chatHistory").append(`
             <li class="message-item ai-message" data-streaming-id="${data.lastIds[0]}">
-              <div class="ai-avatar d-none d-md-flex" id="avatar-${data.lastIds[0]}">
-                <i class="fas fa-robot text-white"></i>
-              </div>
+                            <div class="ai-avatar d-none d-md-flex" id="avatar-${data.lastIds[0]}" data-icon-temp="true">
+                  <i class="fas fa-robot" style="color: #6c757d;"></i>
+                </div>
               <div class="message-content">
                 <span id="system${AItextBlock}" class="system-message"></span>
                 <div class="message-bubble ai-bubble">
@@ -577,7 +584,7 @@ function sseStream(data, outputObject) {
       if(!eventMessage.message.indexOf('<loading>')) {
         stopWaitingLoader(outputObject);
       }
-      outMessage = eventMessage.message.replace(/\\\"/g, '"');
+      outMessage = eventMessage.message.replace(/\"/g, '"');
       aiTextBuffer[outputObject] += outMessage;
       $("#" + outputObject).html(aiTextBuffer[outputObject]);
       $("#chatModalBody").scrollTop( $("#chatModalBody").prop("scrollHeight") );
@@ -642,12 +649,18 @@ function sseStream(data, outputObject) {
 
 // function AI RENDER
 function aiRender(targetId) {
+  // Rendering-Guard: Prüfe auf leeren/whitespace Text
+  let textToRender = aiTextBuffer[targetId] || '';
+  if (!textToRender.trim()) {
+    textToRender = '_Keine Ausgabe empfangen_';
+  }
+  
   if (typeof window.md !== 'undefined') {
-    mdText = window.md.render(aiTextBuffer[targetId] || '') + "<br>";
+    mdText = window.md.render(textToRender) + "<br>";
     $("#"+targetId).html(mdText);
   } else {
     // Fallback if markdown-it is not available
-    mdText = (aiTextBuffer[targetId] || '').replace(/\n/g, '<br>');
+    mdText = textToRender.replace(/\n/g, '<br>');
     // Write into the actual streaming target container
     $("#" + targetId).html(mdText);
   }
@@ -678,6 +691,7 @@ function aiRender(targetId) {
 
 // Fetch the final AI message text from history and render it
 function fetchAndRenderMessageById(messageId, targetId, onDone) {
+  // Erstversuch: wie bisher über loadChatHistory
   fetch('api.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -685,16 +699,47 @@ function fetchAndRenderMessageById(messageId, targetId, onDone) {
   })
   .then(res => res.json())
   .then(data => {
+    let foundText = '';
+    
     if (data && data.success && Array.isArray(data.messages)) {
       const msg = data.messages.find(m => m.BID == messageId);
       if (msg) {
-        const text = (msg.displayText || msg.BTEXT || '').toString();
-        aiTextBuffer[targetId] = text;
+        foundText = (msg.displayText || msg.BTEXT || '').toString().trim();
       }
     }
+    
+    // Fallback: Falls nicht gefunden oder leer, gezielt per BID nachladen
+    if (!foundText) {
+      return fetch('api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=getMessageById&id=${messageId}`
+      })
+      .then(res => res.json())
+      .then(bidData => {
+        if (bidData && bidData.success && bidData.data) {
+          foundText = (bidData.data.displayText || bidData.data.BTEXT || '').toString().trim();
+        }
+        
+        // Letzte Absicherung: Platzhalter bei leerem Text
+        if (!foundText) {
+          foundText = '_Keine Ausgabe empfangen_';
+        }
+        
+        aiTextBuffer[targetId] = foundText;
+      });
+    } else {
+      aiTextBuffer[targetId] = foundText;
+    }
   })
-  .catch(() => {})
-  .finally(() => { try { aiRender(targetId); } catch (e) {} if (typeof onDone === 'function') onDone(); });
+  .catch(() => {
+    // Bei Fehler Platzhalter setzen
+    aiTextBuffer[targetId] = '_Keine Ausgabe empfangen_';
+  })
+  .finally(() => { 
+    try { aiRender(targetId); } catch (e) {} 
+    if (typeof onDone === 'function') onDone(); 
+  });
 }
 
 // Global model cache (shared with chathistory.js)
@@ -726,8 +771,131 @@ function shortenModelName(modelName) {
     const maxLen = 14;
     if (modelName.length > maxLen) {
         return modelName.substring(0, maxLen - 2) + '...';
-    }
+    }    
     return modelName;
+}
+
+// Gekapselte Icon-Render-Funktion ohne globale Seiteneffekte
+function renderAIAvatar(messageElement, aiService, aiModel, aiProvider) {
+    const avatar = messageElement.querySelector('.ai-avatar');
+    if (!avatar) return;
+    
+    // Prüfe ob Icon bereits gelockt ist (verhindert Überschreibung)
+    if (avatar.getAttribute('data-icon-locked') === 'true') {
+        console.log('🎭 Avatar LOCKED - skipping update for messageId:', messageElement.getAttribute('data-message-id'));
+        return;
+    }
+    
+    // Entferne temporäres Flag wenn vorhanden
+    avatar.removeAttribute('data-icon-temp');
+    
+    // Debug-Logging für Again-Button Issues
+    console.log('🎭 renderAIAvatar called with:', {
+      aiService,
+      aiModel, 
+      aiProvider,
+      messageId: messageElement.getAttribute('data-message-id')
+    });
+    
+    // Debug: Was erwartet der User als Logo?
+    console.log('🔍 Expected icon debug - Model contains:', {
+      hasOpenAI: (aiModel || '').toLowerCase().includes('openai') || (aiModel || '').toLowerCase().includes('gpt'),
+      hasClaude: (aiModel || '').toLowerCase().includes('claude'),
+      hasGoogle: (aiModel || '').toLowerCase().includes('gemini') || (aiModel || '').toLowerCase().includes('google'),
+      service: aiService,
+      model: aiModel
+    });
+    
+    // Lade-Reihenfolgen-Check: ai-icons.js muss vor chat.js geladen sein
+    if (typeof getAIIcon !== 'function') {
+        console.warn('getAIIcon not defined - ensure ai-icons.js is loaded before chat.js');
+        return;
+    }
+    
+    // Service zu CSS-Klasse mapping
+    const cleanService = aiService ? aiService.replace(/^AI/, '').toLowerCase() : 'default';
+    const avatarClass = `ai-avatar-${cleanService}`;
+    
+    // Reset all avatar classes robuster (alle Tokens mit ai-avatar- Präfix)
+    const classTokens = avatar.className.split(/\s+/).filter(cls => !cls.startsWith('ai-avatar-'));
+    avatar.className = classTokens.join(' ');
+    avatar.classList.add('ai-avatar', avatarClass, 'd-none', 'd-md-flex');
+    
+    // Debug: Check if icon overwriting happens
+    console.log('🎭 Avatar classes set:', avatar.className);
+    
+    // Icon-Priorität: getAIIconByModel > getAIIcon > Robot
+    let iconHtml = '<i class="fas fa-robot" style="color: #6c757d;"></i>';
+    
+    if (typeof getAIIconByModel === 'function' && (aiProvider || aiModel)) {
+        iconHtml = getAIIconByModel(aiProvider || aiModel, aiService);
+        console.log('🎭 Using getAIIconByModel result:', iconHtml);
+    } else if (typeof getAIIcon === 'function' && aiService) {
+        iconHtml = getAIIcon(aiService);
+        console.log('🎭 Using getAIIcon result:', iconHtml);
+    }
+    
+    avatar.innerHTML = iconHtml;
+    avatar.setAttribute('data-icon-locked', 'true'); // Verhindere weitere Updates
+    console.log('🎭 Final avatar HTML set for messageId', messageElement.getAttribute('data-message-id'), ':', iconHtml);
+    console.log('🎭 Avatar LOCKED - no more changes allowed!');
+    
+    // Überwache weitere Änderungen (Debug) - AKTIVIERT
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+                console.error('🚨 AVATAR CONTENT CHANGED!', {
+                    messageId: messageElement.getAttribute('data-message-id'),
+                    oldContent: mutation.removedNodes,
+                    newContent: avatar.innerHTML,
+                    addedNodes: mutation.addedNodes
+                });
+                console.trace('🔍 Avatar change stack trace:');
+                
+                // Versuche herauszufinden welcher Code das macht
+                setTimeout(() => {
+                    console.error('🔍 Current avatar state:', avatar.innerHTML);
+                }, 100);
+            }
+        });
+    });
+    observer.observe(avatar, { childList: true, subtree: true });
+    
+    // Konsolen-Diagnostik (nur bei debug)
+    if (typeof debugIconInfo === 'function') {
+        debugIconInfo('renderAIAvatar', {
+            service: aiService,
+            provider: aiProvider,
+            model: aiModel,
+            classList: avatar.className,
+            iconUsed: iconHtml.includes('<img') ? 'SVG' : 'FontAwesome'
+        });
+    }
+}
+
+// User-Avatar mit Gravatar-Integration laden (zentraler Coordinator)
+function loadUserAvatar() {
+    // Global flag um doppelte Initialisierung zu vermeiden
+    if (window.userAvatarLoaded) return;
+    window.userAvatarLoaded = true;
+    
+    const userAvatars = document.querySelectorAll('.user-avatar img, .avatar img, [src*="default-avatar"]');
+    
+    userAvatars.forEach(img => {
+        // Cache-Buster für ersten Load, dann normales Caching
+        const cacheBuster = img.dataset.loaded ? '' : `?t=${Date.now()}`;
+        const avatarUrl = `api.php?action=getUserAvatar${cacheBuster}`;
+        
+        // Fallback zu default.png bei Fehler
+        img.onerror = function() {
+            if (this.src.indexOf('default.png') === -1) {
+                this.src = 'up/avatars/default.png';
+            }
+        };
+        
+        img.src = avatarUrl;
+        img.dataset.loaded = 'true';
+    });
 }
 
 // Setup Again button after streaming with persistierte DB-BID
@@ -740,6 +908,23 @@ function setupAgainButtonAfterStreaming(outputObject, eventMessage) {
     // Use the AI Response ID (not the user message ID)
     const aiResponseBID = eventMessage.aiResponseId;
     messageElement.setAttribute('data-message-id', aiResponseBID);
+    
+    // Setze data-Attribute für AI-Metadaten als Single Source of Truth
+    if (eventMessage.aiService) {
+        messageElement.setAttribute('data-ai-service', eventMessage.aiService);
+    }
+    if (eventMessage.aiModel) {
+        messageElement.setAttribute('data-ai-model', eventMessage.aiModel);
+    }
+    if (eventMessage.aiModelProvider) {
+        messageElement.setAttribute('data-ai-provider', eventMessage.aiModelProvider);
+    }
+    if (eventMessage.aiModelId) {
+        messageElement.setAttribute('data-ai-model-id', eventMessage.aiModelId);
+    }
+    if (eventMessage.topic) {
+        messageElement.setAttribute('data-ai-topic', eventMessage.topic);
+    }
     
     console.log('Setting up Again button for AI Response ID:', aiResponseBID);
     
@@ -765,8 +950,23 @@ function setupAgainButtonAfterStreaming(outputObject, eventMessage) {
       
       // Add model tag and load models immediately
       const tagsContainer = messageElement.querySelector('.d-flex.flex-wrap');
-      if (tagsContainer && eventMessage.aiModel) {
-        console.log('Adding model tag for:', eventMessage.aiModel);
+      if (tagsContainer && (eventMessage.aiModel || eventMessage.aiService)) {
+        console.log('Adding model tag for:', eventMessage.aiModel, 'Service:', eventMessage.aiService, 'ModelID:', eventMessage.aiModelId);
+        
+        // Render Avatar EINMALIG mit verfügbaren AI-Metadaten - FINAL, keine weiteren Updates!
+        console.log('🎭 FINAL Avatar render - NO MORE CHANGES AFTER THIS!');
+        renderAIAvatar(messageElement, eventMessage.aiService, eventMessage.aiModel, eventMessage.aiModelProvider);
+        
+        // Badge sofort füllen mit verfügbaren Informationen
+        const placeholder = messageElement.querySelector('.model-tag-placeholder');
+        if (placeholder) {
+          const initialLabel = eventMessage.aiModel || eventMessage.aiService?.replace(/^AI/, '') || 'Model';
+          placeholder.textContent = `Antwort von ${shortenModelName(initialLabel)}`;
+          placeholder.title = initialLabel;
+        }
+        
+        // Get topic from message for model filtering
+        const topic = messageElement.dataset.aiTopic || eventMessage.topic || 'chat';
         
         // Load models first, then update UI
         fetch('api.php', {
@@ -774,7 +974,7 @@ function setupAgainButtonAfterStreaming(outputObject, eventMessage) {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: 'action=getSelectableModels'
+          body: `action=getSelectableModels&topic=${encodeURIComponent(topic)}`
         })
         .then(response => response.json())
         .then(data => {
@@ -782,37 +982,37 @@ function setupAgainButtonAfterStreaming(outputObject, eventMessage) {
             selectableModels = data.models;
             console.log('Loaded models:', data.models);
             
-            // Find current model display name
-            console.log('Looking for model with provider:', eventMessage.aiModel);
-            console.log('Available models:', data.models.map(m => m.provider));
-            const currentModel = data.models.find(m => m.provider === eventMessage.aiModel);
+            // Robustes Matching von Modellen
+            console.log('Looking for model with provider:', eventMessage.aiModel, 'ModelID:', eventMessage.aiModelId);
+            console.log('Available models:', data.models.map(m => `${m.provider} (BID: ${m.bid})`));
+            
+            const currentModel = data.models.find(m =>
+              m.tag === eventMessage.aiModel ||
+              m.provider === eventMessage.aiModel ||
+              (eventMessage.aiModelId && String(m.bid) === String(eventMessage.aiModelId))
+            );
             
             // Use the model's actual name from database, not just provider
             let modelDisplayName = eventMessage.aiModel;
             if (currentModel && currentModel.tag && currentModel.tag !== 'chat') {
                 modelDisplayName = currentModel.tag;
+            } else if (!currentModel) {
+                // Fallback wenn kein Match gefunden wird
+                modelDisplayName = eventMessage.aiModel || eventMessage.aiService?.replace(/^AI/, '') || 'Model';
             }
             
             console.log('Found model:', currentModel);
             console.log('Display name:', modelDisplayName);
             
-            // Replace placeholder with actual model tag
+            // NUR Badge-Label verfeinern, KEINE Avatar-Updates mehr
             const placeholder = messageElement.querySelector('.model-tag-placeholder');
             if (placeholder) {
-              placeholder.textContent = `Antwort von ${modelDisplayName}`;
+              placeholder.textContent = `Antwort von ${shortenModelName(modelDisplayName)}`;
               placeholder.title = modelDisplayName;
               placeholder.classList.remove('model-tag-placeholder');
             }
             
-            // Update avatar with service/model-aware icon (DeepSeek via Groq, etc.)
-            const avatar = messageElement.querySelector('.ai-avatar');
-            if (avatar && eventMessage.aiService) {
-              avatar.innerHTML = (typeof getAIIconByModel === 'function')
-                ? getAIIconByModel(eventMessage.aiModel, eventMessage.aiService)
-                : getAIIcon(eventMessage.aiService);
-              const cleanService = eventMessage.aiService.replace('AI', '').toLowerCase();
-              avatar.className = `ai-avatar ai-avatar-${cleanService} d-none d-md-flex`;
-            }
+            // WICHTIG: KEINE weiteren Avatar-Updates hier!
             
             // Load next model for button
             loadNextModelForButton(aiResponseBID);
@@ -834,15 +1034,28 @@ function setupAgainButtonAfterStreaming(outputObject, eventMessage) {
 
 // Load next model and update button label
 function loadNextModelForButton(messageId) {
-  // Get predicted next model from backend
+  // Get messageElement for topic
+  const messageElement = document.querySelector(`li[data-message-id="${messageId}"]`);
+  
+  // Get predicted next model from backend - aber nur wenn messageElement existiert
+  if (!messageElement) {
+    console.warn('loadNextModelForButton: messageElement not found for messageId:', messageId);
+    return;
+  }
+  
   fetch('api.php', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: `action=getNextModel&messageId=${messageId}`
+    body: `action=getNextModel&messageId=${messageId}&topic=${encodeURIComponent(messageElement.dataset.aiTopic || 'chat')}`
   })
-  .then(response => response.json())
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return response.json();
+  })
   .then(data => {
     if (data.success && data.next_model) {
       const nextModelName = shortenModelName(data.next_model.tag);
@@ -854,19 +1067,11 @@ function loadNextModelForButton(messageId) {
           btnText.textContent = nextModelName;
         }
       }
-    } else {
-      // Fallback
-      const button = document.querySelector(`button.again-btn[data-message-id="${messageId}"]`);
-      if (button) {
-        const btnText = button.querySelector('.next-model-name');
-        if (btnText) {
-          // Keep "..." as fallback
-        }
-      }
     }
   })
   .catch(error => {
-    console.error('Failed to load next model:', error);
+    console.error('Failed to load next model for messageId', messageId, ':', error);
+    // Stille Behandlung - Button bleibt bei "..."
   });
 }
 
@@ -923,13 +1128,22 @@ function handleAgainRequest(messageId, overrideModelBid = null) {
       let errorMessage = data.error || getTranslation('again_error');
       if (data.error_code === 'LOCKED') {
         errorMessage = getTranslation('again_locked');
+      } else if (data.error_code === 'NO_ALTERNATIVE_MODEL') {
+        // Deaktiviere Button dauerhaft und setze Tooltip
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-ban"></i>';
+        button.title = 'Kein alternatives Modell verfügbar';
+        button.style.opacity = '0.5';
+        errorMessage = 'Kein alternatives Modell verfügbar';
       }
       
       showAgainStatus(errorMessage, 'error');
       
-      // Re-enable button
-      button.disabled = false;
-      button.innerHTML = '<i class="fas fa-redo"></i>';
+      // Re-enable button nur wenn nicht NO_ALTERNATIVE_MODEL
+      if (data.error_code !== 'NO_ALTERNATIVE_MODEL') {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-redo"></i>';
+      }
     }
   })
   .catch(error => {
@@ -977,31 +1191,69 @@ function toggleModelDropdown(messageId) {
 
   if (!isOpen) {
     const rect = button.getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const scrollTop = window.pageYOffset;
+    
+    const menuWidth = viewportWidth <= 480 ? viewportWidth - 24 : 280;
 
-    let top = rect.bottom + scrollTop + 6;
-    let maxHeight = viewportHeight - rect.bottom - 16;
-    if (maxHeight < 160) {
-      top = rect.top + scrollTop - 6; // open upward
-      dropdown.classList.add('dropup');
-    } else {
-      dropdown.classList.remove('dropup');
+    // Mobile: Bottom sheet style
+    if (viewportWidth <= 480) {
+      dropdown.style.position = 'fixed';
+      dropdown.style.left = '12px';
+      dropdown.style.right = '12px';
+      dropdown.style.bottom = '12px';
+      dropdown.style.top = 'auto';
+      dropdown.style.width = 'auto';
+      dropdown.style.maxHeight = '60vh';
+      dropdown.style.borderRadius = '12px';
+      dropdown.style.boxShadow = '0 -4px 20px rgba(0,0,0,0.15)';
+    } 
+    // Tablet: Centered dropdown
+    else if (viewportWidth <= 768) {
+      const centerX = viewportWidth / 2;
+      const left = centerX - (menuWidth / 2);
+      let top = rect.bottom + scrollTop + 8;
+      let maxHeight = viewportHeight - rect.bottom - 20;
+      
+      if (maxHeight < 180) {
+        top = rect.top + scrollTop - 8;
+        maxHeight = rect.top - 20;
+        dropdown.classList.add('dropup');
+      } else {
+        dropdown.classList.remove('dropup');
+      }
+
+      dropdown.style.position = 'fixed';
+      dropdown.style.left = Math.max(12, left) + 'px';
+      dropdown.style.top = top + 'px';
+      dropdown.style.width = menuWidth + 'px';
+      dropdown.style.maxHeight = Math.max(180, maxHeight) + 'px';
+    }
+    // Desktop: Right-aligned to button
+    else {
+      let top = rect.bottom + scrollTop + 6;
+      let maxHeight = viewportHeight - rect.bottom - 16;
+      
+      if (maxHeight < 160) {
+        top = rect.top + scrollTop - 6;
+        dropdown.classList.add('dropup');
+      } else {
+        dropdown.classList.remove('dropup');
+      }
+
+      let left = rect.right - menuWidth;
+      left = Math.max(12, Math.min(left, viewportWidth - menuWidth - 12));
+
+      dropdown.style.position = 'fixed';
+      dropdown.style.left = left + 'px';
+      dropdown.style.top = top + 'px';
+      dropdown.style.width = menuWidth + 'px';
+      dropdown.style.maxHeight = Math.max(160, maxHeight) + 'px';
     }
 
-    const menuWidth = 280;
-    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-    let left = rect.right - menuWidth;
-    left = Math.max(12, Math.min(left, viewportWidth - menuWidth - 12));
-
-    dropdown.style.position = 'fixed';
-    dropdown.style.left = left + 'px';
-    dropdown.style.top = top + 'px';
-    dropdown.style.maxHeight = Math.max(160, maxHeight) + 'px';
     dropdown.style.overflowY = 'auto';
-    dropdown.style.minWidth = menuWidth + 'px';
     dropdown.style.zIndex = 2000;
-
     dropdown.classList.add('show');
     loadModelsForDropdown(messageId);
   }
@@ -1012,6 +1264,10 @@ function loadModelsForDropdown(messageId) {
   const dropdown = document.getElementById(`model-dropdown-${messageId}`);
   if (!dropdown) return;
   
+  // Get topic from message element for filtering
+  const messageElement = document.querySelector(`li[data-message-id="${messageId}"]`);
+  const topic = messageElement?.dataset.aiTopic || 'chat';
+  
   if (selectableModels) {
     renderModelDropdown(messageId, selectableModels);
     return;
@@ -1020,13 +1276,13 @@ function loadModelsForDropdown(messageId) {
   // Show loading state
   dropdown.innerHTML = `<li><span class="dropdown-item-text text-center"><i class="fas fa-spinner fa-spin"></i> Lade Modelle...</span></li>`;
   
-  // Fetch models from API
+  // Fetch models from API with topic filter
   fetch('api.php', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: 'action=getSelectableModels'
+    body: `action=getSelectableModels&topic=${encodeURIComponent(topic)}`
   })
   .then(response => response.json())
   .then(data => {
@@ -1108,13 +1364,16 @@ function updateAgainButtonLabel(messageId) {
     return;
   }
   
+  // Get messageElement for topic
+  const messageElement = document.querySelector(`li[data-message-id="${messageId}"]`);
+  
   // Get predicted next model from backend Round-Robin logic
   fetch('api.php', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: `action=getNextModel&messageId=${messageId}`
+    body: `action=getNextModel&messageId=${messageId}&topic=${encodeURIComponent(messageElement?.dataset.aiTopic || 'chat')}`
   })
   .then(response => response.json())
   .then(data => {
@@ -1143,9 +1402,16 @@ function updateAgainButtonLabel(messageId) {
 
 // Get model name by BID (also in chathistory.js)
 function getModelNameById(modelBid) {
-  if (!selectableModels) return 'Modell';
-  const model = selectableModels.find(m => m.bid == modelBid);
-  return model ? model.tag : 'Modell';
+    if (!selectableModels) return 'Modell';
+    
+    // Robustes Matching von Modellen
+    const model = selectableModels.find(m =>
+        String(m.bid) === String(modelBid) ||
+        m.tag === modelBid ||
+        m.provider === modelBid
+    );
+    
+    return model ? model.tag : 'Modell';
 }
 
 // Function to show file details for a specific message

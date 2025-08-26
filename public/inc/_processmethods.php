@@ -188,11 +188,8 @@ class ProcessMethods {
                 // count bytes
                 XSControl::countBytes(self::$msgArr, 'SORT', self::$stream);
                 // DON'T overwrite AI info for Again messages
-                $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
-                if (!db::FetchArr(db::Query($againCheck))) {
-                    XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $AIGENERAL, self::$stream);
-                    XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $AIGENERALmodel, self::$stream);
-                }
+                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $AIGENERAL, self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $AIGENERALmodel, self::$stream);
                 XSControl::storeAIDetails(self::$msgArr, 'AIMODELID', $AIGENERALmodelId, self::$stream);
             }
         }
@@ -200,7 +197,6 @@ class ProcessMethods {
         // -----------------------------------------------------
         // ----------------------------------------------------- has it added a tool?
         if(substr(self::$msgArr['BTEXT'], 0, 1) == '/') {
-            Frontend::statusToStream(self::$msgId, 'pre', __FILE__.':'.__LINE__.' - slash ist da');
 
             // -----------------------------------------------------
             // it is a tool request
@@ -211,7 +207,6 @@ class ProcessMethods {
 
             // ************************* CALL THE TOOL *************
             self::$toolAnswer = BasicAI::toolPrompt(self::$msgArr, self::$stream);
-            Frontend::statusToStream(self::$msgId, 'pre', __FILE__.':'.__LINE__.' - tool gecalled');
             
             // Preserve essential fields from original message when merging tool answer
             /*
@@ -229,7 +224,6 @@ class ProcessMethods {
             // Restore essential fields if they're missing in the tool answer            
             // For tool responses, ensure BTOPIC is not a tools: prefixed value to prevent duplication
             if (substr(self::$msgArr['BTOPIC'], 0, 1) == '/') {
-                Frontend::statusToStream(self::$msgId, 'pre', __FILE__.':'.__LINE__.' - nochmal tool zeug');
 
                 // Mark that a tool was processed
                 self::$toolProcessed = true;
@@ -249,8 +243,6 @@ class ProcessMethods {
         // -----------------------------------------------------
         // ----------------------------------------------------- maybe process it
         if(substr(self::$msgArr['BTEXT'], 0, 1) != '/') {
-            Frontend::statusToStream(self::$msgId, 'pre', __FILE__.':'.__LINE__.' - nix slash');
-
             self::processMessage();
         }
         return;
@@ -387,11 +379,8 @@ class ProcessMethods {
             }
             
             // DON'T store AI info for Again messages - they already have correct info
-            $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
-            if (!db::FetchArr(db::Query($againCheck))) {
-                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $usedService, self::$stream);
-                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $usedModel, self::$stream);
-            }
+            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $usedService, self::$stream);
+            XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $usedModel, self::$stream);
             $previousCall = true;
         } else {
             if(self::$stream) {
@@ -426,12 +415,10 @@ class ProcessMethods {
                 }
             }
             
-            // DON'T store AI info for Again messages - they already have correct info
-            $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
-            if (!db::FetchArr(db::Query($againCheck))) {
-                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $usedService, self::$stream);
-                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $usedModel, self::$stream);
-            }
+            // Store AI info for mediamaker initial prompt (not for tool execution)
+            // The tool execution (/pic, /vid, /audio) will set the correct final AI metadata via globals
+            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', $usedService, self::$stream);
+            XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $usedModel, self::$stream);
             $previousCall = true;
 
             // DEBUG: Log the raw response for troubleshooting
@@ -515,24 +502,8 @@ class ProcessMethods {
                 $answerSorted = BasicAI::toolPrompt($answerSorted, self::$threadArr);
             }
             if(substr($answerSorted['BTEXT'], 0, 1) == '/') {
-                // DON'T overwrite AI info for Again messages
-                $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
-                if (!db::FetchArr(db::Query($againCheck))) {
-                    // Mediamaker uses specific tools; set correct service/model for icons
-                    if ($task === 'image') {
-                        XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIOpenAI', self::$stream);
-                        XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'images-1', self::$stream);
-                    } elseif ($task === 'video') {
-                        XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIOpenAI', self::$stream);
-                        XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'video', self::$stream);
-                    } elseif ($task === 'audio') {
-                        XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIOpenAI', self::$stream);
-                        XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'audio', self::$stream);
-                    } else {
-                        XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', $task, self::$stream);
-                    }
-                }
-
+                // Let the tool handlers (BasicAI::toolPrompt) set correct AI metadata
+                // They use the DB-based approach with GLOBALS and proper model lookup
                 self::$msgArr = self::preserveEssentialFields($answerSorted);
                 self::sortMessage();
                 return;
@@ -580,11 +551,9 @@ class ProcessMethods {
                     Frontend::statusToStream(self::$msgId, 'pre', $feNote);
                 }
                 // DON'T overwrite AI info for Again messages
-                $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
-                if (!db::FetchArr(db::Query($againCheck))) {
-                    XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIOpenAI', self::$stream);
-                    XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'CreateOfficeFile', self::$stream);
-                }
+                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIOpenAI', self::$stream);
+                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'CreateOfficeFile', self::$stream);
+
                 XSControl::storeAIDetails(self::$msgArr, 'AIMODELID', '0', self::$stream);
             }
             // $answerSorted['BTEXT'] = Tools::addMediaToText($answerSorted);
@@ -614,11 +583,8 @@ class ProcessMethods {
             $answerSorted['BTEXT'] = Tools::processComplexHtml($answerSorted['BFILETEXT']);
             $answerSorted['BFILETEXT'] = '';
             // DON'T overwrite AI info for Again messages
-            $againCheck = "SELECT 1 FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AGAIN_STATUS' AND BVALUE = 'RETRY'";
-            if (!db::FetchArr(db::Query($againCheck))) {
-                XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIGoogle', self::$stream);
-                XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'AnalyzeFile', self::$stream);
-            }
+            XSControl::storeAIDetails(self::$msgArr, 'AISERVICE', 'AIGoogle', self::$stream);
+            XSControl::storeAIDetails(self::$msgArr, 'AIMODEL', 'AnalyzeFile', self::$stream);
             XSControl::storeAIDetails(self::$msgArr, 'AIMODELID', '0', self::$stream);
         }
 
@@ -654,6 +620,7 @@ class ProcessMethods {
             if(self::$stream) {
                 Frontend::statusToStream(self::$msgId, 'pre', 'Calling '.$AIGENERAL.'. ');
             }
+            // generate the plain chat answer via standard model
             $answerSorted = $AIGENERAL::topicPrompt(self::$msgArr, self::$threadArr, self::$stream);
         }
 
@@ -663,8 +630,8 @@ class ProcessMethods {
         // **************************************************************************************************
 
         self::$msgArr = self::preserveEssentialFields($answerSorted);
-        
         $outText = Tools::addMediaToText($answerSorted);
+
         // print to stream
         if(self::$stream) {
             //error_log('outText: '.$outText);
@@ -790,38 +757,33 @@ class ProcessMethods {
 
 
         // Store AI service and model information for AI messages
-        // Always copy the chosen AI (service/model) from the triggering user message (self::$msgArr)
-        // This works for both normal and Again flows, because Again logic persists the correct
-        // choice on the user message beforehand.
-        $serviceSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AISERVICE' ORDER BY BID ASC LIMIT 1";
-        $serviceRes = db::Query($serviceSQL);
-        if($serviceArr = db::FetchArr($serviceRes)) {
-            XSControl::storeAIDetails($aiAnswer, 'AISERVICE', $serviceArr['BVALUE'], self::$stream);
+        $usedService = $GLOBALS['USEDAISERVICE'] ?? $GLOBALS["AI_CHAT"]["SERVICE"] ?? 'Unknown';
+        $usedModel = $GLOBALS['USEDAIMODEL'] ?? $GLOBALS["AI_CHAT"]["MODEL"] ?? 'Unknown';
+        
+        // Get ModelID - first try global, then lookup in BMODELS, finally fallback to current modelID
+        $usedModelId = $GLOBALS['USEDAIMODELID'] ?? 
+                      BasicAI::getModelIdByProvider($usedModel, str_replace('AI', '', $usedService)) ?? 
+                      $GLOBALS["AI_CHAT"]["MODELID"] ?? '0';
+        
+        XSControl::storeAIDetails($aiAnswer, 'AISERVICE', $usedService, self::$stream);
+        XSControl::storeAIDetails($aiAnswer, 'AIMODEL', $usedModel, self::$stream);
+        XSControl::storeAIDetails($aiAnswer, 'AIMODELID', $usedModelId, self::$stream);
+        
+        // Debug logging
+        if($GLOBALS["debug"]) {
+            error_log("[USED_AI] {$usedService}/{$usedModel} msgId={$aiAnswer['BID']}");
         }
         
-        $modelSQL = "SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval(self::$msgArr['BID'])." AND BTOKEN = 'AIMODEL' ORDER BY BID ASC LIMIT 1";
-        $modelRes = db::Query($modelSQL);
-        if($modelArr = db::FetchArr($modelRes)) {
-            XSControl::storeAIDetails($aiAnswer, 'AIMODEL', $modelArr['BVALUE'], self::$stream);
-        }
+        // Clean up globals after use
+        unset($GLOBALS['USEDAISERVICE'], $GLOBALS['USEDAIMODEL'], $GLOBALS['USEDAIMODELID']);
         
-        // If this was a media generation (image/video/audio), force the correct service/model
-        // so history and live view show the right provider (e.g., OpenAI Images)
-        if ((self::$msgArr['BTOPIC'] ?? '') === 'mediamaker') {
-            $isImage = (isset($aiAnswer['BFILETYPE']) && in_array(strtolower($aiAnswer['BFILETYPE']), ['png','jpg','jpeg']));
-            $isVideo = (isset($aiAnswer['BFILETYPE']) && in_array(strtolower($aiAnswer['BFILETYPE']), ['mp4','webm']));
-            $isAudio = (isset($aiAnswer['BFILETYPE']) && strtolower($aiAnswer['BFILETYPE']) === 'mp3');
-            $explicitTool = isset(self::$msgArr['BTEXT']) && is_string(self::$msgArr['BTEXT']) && strlen(self::$msgArr['BTEXT']) > 0 && self::$msgArr['BTEXT'][0] === '/';
-            if ($isImage || $isVideo || $isAudio || $explicitTool) {
-                XSControl::storeAIDetails($aiAnswer, 'AISERVICE', 'AIOpenAI', self::$stream);
-                XSControl::storeAIDetails($aiAnswer, 'AIMODEL', $isImage ? 'images-1' : ($isVideo ? 'video' : ($isAudio ? 'audio' : 'images-1')), self::$stream);
-            }
-        }
         // **************************************************************************************************
         // **************************************************************************************************
 
         return $aiLastId;
     }
+
+
 
 
 

@@ -103,9 +103,13 @@ class AIAnthropic {
      * @param array $threadArr Conversation thread history
      * @return array|string|bool Sorting result or error message
      */
-    public static function sortingPrompt($msgArr, $threadArr): array|string|bool {
+        public static function sortingPrompt($msgArr, $threadArr): array|string|bool {
         $systemPrompt = BasicAI::getAprompt('tools:sort');
-        
+
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_SORT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIAnthropic';
+
         $messages = [
             ['role' => 'user', 'content' => $systemPrompt['BPROMPT']]
         ];
@@ -239,6 +243,8 @@ class AIAnthropic {
         } else {
             $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
         }
+        $GLOBALS['USEDAIMODEL'] = $myModel;
+        $GLOBALS['USEDAISERVICE'] = 'AIAnthropic';
 
         $requestData = [
             'model' => $myModel,
@@ -393,6 +399,10 @@ class AIAnthropic {
         $arrPrompt = BasicAI::getAprompt('tools:help');
         $systemPrompt = $arrPrompt['BPROMPT'];
         
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_CHAT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIAnthropic';
+        
         $messages = [
             ['role' => 'user', 'content' => $systemPrompt],
             ['role' => 'user', 'content' => '{"BCOMMAND":"/list","BLANG":"'.$msgArr['BLANG'].'"}']
@@ -446,6 +456,10 @@ class AIAnthropic {
      * @return array Message array with image file information
      */
     public static function picPrompt($msgArr, $stream = false): array {
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = 'claude-image-gen';
+        $GLOBALS['USEDAISERVICE'] = 'AIAnthropic';
+        
         // Anthropic doesn't have image generation like DALL-E
         // This would need to be implemented using a different service
         // For now, return an error message
@@ -662,6 +676,10 @@ class AIAnthropic {
      * @return array Response array with success status and result/error
      */
     public static function simplePrompt($systemPrompt, $userPrompt): array {
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_CHAT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIAnthropic';
+        
         $messages = [
             ['role' => 'user', 'content' => $systemPrompt],
             ['role' => 'user', 'content' => $userPrompt]

@@ -11,6 +11,61 @@ class Tools {
         $setArr = db::FetchArr($res);
         return $setArr['BVALUE'];
     }
+    
+    // ****************************************************************************************************** 
+    // get widget configuration dynamically from BCONFIG
+    // ****************************************************************************************************** 
+    public static function getWidgetConfig($widgetId, $ownerId): array {
+        $groupName = 'widget_' . intval($widgetId);
+        
+        // Load widget settings from BCONFIG with fallback to defaults (BOWNERID=0)
+        $sql = "SELECT BSETTING, BVALUE FROM BCONFIG 
+                WHERE BGROUP = '" . db::EscString($groupName) . "' 
+                AND (BOWNERID = " . intval($ownerId) . " OR BOWNERID = 0) 
+                ORDER BY BOWNERID DESC, BID DESC";
+        
+        $res = db::Query($sql);
+        
+        // Default configuration
+        $config = [
+            'widgetId' => intval($widgetId),
+            'ownerId' => intval($ownerId),
+            'color' => '#007bff',
+            'position' => 'bottom-right',
+            'autoMessage' => '',
+            'prompt' => 'general',
+            'domains' => '',
+            'enabled' => true
+        ];
+        
+        // Track which settings we've seen to prefer user-specific over defaults
+        $seenSettings = [];
+        
+        while ($row = db::FetchArr($res)) {
+            $setting = $row['BSETTING'];
+            $value = $row['BVALUE'];
+            
+            // Only use this value if we haven't seen this setting yet (user-specific comes first)
+            if (!isset($seenSettings[$setting])) {
+                $seenSettings[$setting] = true;
+                
+                switch($setting) {
+                    case 'color':
+                    case 'position':
+                    case 'autoMessage':
+                    case 'prompt':
+                    case 'domains':
+                        $config[$setting] = $value;
+                        break;
+                    case 'enabled':
+                        $config[$setting] = ($value === '1' || $value === 'true');
+                        break;
+                }
+            }
+        }
+        
+        return $config;
+    }
     // ****************************************************************************************************** 
     // member link
     // ****************************************************************************************************** 

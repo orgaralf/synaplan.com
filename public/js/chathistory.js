@@ -140,9 +140,14 @@ function renderChatHistory(messages) {
             const avatarClass = getModelAvatarClass(cleanService);
             
             messageHtml = `
-                <li class="message-item ai-message${againedClass}" data-message-id="${chat.BID}">
-                    <div class="ai-avatar ${avatarClass} d-none d-md-flex">
-                        ${chat.aiService ? (typeof getAIIconByModel === 'function' ? getAIIconByModel(modelProviderRaw || modelName, chat.aiService) : getAIIcon(chat.aiService)) : '<i class="fas fa-robot text-white"></i>'}
+                <li class="message-item ai-message${againedClass}" data-message-id="${chat.BID}" 
+                    data-ai-service="${chat.aiService || ''}" 
+                    data-ai-model="${chat.aiModel || ''}" 
+                    data-ai-provider="${chat.aiModelProvider || ''}" 
+                    data-ai-model-id="${chat.aiModelId || ''}" 
+                    data-ai-topic="${chat.aiTopic || chat.BTOPIC || 'chat'}">
+                    <div class="ai-avatar ai-avatar-${cleanService.toLowerCase()} d-none d-md-flex" data-icon-locked="true">
+                        ${chat.aiService ? (typeof getAIIconByModel === 'function' ? getAIIconByModel(modelProviderRaw || modelName, chat.aiService) : getAIIcon(chat.aiService)) : '<i class="fas fa-robot" style="color: #6c757d;"></i>'}
                     </div>
                     <div class="message-content">
                         <span id="system${chat.BID}" class="system-message"></span>
@@ -478,13 +483,24 @@ function handleAgainRequest(messageId, overrideModelBid = null) {
                 errorMessage = errorMappings[data.error_code];
             }
             
+            // Special handling für NO_ALTERNATIVE_MODEL
+            if (data.error_code === 'NO_ALTERNATIVE_MODEL') {
+                // Deaktiviere Button dauerhaft und setze Tooltip
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-ban"></i>';
+                button.title = 'Kein alternatives Modell verfügbar';
+                button.style.opacity = '0.5';
+            }
+            
             // Track failure
             trackAgainEvent('again_failed', messageId, null, data.error_code);
             
             showAgainStatus(errorMessage, 'error');
             
-            // Reset button state
-            setAgainButtonState(messageId, 'error', errorMessage);
+            // Reset button state nur wenn nicht NO_ALTERNATIVE_MODEL
+            if (data.error_code !== 'NO_ALTERNATIVE_MODEL') {
+                setAgainButtonState(messageId, 'error', errorMessage);
+            }
         }
     })
     .catch(error => {
@@ -566,13 +582,16 @@ function updateAgainButtonLabel(messageId) {
         return;
     }
     
+    // Get messageElement for topic
+    const messageElement = document.querySelector(`li[data-message-id="${messageId}"]`);
+    
     // Get predicted next model from backend Round-Robin logic
     fetch('api.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `action=getNextModel&messageId=${messageId}`
+        body: `action=getNextModel&messageId=${messageId}&topic=${encodeURIComponent(messageElement?.dataset.aiTopic || 'chat')}`
     })
     .then(response => response.json())
     .then(data => {
@@ -611,35 +630,69 @@ function toggleModelDropdown(messageId) {
     
     if (!isOpen) {
         const rect = button.getBoundingClientRect();
-        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        const viewportHeight = window.innerHeight;
+        const viewportWidth = window.innerWidth;
+        const scrollTop = window.pageYOffset;
+        
+        const menuWidth = viewportWidth <= 480 ? viewportWidth - 24 : 280;
 
-        // Default position below button
-        let top = rect.bottom + 6;
-        let maxHeight = viewportHeight - rect.bottom - 16; // space below
+        // Mobile: Bottom sheet style
+        if (viewportWidth <= 480) {
+            dropdown.style.position = 'fixed';
+            dropdown.style.left = '12px';
+            dropdown.style.right = '12px';
+            dropdown.style.bottom = '12px';
+            dropdown.style.top = 'auto';
+            dropdown.style.width = 'auto';
+            dropdown.style.maxHeight = '60vh';
+            dropdown.style.borderRadius = '12px';
+            dropdown.style.boxShadow = '0 -4px 20px rgba(0,0,0,0.15)';
+        } 
+        // Tablet: Centered dropdown
+        else if (viewportWidth <= 768) {
+            const centerX = viewportWidth / 2;
+            const left = centerX - (menuWidth / 2);
+            let top = rect.bottom + scrollTop + 8;
+            let maxHeight = viewportHeight - rect.bottom - 20;
+            
+            if (maxHeight < 180) {
+                top = rect.top + scrollTop - 8;
+                maxHeight = rect.top - 20;
+                dropdown.classList.add('dropup');
+            } else {
+                dropdown.classList.remove('dropup');
+            }
 
-        // If there is not enough space below, open upwards
-        if (maxHeight < 160) { // 160px minimal dropdown height
-            maxHeight = rect.top - 16; // space above
-            top = rect.top - Math.min(400, maxHeight) - 6;
-            dropdown.classList.add('dropup');
-        } else {
-            dropdown.classList.remove('dropup');
+            dropdown.style.position = 'fixed';
+            dropdown.style.left = Math.max(12, left) + 'px';
+            dropdown.style.top = top + 'px';
+            dropdown.style.width = menuWidth + 'px';
+            dropdown.style.maxHeight = Math.max(180, maxHeight) + 'px';
+        }
+        // Desktop: Right-aligned to button
+        else {
+            let top = rect.bottom + scrollTop + 6;
+            let maxHeight = viewportHeight - rect.bottom - 16;
+            
+            if (maxHeight < 160) {
+                top = rect.top + scrollTop - 6;
+                dropdown.classList.add('dropup');
+            } else {
+                dropdown.classList.remove('dropup');
+            }
+
+            let left = rect.right - menuWidth;
+            left = Math.max(12, Math.min(left, viewportWidth - menuWidth - 12));
+
+            dropdown.style.position = 'fixed';
+            dropdown.style.left = left + 'px';
+            dropdown.style.top = top + 'px';
+            dropdown.style.width = menuWidth + 'px';
+            dropdown.style.maxHeight = Math.max(160, maxHeight) + 'px';
         }
 
-        // Align within viewport width and set fixed positioning for overlay
-        const menuWidth = 280;
-        const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-        let left = rect.right - menuWidth;
-        left = Math.max(12, Math.min(left, viewportWidth - menuWidth - 12));
-
-        dropdown.style.position = 'fixed';
-        dropdown.style.left = left + 'px';
-        dropdown.style.top = top + 'px';
-        dropdown.style.maxHeight = Math.max(160, maxHeight) + 'px';
         dropdown.style.overflowY = 'auto';
-        dropdown.style.minWidth = menuWidth + 'px';
         dropdown.style.zIndex = 2000;
-
         dropdown.classList.add('show');
         loadModelsForDropdown(messageId);
     }
@@ -649,6 +702,10 @@ function toggleModelDropdown(messageId) {
 function loadModelsForDropdown(messageId) {
     const dropdown = document.getElementById(`model-dropdown-${messageId}`);
     if (!dropdown) return;
+    
+    // Get topic from message element for filtering
+    const messageElement = document.querySelector(`li[data-message-id="${messageId}"]`);
+    const topic = messageElement?.dataset.aiTopic || 'chat';
     
     if (selectableModels) {
         renderModelDropdown(messageId, selectableModels);
@@ -660,13 +717,13 @@ function loadModelsForDropdown(messageId) {
         dropdown.innerHTML = `<li><span class="dropdown-item-text text-center"><i class="fas fa-spinner fa-spin"></i> ${getTranslation('loading_models')}</span></li>`;
     }
     
-    // Fetch models from API
+    // Fetch models from API with topic filter
     fetch('api.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: 'action=getSelectableModels'
+        body: `action=getSelectableModels&topic=${encodeURIComponent(topic)}`
     })
     .then(response => response.json())
     .then(data => {
@@ -701,7 +758,7 @@ function renderModelDropdown(messageId, models) {
             <li><a class="dropdown-item ${isSelected ? 'active' : ''}" href="#" onclick="window.selectModel(${messageId}, ${model.bid}, '${model.tag}'); return false;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="ai-icon">${(typeof getAIIconByModel === 'function') ? getAIIconByModel(model.provider, 'AI' + model.service) : getAIIcon('AI' + model.service)}</span>
+                        <span class="ai-icon">${(typeof getAIIconByModel === 'function') ? getAIIconByModel(model.provider, 'AI' + model.service) : (typeof getAIIcon === 'function' ? getAIIcon('AI' + model.service) : '')}</span>
                         <span class="fw-medium">${model.tag}</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -741,11 +798,43 @@ function selectModel(messageId, modelBid, modelName) {
     }
 }
 
-// Get model name by BID
+// Get model name by BID with robust matching
 function getModelNameById(modelBid) {
     if (!selectableModels) return 'Modell';
-    const model = selectableModels.find(m => m.bid == modelBid);
+    
+    // Robustes Matching von Modellen
+    const model = selectableModels.find(m =>
+        String(m.bid) === String(modelBid) ||
+        m.tag === modelBid ||
+        m.provider === modelBid
+    );
+    
     return model ? model.tag : 'Modell';
+}
+
+// User-Avatar mit Gravatar-Integration laden (Fallback wenn chat.js nicht verfügbar)
+function loadUserAvatar() {
+    // Nur laden wenn nicht bereits von chat.js initialisiert
+    if (window.userAvatarLoaded) return;
+    window.userAvatarLoaded = true;
+    
+    const userAvatars = document.querySelectorAll('.user-avatar img, .avatar img, [src*="default-avatar"]');
+    
+    userAvatars.forEach(img => {
+        // Cache-Buster für ersten Load, dann normales Caching
+        const cacheBuster = img.dataset.loaded ? '' : `?t=${Date.now()}`;
+        const avatarUrl = `api.php?action=getUserAvatar${cacheBuster}`;
+        
+        // Fallback zu default.png bei Fehler
+        img.onerror = function() {
+            if (this.src.indexOf('default.png') === -1) {
+                this.src = 'up/avatars/default.png';
+            }
+        };
+        
+        img.src = avatarUrl;
+        img.dataset.loaded = 'true';
+    });
 }
 
 // Scroll to message with highlight
@@ -859,6 +948,9 @@ function formatDateTime(dateTimeStr) {
 
 // Initialize chat history functionality when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
+    // Load user avatars mit Gravatar
+    setTimeout(loadUserAvatar, 100);
+    
     // Only initialize if not in anonymous widget mode and elements exist
     if (typeof window.isAnonymousWidget === 'undefined' || !window.isAnonymousWidget) {
         // Add event listeners to history loading buttons

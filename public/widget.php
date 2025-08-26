@@ -10,26 +10,13 @@ $uid = isset($_REQUEST['uid']) ? intval($_REQUEST['uid']) : 0;
 $widgetId = isset($_REQUEST['widgetid']) ? intval($_REQUEST['widgetid']) : 1;
 
 // Validate parameters
-if ($uid <= 0 || $widgetId < 1 || $widgetId > 9) {
+if ($uid <= 0 || $widgetId < 1) {
     echo "console.error('Invalid widget parameters: uid=$uid, widgetid=$widgetId');";
     exit;
 }
 
-// Get widget configuration from database
-$group = "widget_" . $widgetId;
-$sql = "SELECT BSETTING, BVALUE FROM BCONFIG WHERE BOWNERID = " . $uid . " AND BGROUP = '" . db::EscString($group) . "'";
-$res = db::Query($sql);
-
-$config = [
-    'color' => '#007bff',
-    'position' => 'bottom-right',
-    'autoMessage' => '',
-    'prompt' => 'general'
-];
-
-while ($row = db::FetchArr($res)) {
-    $config[$row['BSETTING']] = $row['BVALUE'];
-}
+// Use Tools::getWidgetConfig for dynamic configuration loading
+$config = Tools::getWidgetConfig($widgetId, $uid);
 
 // Get the base URL for the widget
 $baseUrl = $GLOBALS["baseUrl"];

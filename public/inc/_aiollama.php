@@ -28,6 +28,10 @@ class AIOllama {
 
         $client = self::$client;
         
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_SORT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIOllama';
+        
         // Build the complete prompt with system context and message history
         $fullPrompt = $systemPrompt['BPROMPT']."\n\n";
         
@@ -140,6 +144,8 @@ class AIOllama {
                 } else {
                     $myModel = $GLOBALS["AI_CHAT"]["MODEL"];
                 }
+                $GLOBALS['USEDAIMODEL'] = $myModel;
+                $GLOBALS['USEDAISERVICE'] = 'AIOllama';
 
                 $completions = $client->completions()->createStreamed([
                     'model' => $myModel,
@@ -249,6 +255,10 @@ class AIOllama {
         $systemPrompt = $arrPrompt['BPROMPT'];
         
         $client = self::$client;
+        
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_CHAT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIOllama';
 
         $fullPrompt = $systemPrompt . "\n\n";
         $msgText = '{"BCOMMAND":"/list","BLANG":"'.$msgArr['BLANG'].'"}';
@@ -440,6 +450,10 @@ class AIOllama {
      */
     public static function simplePrompt($systemPrompt, $userPrompt): array {
         $client = self::$client;
+        
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = $GLOBALS["AI_CHAT"]["MODEL"];
+        $GLOBALS['USEDAISERVICE'] = 'AIOllama';
         
         // Build the complete prompt with system context and user input
         $fullPrompt = $systemPrompt . "\n\n" . $userPrompt;

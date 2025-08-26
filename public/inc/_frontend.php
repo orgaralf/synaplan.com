@@ -620,21 +620,57 @@ Class Frontend {
         // now work on the message itself, sort it and process it
         $aiResponseId = self::createAnswer($msgId);
         
-        // Resolve final AI service/model from persisted AI response message (not globals)
+        // Resolve final AI service/model/modelId/topic from persisted AI response message (not globals)
         $finalService = '';
         $finalModelProvider = '';
+        $finalModelId = '';
+        $finalTopic = '';
+        
         if ($aiResponseId) {
-            $svcRes = db::Query("SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($aiResponseId)." AND BTOKEN = 'AISERVICE' ORDER BY BID ASC LIMIT 1");
-            if ($svcArr = db::FetchArr($svcRes)) {
-                $finalService = $svcArr['BVALUE'];
+            // Ensure DB transaction is committed by checking if message exists
+            $retryCount = 0;
+            $maxRetries = 5;
+            $messageExists = false;
+            
+            while ($retryCount < $maxRetries && !$messageExists) {
+                $checkRes = db::Query("SELECT BID FROM BMESSAGES WHERE BID = ".intval($aiResponseId)." LIMIT 1");
+                $messageExists = (db::FetchArr($checkRes) !== false);
+                
+                if (!$messageExists) {
+                    usleep(100000); // 100ms wait
+                    $retryCount++;
+                    error_log("getMessageById retry $retryCount for ID $aiResponseId");
+                }
             }
-            $mdlRes = db::Query("SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($aiResponseId)." AND BTOKEN = 'AIMODEL' ORDER BY BID ASC LIMIT 1");
-            if ($mdlArr = db::FetchArr($mdlRes)) {
-                $finalModelProvider = $mdlArr['BVALUE'];
+            
+            if ($messageExists) {
+                $svcRes = db::Query("SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($aiResponseId)." AND BTOKEN = 'AISERVICE' ORDER BY BID ASC LIMIT 1");
+                if ($svcArr = db::FetchArr($svcRes)) {
+                    $finalService = $svcArr['BVALUE'];
+                }
+                $mdlRes = db::Query("SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($aiResponseId)." AND BTOKEN = 'AIMODEL' ORDER BY BID ASC LIMIT 1");
+                if ($mdlArr = db::FetchArr($mdlRes)) {
+                    $finalModelProvider = $mdlArr['BVALUE'];
+                }
+                $midRes = db::Query("SELECT BVALUE FROM BMESSAGEMETA WHERE BMESSID = ".intval($aiResponseId)." AND BTOKEN = 'AIMODELID' ORDER BY BID ASC LIMIT 1");
+                if ($midArr = db::FetchArr($midRes)) {
+                    $finalModelId = $midArr['BVALUE'];
+                }
+                
+                // Get topic from AI response message
+                $topicRes = db::Query("SELECT BTOPIC FROM BMESSAGES WHERE BID = ".intval($aiResponseId)." LIMIT 1");
+                if ($topicArr = db::FetchArr($topicRes)) {
+                    $finalTopic = $topicArr['BTOPIC'] ?: 'chat';
+                }
+            } else {
+                error_log("Warning: AI response message ID $aiResponseId not found in database after retries");
             }
         }
+        
         if ($finalService === '') $finalService = $GLOBALS["AI_CHAT"]["SERVICE"] ?? '';
         if ($finalModelProvider === '') $finalModelProvider = $GLOBALS["AI_CHAT"]["MODEL"] ?? '';
+        if ($finalModelId === '') $finalModelId = $GLOBALS["AI_CHAT"]["MODELID"] ?? '';
+        if ($finalTopic === '') $finalTopic = 'chat';
 
         $update = [
             'msgId' => $msgId,
@@ -642,7 +678,9 @@ Class Frontend {
             'status' => 'done',
             'message' => 'That should end the stream. ',
             'aiModel' => $finalModelProvider,
-            'aiService' => $finalService
+            'aiService' => $finalService,
+            'aiModelId' => $finalModelId, // For UI matching
+            'topic' => $finalTopic // For topic-aware filtering
         ];
         self::printToStream($update);
 
@@ -946,6 +984,7 @@ Class Frontend {
                     'BFILETYPE' => $chat['BFILETYPE'],
                     'aiService' => $aiService,
                     'aiModel' => $aiModel,
+                    'aiTopic' => $chat['BTOPIC'], // For frontend topic filtering
                     // expose raw provider to front-end for provider-specific icon logic (e.g., DeepSeek via Groq)
                     'aiModelProvider' => isset($modelProvider) ? $modelProvider : '',
                     'againStatus' => $againStatus
@@ -956,23 +995,25 @@ Class Frontend {
                 // Process display text for AI messages
                 if($chat['BDIRECT'] == 'OUT') {
                     $displayText = $chat['BTEXT'];
+                    /*
                     if(substr($chat['BTEXT'], 0, 1) == '/') {
                         $displayText = "File generated";
                     }
-                    
+                    */
                     $hasFile = ($chat['BFILE'] > 0 && !empty($chat['BFILETYPE']) && !empty($chat['BFILEPATH']) && strpos($chat['BFILEPATH'], '/') !== false);
                     
                     // If the message starts with a tool command but has a file, show a better message
+                    /*
                     if ($hasFile && substr($chat['BTEXT'], 0, 1) == '/') {
                         if ($chat['BFILETYPE'] == 'mp4' || $chat['BFILETYPE'] == 'webm') {
                             $displayText = "Video";
                         } elseif (in_array($chat['BFILETYPE'], ['png', 'jpg', 'jpeg', 'gif'])) {
-                            $displayText = "Image";
+                            ##$displayText = "Image";
                         } else {
                             $displayText = "File";
                         }
                     }
-                    
+                    */
                     $messageData['displayText'] = $displayText;
                     $messageData['hasFile'] = $hasFile;
                 }
@@ -1008,51 +1049,29 @@ Class Frontend {
         
         $userId = intval($_SESSION["USERPROFILE"]["BID"]);
         
-        // Get all widget configurations for this user
-        $sql = "SELECT BGROUP, BSETTING, BVALUE FROM BCONFIG WHERE BOWNERID = " . $userId . " AND BGROUP LIKE 'widget_%' ORDER BY BGROUP, BSETTING";
+        // Get all distinct widget groups for this user and defaults
+        $sql = "SELECT DISTINCT BGROUP FROM BCONFIG 
+                WHERE (BOWNERID = " . $userId . " OR BOWNERID = 0) 
+                AND BGROUP LIKE 'widget_%' 
+                ORDER BY BGROUP";
         $res = DB::Query($sql);
         
         $widgets = [];
         while($row = DB::FetchArr($res)) {
             $group = $row['BGROUP'];
-            $setting = $row['BSETTING'];
-            $value = $row['BVALUE'];
             
             // Extract widget ID from group (e.g., "widget_1" -> 1)
             if (preg_match('/^widget_(\d+)$/', $group, $matches)) {
                 $widgetId = intval($matches[1]);
                 
-                if (!isset($widgets[$widgetId])) {
-                    $widgets[$widgetId] = [
-                        'widgetId' => $widgetId,
-                        'userId' => $userId, // Add user ID to widget data
-                        'color' => '#007bff',
-                        'position' => 'bottom-right',
-                        'autoMessage' => '',
-                        'prompt' => 'general'
-                    ];
-                }
-                
-                // Map settings to widget properties
-                switch($setting) {
-                    case 'color':
-                        $widgets[$widgetId]['color'] = $value;
-                        break;
-                    case 'position':
-                        $widgets[$widgetId]['position'] = $value;
-                        break;
-                    case 'autoMessage':
-                        $widgets[$widgetId]['autoMessage'] = $value;
-                        break;
-                    case 'prompt':
-                        $widgets[$widgetId]['prompt'] = $value;
-                        break;
-                }
+                // Use Tools::getWidgetConfig to get dynamic configuration
+                $widgetConfig = Tools::getWidgetConfig($widgetId, $userId);
+                $widgets[] = $widgetConfig;
             }
         }
         
         $retArr["success"] = true;
-        $retArr["widgets"] = array_values($widgets);
+        $retArr["widgets"] = $widgets;
         return $retArr;
     }
     
@@ -1072,8 +1091,8 @@ Class Frontend {
         $userId = intval($_SESSION["USERPROFILE"]["BID"]);
         $widgetId = intval($_REQUEST['widgetId'] ?? 0);
         
-        if ($widgetId < 1 || $widgetId > 9) {
-            $retArr["error"] = "Invalid widget ID. Must be between 1 and 9.";
+        if ($widgetId < 1) {
+            $retArr["error"] = "Invalid widget ID. Must be greater than 0.";
             return $retArr;
         }
         
@@ -1082,6 +1101,8 @@ Class Frontend {
         $position = db::EscString($_REQUEST['widgetPosition'] ?? 'bottom-right');
         $autoMessage = db::EscString($_REQUEST['autoMessage'] ?? '');
         $prompt = db::EscString($_REQUEST['widgetPrompt'] ?? 'general');
+        $domains = db::EscString($_REQUEST['domains'] ?? '');
+        $enabled = isset($_REQUEST['enabled']) ? ($_REQUEST['enabled'] ? '1' : '0') : '1';
         
         // Validate position
         $validPositions = ['bottom-right', 'bottom-left', 'bottom-center'];
@@ -1103,7 +1124,9 @@ Class Frontend {
             'color' => $color,
             'position' => $position,
             'autoMessage' => $autoMessage,
-            'prompt' => $prompt
+            'prompt' => $prompt,
+            'domains' => $domains,
+            'enabled' => $enabled
         ];
         
         foreach ($settings as $setting => $value) {
@@ -1143,8 +1166,8 @@ Class Frontend {
         $userId = intval($_SESSION["USERPROFILE"]["BID"]);
         $widgetId = intval($_REQUEST['widgetId'] ?? 0);
         
-        if ($widgetId < 1 || $widgetId > 9) {
-            $retArr["error"] = "Invalid widget ID. Must be between 1 and 9.";
+        if ($widgetId < 1) {
+            $retArr["error"] = "Invalid widget ID. Must be greater than 0.";
             return $retArr;
         }
         
@@ -1415,7 +1438,7 @@ Class Frontend {
      */
     public static function setAnonymousWidgetSession($ownerId, $widgetId): bool {
         // Validate parameters
-        if ($ownerId <= 0 || $widgetId < 1 || $widgetId > 9) {
+        if ($ownerId <= 0 || $widgetId < 1) {
             return false;
         }
         
@@ -1750,8 +1773,47 @@ Class Frontend {
             return $retArr;
         }
         
-        // Get next best model using topic-aware Round-Robin logic (with optional override)
+        // Topic nur einmal bestimmen mit Whitelist
+        $allowedTopics = ['chat', 'general', 'pic2text', 'text2pic', 'text2vid', 'text2sound', 'sound2text', 'analyzefile', 'mediamaker'];
         $topic = $originalMessage['BTOPIC'] ?: 'chat';
+        
+        // Optional Request-Override nur wenn valide und passend zur Original-Message
+        if (isset($_REQUEST['topic'])) {
+            $requestTopic = db::EscString($_REQUEST['topic']);
+            if (in_array($requestTopic, $allowedTopics)) {
+                // Zusätzliche Logik: nur erlauben wenn es zur ursprünglichen Message-Kategorie passt
+                // Für jetzt: akzeptieren wenn valid (strengere Logik kann später hinzugefügt werden)
+                $topic = $requestTopic;
+            }
+        }
+        
+        // Fallback zu chat bei unbekanntem Topic
+        if (!in_array($topic, $allowedTopics)) {
+            $topic = 'chat';
+        }
+        
+        // Override-Schutz: Validate override model is compatible with topic  
+        if ($overrideModelId) {
+            $selectableModels = AgainLogic::getSelectableModels($topic);
+            $validOverride = false;
+            
+            foreach ($selectableModels as $model) {
+                // Strict int compare nach casting
+                if (intval($model['bid']) === intval($overrideModelId)) {
+                    $validOverride = true;
+                    break;
+                }
+            }
+            
+            if (!$validOverride) {
+                $retArr["error"] = "Modell nicht kompatibel";
+                $retArr["error_code"] = "NO_ALTERNATIVE_MODEL";
+                AgainLogic::storeErrorAnalytics($messageId, "INCOMPATIBLE_MODEL_OVERRIDE");
+                return $retArr;
+            }
+        }
+        
+        // Get next best model using topic-aware Round-Robin logic (with optional override)
         $nextModel = AgainLogic::getNextBestModel($originalModel['bid'], $originalMessage['BTRACKID'], $overrideModelId, $topic);
         if (!$nextModel) {
             $retArr["error"] = "No alternative model available";
@@ -1898,6 +1960,18 @@ Class Frontend {
     public static function getSelectableModels(): array {
         $retArr = ["error" => "", "success" => false];
         
+        // Benutzer-Authentifizierung prüfen (auch für Model-Liste)
+        $userid = null;
+        if (isset($_SESSION["widget_owner_id"])) {
+            $userid = $_SESSION["widget_owner_id"];
+        } elseif (isset($_SESSION["USERPROFILE"]["BID"])) {
+            $userid = $_SESSION["USERPROFILE"]["BID"];
+        } else {
+            $retArr["error"] = "Authentication required";
+            $retArr["error_code"] = "UNAUTHORIZED";
+            return $retArr;
+        }
+        
         try {
             // Get topic from request for filtering
             $topic = isset($_REQUEST['topic']) ? db::EscString($_REQUEST['topic']) : 'chat';
@@ -1920,6 +1994,18 @@ Class Frontend {
     public static function getNextModel(): array {
         $retArr = ["error" => "", "success" => false];
         
+        // Benutzer-Authentifizierung prüfen
+        $userid = null;
+        if (isset($_SESSION["widget_owner_id"])) {
+            $userid = $_SESSION["widget_owner_id"];
+        } elseif (isset($_SESSION["USERPROFILE"]["BID"])) {
+            $userid = $_SESSION["USERPROFILE"]["BID"];
+        } else {
+            $retArr["error"] = "Authentication required";
+            $retArr["error_code"] = "UNAUTHORIZED";
+            return $retArr;
+        }
+        
         // Get message ID from request
         $messageId = isset($_REQUEST['messageId']) ? intval($_REQUEST['messageId']) : 0;
         
@@ -1929,13 +2015,13 @@ Class Frontend {
         }
         
         try {
-            // Get original message details
-            $originalMessageSQL = "SELECT * FROM BMESSAGES WHERE BID = " . intval($messageId) . " AND BDIRECT = 'OUT'";
+            // Get original message details - mit User-Sicherheit
+            $originalMessageSQL = "SELECT * FROM BMESSAGES WHERE BID = " . intval($messageId) . " AND BDIRECT = 'OUT' AND BUSERID = " . intval($userid);
             $originalMessageRes = db::Query($originalMessageSQL);
             $originalMessage = db::FetchArr($originalMessageRes);
             
             if (!$originalMessage) {
-                $retArr["error"] = "Message not found";
+                $retArr["error"] = "Message not found or access denied";
                 return $retArr;
             }
             
@@ -1946,11 +2032,25 @@ Class Frontend {
                 return $retArr;
             }
             
-            // Get next best model using topic-aware Round-Robin logic
-            $topic = 'chat'; // Default for getNextModel API
+            // Get topic from original message or request
+                          // Topic nur einmal bestimmen mit Whitelist
+            $allowedTopics = ['chat', 'general', 'pic2text', 'text2pic', 'text2vid', 'text2sound', 'sound2text', 'analyzefile', 'mediamaker'];
+            $topic = $originalMessage['BTOPIC'] ?? 'chat';
+            
+            // Optional Request-Override nur wenn valide
             if (isset($_REQUEST['topic'])) {
-                $topic = db::EscString($_REQUEST['topic']);
+                $requestTopic = db::EscString($_REQUEST['topic']);
+                if (in_array($requestTopic, $allowedTopics)) {
+                    $topic = $requestTopic;
+                }
             }
+            
+            // Fallback zu chat bei unbekanntem Topic
+            if (!in_array($topic, $allowedTopics)) {
+                $topic = 'chat';
+            }
+            
+            // Get next best model using topic-aware Round-Robin logic
             $nextModel = AgainLogic::getNextBestModel($originalModel['bid'], $originalMessage['BTRACKID'], null, $topic);
             
             if ($nextModel) {
@@ -2078,6 +2178,56 @@ Class Frontend {
             header('Content-Type: image/png');
             header('Cache-Control: public, max-age=604800');
             readfile($defaultPath);
+        }
+    }
+
+    public static function getMessageById() {
+        $id = intval($_REQUEST['id'] ?? 0);
+        
+        if ($id <= 0) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Invalid message ID']);
+            return;
+        }
+        
+        $userid = null;
+        
+        // Sicherheitskontext
+        if (isset($_SESSION["widget_owner_id"])) {
+            $userid = $_SESSION["widget_owner_id"];
+        } elseif (isset($_SESSION["USERPROFILE"]["BID"])) {
+            $userid = $_SESSION["USERPROFILE"]["BID"];
+        } else {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'User not authenticated']);
+            return;
+        }
+        
+        try {
+            $sql = "SELECT BID, BDIRECT, BTEXT, BDATETIME, BFILE, BFILEPATH, BFILETYPE, BTOPIC 
+                    FROM BMESSAGES 
+                    WHERE BUSERID = ".intval($userid)." AND BID = ".intval($id)." 
+                    LIMIT 1";
+            
+            $res = DB::Query($sql);
+            $message = DB::FetchArr($res);
+            
+            if (!$message) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Message not found']);
+                return;
+            }
+            
+            // displayText gleiche Semantik wie in loadChatHistory
+            $message['displayText'] = $message['BTEXT'];
+            
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'data' => $message]);
+            
+        } catch (Exception $e) {
+            error_log("getMessageById error: " . $e->getMessage());
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
         }
     }
 }	

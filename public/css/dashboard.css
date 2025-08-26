@@ -1121,10 +1121,10 @@ CHAT INTERFACE STYLES
 }
 
 .message-bubble.ai-bubble {
-  background: white;
+  background: #f8f9fa;
   border-radius: 4px 18px 18px 18px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  border: 1px solid #e9ecef;
+  border: 1px solid #dee2e6;
 }
 
 .message-bubble p {
@@ -1186,17 +1186,29 @@ CHAT INTERFACE STYLES
 .ai-avatar {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #051937, #003d73);
+  background: #ffffff;
+  border: 2px solid #e9ecef;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-right: 12px;
   flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .ai-avatar i {
   font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.ai-avatar img,
+.ai-avatar .ai-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: middle;
+  object-fit: contain;
 }
 
 /* Message Content Container */
@@ -1482,8 +1494,8 @@ CHAT INTERFACE STYLES
 }
 
 .ai-avatar-openai {
-  /* Brighten for white/green OpenAI mark to be clearly visible */
-  background: linear-gradient(135deg, #19cba0, #39e2bd) !important;
+  background: #ffffff !important;
+  border: 2px solid #10a37f !important;
 }
 
 .ai-avatar-claude {
@@ -1503,7 +1515,8 @@ CHAT INTERFACE STYLES
 }
 
 .ai-avatar-default {
-  background: linear-gradient(135deg, #051937, #003d73) !important;
+  background: #ffffff !important;
+  border: 2px solid #e9ecef !important;
 }
 
 /* Status message for Again operations */
@@ -1584,33 +1597,7 @@ CHAT INTERFACE STYLES
     padding: 10px 16px;
   }
   
-  /* Bottom sheet for mobile dropdown */
-  @media (max-width: 480px) {
-    .dropdown-menu {
-      position: fixed;
-      top: auto;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      transform: none;
-      border-radius: 16px 16px 0 0;
-      max-height: 50vh;
-      min-width: auto;
-    }
-    
-    .dropdown-menu.show {
-      animation: slideUpFromBottom 0.3s ease-out;
-    }
-    
-    @keyframes slideUpFromBottom {
-      from {
-        transform: translateY(100%);
-      }
-      to {
-        transform: translateY(0);
-      }
-    }
-  }
+  /* Bottom sheet for mobile dropdown - handled by JS */
 }
 
 /* AI Icon Styles */
@@ -1622,6 +1609,10 @@ CHAT INTERFACE STYLES
 
 /* Mobile-friendly dropdown list items: stack icon, name, meta untereinander */
 @media (max-width: 480px) {
+  .dropdown-menu {
+    animation: slideUpFromBottom 0.3s ease-out;
+  }
+  
   .dropdown-menu .dropdown-item .d-flex.justify-content-between.align-items-center {
     flex-direction: column;
     align-items: flex-start !important;
@@ -1635,6 +1626,17 @@ CHAT INTERFACE STYLES
   }
   .dropdown-menu .dropdown-item small.text-muted {
     font-size: 0.8rem;
+  }
+
+  @keyframes slideUpFromBottom {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 }
 

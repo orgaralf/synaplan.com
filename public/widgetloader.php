@@ -9,7 +9,7 @@ $uid = isset($_REQUEST['uid']) ? intval($_REQUEST['uid']) : 0;
 $widgetId = isset($_REQUEST['widgetid']) ? intval($_REQUEST['widgetid']) : 1;
 
 // Validate parameters
-if ($uid <= 0 || $widgetId < 1 || $widgetId > 9) {
+if ($uid <= 0 || $widgetId < 1) {
     echo "<h1>Invalid widget parameters!</h1>";
     exit;
 }
@@ -43,21 +43,8 @@ if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
     }
 }
 
-// Get widget configuration from database
-$group = "widget_" . $widgetId;
-$sql = "SELECT BSETTING, BVALUE FROM BCONFIG WHERE BOWNERID = " . $uid . " AND BGROUP = '" . db::EscString($group) . "'";
-$res = db::Query($sql);
-
-$config = [
-    'color' => '#007bff',
-    'position' => 'bottom-right',
-    'autoMessage' => '',
-    'prompt' => 'general'
-];
-
-while ($row = db::FetchArr($res)) {
-    $config[$row['BSETTING']] = $row['BVALUE'];
-}
+// Use Tools::getWidgetConfig for dynamic configuration loading
+$config = Tools::getWidgetConfig($widgetId, $uid);
 
 // Set the prompt topic for the chat
 $_SESSION['WIDGET_PROMPT'] = $config['prompt'];

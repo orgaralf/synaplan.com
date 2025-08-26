@@ -19,6 +19,10 @@ class AITheHive {
     public static function picPrompt($msgArr): array {
         $usrArr = Central::getUsrById($msgArr['BUSERID']);
 
+        // Set globals
+        $GLOBALS['USEDAIMODEL'] = 'sdxl';
+        $GLOBALS['USEDAISERVICE'] = 'AITheHive';
+
         if(substr($msgArr['BTEXT'], 0, 1) == '/') {
             $picPrompt = substr($msgArr['BTEXT'], strpos($msgArr['BTEXT'], " "));
         } else {
