@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "80579ab30149210c43966821e6cffbd1",
+    "content-hash": "d6a232ada821ba424b19eb42e5a6bb2f",
     "packages": [
         {
             "name": "ardagnsrn/ollama-php",
@@ -2301,16 +2301,16 @@
         },
         {
             "name": "openai-php/client",
-            "version": "v0.13.0",
+            "version": "v0.16.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/openai-php/client.git",
-                "reference": "399229860cea244843753bf1d9c28aee0e74c3a6"
+                "reference": "d857954cb96731e183adc5e51e5f79d16717ab2a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/openai-php/client/zipball/399229860cea244843753bf1d9c28aee0e74c3a6",
-                "reference": "399229860cea244843753bf1d9c28aee0e74c3a6",
+                "url": "https://api.github.com/repos/openai-php/client/zipball/d857954cb96731e183adc5e51e5f79d16717ab2a",
+                "reference": "d857954cb96731e183adc5e51e5f79d16717ab2a",
                 "shasum": ""
             },
             "require": {
@@ -2325,7 +2325,7 @@
             "require-dev": {
                 "guzzlehttp/guzzle": "^7.9.3",
                 "guzzlehttp/psr7": "^2.7.1",
-                "laravel/pint": "^1.22.0",
+                "laravel/pint": "^1.24.0",
                 "mockery/mockery": "^1.6.12",
                 "nunomaduro/collision": "^8.8.0",
                 "pestphp/pest": "^3.8.2|^4.0.0",
@@ -2372,7 +2372,7 @@
             ],
             "support": {
                 "issues": "https://github.com/openai-php/client/issues",
-                "source": "https://github.com/openai-php/client/tree/v0.13.0"
+                "source": "https://github.com/openai-php/client/tree/v0.16.0"
             },
             "funding": [
                 {
@@ -2388,7 +2388,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-05-14T21:43:59+00:00"
+            "time": "2025-08-26T12:28:37+00:00"
         },
         {
             "name": "paragonie/constant_time_encoding",
