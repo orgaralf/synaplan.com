@@ -266,8 +266,9 @@ $isAnonymousWidget = isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] ===
         return currentPromptConfig;
     }
 
-    // Anonymous widget mode detection - define this globally before other scripts
+    // Widget mode detection - define this globally before other scripts
     window.isAnonymousWidget = <?php echo $isAnonymousWidget ? 'true' : 'false'; ?>;
+    window.isWidgetMode = <?php echo $isWidgetMode ? 'true' : 'false'; ?>;
 
     // Widget-specific functionality
     <?php if ($isWidgetMode): ?>

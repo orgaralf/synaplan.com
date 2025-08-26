@@ -563,9 +563,15 @@ function sseStream(data, outputObject) {
         // Use proper DOM manipulation to avoid HTML escaping
         const systemElement = document.getElementById(`system${outputObject}`);
         if (systemElement) {
-          const messageSpan = document.createElement('span');
-          messageSpan.textContent = eventMessage.message;
-          systemElement.appendChild(messageSpan);
+          if (typeof window.isWidgetMode !== 'undefined' && window.isWidgetMode) {
+            // In widget mode, replace content to avoid overflow
+            systemElement.textContent = eventMessage.message;
+          } else {
+            // In standard mode, append messages as spans
+            const messageSpan = document.createElement('span');
+            messageSpan.textContent = eventMessage.message;
+            systemElement.appendChild(messageSpan);
+          }
         }
       }
       //console.log('Processing:', eventMessage.step);
