@@ -26,9 +26,17 @@ try {
 }
 
 // Connect to database with persistent connection
-$GLOBALS["dbcon"] = mysqli_connect("p:".DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) 
-    or die("Could not connect to database on " . DB_HOST . ". Error: " . mysqli_connect_error());
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
+try {
+    // $GLOBALS["dbcon"] = mysqli_connect("p:" . DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
+    $GLOBALS["dbcon"] = mysqli_connect("p:127.0.0.1", DB_USER, DB_PASSWORD, DB_NAME, 3306);
+    $GLOBALS["dbcon"]->set_charset("utf8mb4");
+} catch (mysqli_sql_exception $e) {
+    error_log("Database connection failed: " . $e->getMessage());
+    http_response_code(500);
+    exit("Internal Server Error: Database connection failed");
+}
 // Set connection parameters
 mysqli_set_charset($GLOBALS["dbcon"], DB_CHARSET);
 mysqli_autocommit($GLOBALS["dbcon"], TRUE);

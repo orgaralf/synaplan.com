@@ -171,9 +171,39 @@ class ProcessMethods {
 
 
                 $answerJsonArr = json_decode($answerJson, true);
+
+                // Unified fallback if sorting failed or returned invalid structure
+                $fallbackUsed = false;
+                if (!is_array($answerJsonArr)) {
+                    $fallbackUsed = true;
+                    if($GLOBALS["debug"]) error_log("Sorting failed or returned invalid JSON: ".$answerJson);
+                    $answerJsonArr = [];
+                }
+
+                // Preserve original BTEXT if not provided by sorter
+                if (!isset($answerJsonArr['BTEXT']) || $answerJsonArr['BTEXT'] === null) {
+                    $answerJsonArr['BTEXT'] = self::$msgArr['BTEXT'] ?? '';
+                }
+
+                // Ensure topic and language defaults
+                if (!isset($answerJsonArr['BTOPIC']) || !is_string($answerJsonArr['BTOPIC']) || strlen(trim($answerJsonArr['BTOPIC'])) === 0) {
+                    $answerJsonArr['BTOPIC'] = 'general';
+                    $fallbackUsed = true;
+                }
+                if (!isset($answerJsonArr['BLANG']) || !is_string($answerJsonArr['BLANG']) || strlen(trim($answerJsonArr['BLANG'])) === 0) {
+                    $answerJsonArr['BLANG'] = 'en';
+                    $fallbackUsed = true;
+                }
+
+                // Apply resolved values
                 self::$msgArr['BTEXT'] = $answerJsonArr['BTEXT'];
                 self::$msgArr['BTOPIC'] = $answerJsonArr['BTOPIC'];
                 self::$msgArr['BLANG'] = $answerJsonArr['BLANG'];
+
+                // Notify via stream if we had to fallback
+                if ($fallbackUsed && self::$stream) {
+                    Frontend::statusToStream(self::$msgId, 'pre', 'Sorting unavailable. Defaulted to general (en). ');
+                }
 
                 if(self::$stream) {
                     Frontend::statusToStream(self::$msgId, 'pre', 'Topic and language determined: '.self::$msgArr['BTOPIC'].' ('.self::$msgArr['BLANG'].'). ');
@@ -581,6 +611,8 @@ class ProcessMethods {
         // **************************************************************************************************
         // **************************************************************************************************
         // Handle web search if needed
+        error_log('BFILE: '.print_r($answerSorted, true));
+
         if($answerSorted['BFILE'] == 10 && strlen($answerSorted['BFILETEXT']) > 0 AND strlen($answerSorted['BFILETEXT']) < 64) {
             $answerText = '';
             if($previousCall) {
