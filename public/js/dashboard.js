@@ -32,7 +32,7 @@ function showLogoutModal() {
 }
 
 function confirmLogout() {
-    window.location.href = 'index.php?logout=true';
+    window.location.href = 'index.php?action=logout';
 }
 
 // Initialize when DOM is loaded

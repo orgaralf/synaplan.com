@@ -31,10 +31,7 @@ if(!isset($_SESSION['USERPROFILE'])) {
     if(count($_SESSION['USERPROFILE']) > 0) {
         $contentInc = "chat";
         if(count($commandParts) > 0) {
-            if($commandParts[0] == "logout") {
-                unset($_SESSION['USERPROFILE']);
-                $contentInc = "login";
-            } elseif($commandParts[0] == "confirm") {
+            if($commandParts[0] == "confirm") {
                 $contentInc = "confirm";
             } elseif(strlen($commandParts[0])>2) {
                 $contentInc = $commandParts[0];

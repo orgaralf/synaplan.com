@@ -19,6 +19,7 @@ require_once($root . 'inc/_myGMail.php');
 require_once($root . 'inc/_xscontrol.php');
 // oidc authentication
 require_once($root . 'inc/_oidc.php');
+require_once($root . 'inc/_logout.php');
 // frontend tools
 require_once($root . 'inc/_frontend.php');
 // central tool

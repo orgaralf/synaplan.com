@@ -11,8 +11,6 @@ session_start();
 $root = __DIR__ . '/';
 require_once($root . 'inc/_coreincludes.php');
 
-// Log callback parameters for debugging
-error_log('OIDC callback received parameters: ' . json_encode($_REQUEST));
 
 // Handle OIDC callback
 if (isset($_REQUEST['code']) || isset($_REQUEST['error'])) {
@@ -43,7 +41,6 @@ if (isset($_REQUEST['code']) || isset($_REQUEST['error'])) {
     }
 } else {
     // No valid callback parameters - redirect to login
-    error_log('OIDC callback accessed without valid parameters');
     $_SESSION['oidc_error'] = 'Invalid callback request.';
     header('Location: index.php');
     exit;

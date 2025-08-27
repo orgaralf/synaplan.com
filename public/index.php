@@ -32,6 +32,9 @@ if(isset($_REQUEST['action'])) {
             $result = Frontend::registerNewUser();
             $_SESSION['registration_result'] = $result;
             break;
+        case 'logout':
+            handleLogout();
+            break;
     }
 }
 
