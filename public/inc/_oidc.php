@@ -111,8 +111,8 @@ class OidcAuth {
                 return false;
             }
             
-            // Get or create user in database
-            $user = self::getOrCreateUser($userInfo);
+            // Get or create user in database using Central
+            $user = self::getOrCreateUserFromOidc($userInfo);
             
             if ($user) {
                 // Set session
@@ -135,73 +135,27 @@ class OidcAuth {
     }
     
     /**
-     * Get existing user or create new user from OIDC info
+     * Get existing user or create new user from OIDC info using Central functions
      */
-    private static function getOrCreateUser($userInfo) {
-        $email = DB::EscString($userInfo->email);
-        $providerId = 'OIDC'; // Use simple 'OIDC' identifier instead of long subject
+    private static function getOrCreateUserFromOidc($userInfo) {
+        $email = $userInfo->email;
         
-        // Try to find existing user by email first
-        $uSQL = "SELECT * FROM BUSER WHERE BMAIL = '".$email."'";
-        $uRes = DB::Query($uSQL);
-        $uArr = DB::FetchArr($uRes);
+        // Use Central::getUserByMail() - it handles both finding and creating users
+        $user = Central::getUserByMail($email, '', true);
         
-        if ($uArr) {
-            // Update existing user to mark as OIDC
-            if ($uArr['BINTYPE'] !== 'OIDC') {
-                $updateSQL = "UPDATE BUSER SET BPROVIDERID = '".$providerId."', BINTYPE = 'OIDC' WHERE BID = ".$uArr['BID'];
+        if ($user) {
+            // Update user to mark as OIDC type if not already
+            if ($user['BINTYPE'] !== 'OIDC') {
+                $updateSQL = "UPDATE BUSER SET BINTYPE = 'OIDC', BPROVIDERID = 'OIDC' WHERE BID = " . $user['BID'];
                 DB::Query($updateSQL);
-                $uArr['BPROVIDERID'] = $providerId;
-                $uArr['BINTYPE'] = 'OIDC';
+                $user['BINTYPE'] = 'OIDC';
+                $user['BPROVIDERID'] = 'OIDC';
             }
             
-            // Update user details from OIDC
-            self::updateUserDetails($uArr['BID'], $userInfo);
+            // Update user details with OIDC information
+            $user = self::updateUserDetailsFromOidc($user, $userInfo);
             
-            return $uArr;
-        } else {
-            // Create new user
-            return self::createNewUser($userInfo, $email, $providerId);
-        }
-    }
-    
-    /**
-     * Create new user from OIDC information
-     */
-    private static function createNewUser($userInfo, $email, $providerId) {
-        $created = date('YmdHis');
-        
-        // Prepare user details JSON
-        $userDetails = [
-            'firstName' => isset($userInfo->given_name) ? $userInfo->given_name : '',
-            'lastName' => isset($userInfo->family_name) ? $userInfo->family_name : '',
-            'phone' => isset($userInfo->phone_number) ? $userInfo->phone_number : '',
-            'companyName' => isset($userInfo->organization) ? $userInfo->organization : '',
-            'vatId' => '',
-            'street' => '',
-            'zipCode' => '',
-            'city' => '',
-            'country' => '',
-            'language' => isset($userInfo->locale) ? substr($userInfo->locale, 0, 2) : 'en',
-            'timezone' => isset($userInfo->zoneinfo) ? $userInfo->zoneinfo : '',
-            'invoiceEmail' => '',
-            'oidc_subject' => isset($userInfo->sub) ? $userInfo->sub : '' // Store actual OIDC subject
-        ];
-        
-        $userDetailsJson = json_encode($userDetails);
-        $userDetailsEscaped = DB::EscString($userDetailsJson);
-        
-        // Insert new user
-        $insertSQL = "INSERT INTO BUSER (BCREATED, BINTYPE, BMAIL, BPW, BPROVIDERID, BUSERLEVEL, BUSERDETAILS) 
-                      VALUES ('".$created."', 'OIDC', '".$email."', '', '".$providerId."', 'NEW', '".$userDetailsEscaped."')";
-        
-        if (DB::Query($insertSQL)) {
-            $userId = DB::LastId();
-            
-            // Fetch the new user record
-            $newUserSQL = "SELECT * FROM BUSER WHERE BID = ".$userId;
-            $newUserRes = DB::Query($newUserSQL);
-            return DB::FetchArr($newUserRes);
+            return $user;
         }
         
         return false;
@@ -210,41 +164,38 @@ class OidcAuth {
     /**
      * Update user details from OIDC information
      */
-    private static function updateUserDetails($userId, $userInfo) {
-        // Get current user details
-        $userSQL = "SELECT BUSERDETAILS FROM BUSER WHERE BID = ".$userId;
-        $userRes = DB::Query($userSQL);
-        $userRow = DB::FetchArr($userRes);
+    private static function updateUserDetailsFromOidc($user, $userInfo) {
+        $currentDetails = $user['DETAILS'] ?? [];
         
-        if ($userRow) {
-            $currentDetails = json_decode($userRow['BUSERDETAILS'], true);
-            if (!$currentDetails) {
-                $currentDetails = [];
-            }
-            
-            // Update with OIDC information (only if not already set)
-            if (empty($currentDetails['firstName']) && isset($userInfo->given_name)) {
-                $currentDetails['firstName'] = $userInfo->given_name;
-            }
-            if (empty($currentDetails['lastName']) && isset($userInfo->family_name)) {
-                $currentDetails['lastName'] = $userInfo->family_name;
-            }
-            if (empty($currentDetails['phone']) && isset($userInfo->phone_number)) {
-                $currentDetails['phone'] = $userInfo->phone_number;
-            }
-            if (empty($currentDetails['language']) && isset($userInfo->locale)) {
-                $currentDetails['language'] = substr($userInfo->locale, 0, 2);
-            }
-            if (empty($currentDetails['timezone']) && isset($userInfo->zoneinfo)) {
-                $currentDetails['timezone'] = $userInfo->zoneinfo;
-            }
-            
-            $updatedDetailsJson = json_encode($currentDetails);
-            $updatedDetailsEscaped = DB::EscString($updatedDetailsJson);
-            
-            $updateSQL = "UPDATE BUSER SET BUSERDETAILS = '".$updatedDetailsEscaped."' WHERE BID = ".$userId;
-            DB::Query($updateSQL);
+        // Update with OIDC information (only if not already set)
+        if (empty($currentDetails['firstName']) && isset($userInfo->given_name)) {
+            $currentDetails['firstName'] = $userInfo->given_name;
         }
+        if (empty($currentDetails['lastName']) && isset($userInfo->family_name)) {
+            $currentDetails['lastName'] = $userInfo->family_name;
+        }
+        if (empty($currentDetails['phone']) && isset($userInfo->phone_number)) {
+            $currentDetails['phone'] = $userInfo->phone_number;
+        }
+        if (empty($currentDetails['language']) && isset($userInfo->locale)) {
+            $currentDetails['language'] = substr($userInfo->locale, 0, 2);
+        }
+        if (empty($currentDetails['timezone']) && isset($userInfo->zoneinfo)) {
+            $currentDetails['timezone'] = $userInfo->zoneinfo;
+        }
+        // Store OIDC subject for reference
+        if (isset($userInfo->sub)) {
+            $currentDetails['oidc_subject'] = $userInfo->sub;
+        }
+        
+        // Update database using Central helper function
+        Central::updateUserDetails($user['BID'], $currentDetails);
+        
+        // Update the user array and return it
+        $user['BUSERDETAILS'] = json_encode($currentDetails, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $user['DETAILS'] = $currentDetails;
+        
+        return $user;
     }
     
     /**

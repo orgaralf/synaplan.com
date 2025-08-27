@@ -780,6 +780,17 @@ class Central {
         return $usrArr;
     }
 
+    /**
+     * Update user details in database
+     */
+    public static function updateUserDetails($userId, $details) {
+        $detailsJson = json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $detailsEscaped = DB::EscString($detailsJson);
+        
+        $updateSQL = "UPDATE BUSER SET BUSERDETAILS = '" . $detailsEscaped . "' WHERE BID = " . $userId;
+        return DB::Query($updateSQL);
+    }
+
     // ****************************************************************************************************** 
     // RAG FILE PROCESSING - specifically for file manager uploads with custom group keys
     // ****************************************************************************************************** 
