@@ -83,8 +83,16 @@ RUN install-php-extensions \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Expose ports (HTTP and HTTPS)
-EXPOSE 80 443
+# Install Node.js
+COPY --from=node:20 /usr/local /usr/local
+RUN node --version && npm --version
+
+COPY . .
+
+# Install dependencies
+RUN composer install --prefer-dist --no-interaction --optimize-autoloader
+RUN cd public && npm ci --no-audit --no-fund
 
 # Start FrankenPHP
+EXPOSE 80
 CMD ["frankenphp", "php-server", "--listen", "0.0.0.0:80", "--root", "public/"]

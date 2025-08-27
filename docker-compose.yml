@@ -12,8 +12,6 @@ services:
     volumes:
       - ./:/var/www/html
       - whisper_models:/var/www/html/inc/whispermodels:ro
-      - vendor:/var/www/html/vendor
-      - node_modules:/var/www/html/public/node_modules
     environment:
       - APP_ENV=development
       - APP_DEBUG=true
@@ -66,19 +64,7 @@ services:
       - COMPOSER_PROCESS_TIMEOUT=1600
     volumes:
       - ./:/var/www/html
-      - vendor:/var/www/html/vendor
-    command: >
-      sh -c '
-        set -e;
-        echo "Checking Composer dependencies..." &&
-        if [ -f "/var/www/html/vendor/autoload.php" ]; then
-          echo "Composer dependencies already installed, skipping"
-        else
-          echo "Installing Composer dependencies..." &&
-          composer install --prefer-dist --no-interaction
-        fi &&
-        echo "Composer installation completed."
-      '
+    command: composer install --prefer-dist --no-interaction
     restart: "no"
     logging:
       options:
@@ -94,19 +80,7 @@ services:
     working_dir: /var/www/html/public
     volumes:
       - ./:/var/www/html
-      - node_modules:/var/www/html/public/node_modules
-    command: >
-      sh -c '
-        set -e;
-        echo "Checking NPM dependencies..." &&
-        if [ -d "/var/www/html/public/node_modules" ] && [ "$(ls -A /var/www/html/public/node_modules)" ]; then
-          echo "NPM dependencies already installed, skipping"
-        else
-          echo "Installing NPM dependencies..." &&
-          npm ci --no-audit --no-fund
-        fi &&
-        echo "NPM installation completed."
-      '
+    command: npm ci --no-audit --no-fund
     restart: "no"
     logging:
       options:
@@ -235,8 +209,6 @@ volumes:
   mysql_data:
   ollama_data:
   whisper_models:
-  vendor:
-  node_modules:
 
 networks:
   synaplan-network:
