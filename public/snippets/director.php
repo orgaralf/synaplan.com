@@ -1,15 +1,7 @@
 <?php
 $contentInc = "unknown";
-// check for login command
-if(isset($_REQUEST['action']) AND $_REQUEST['action'] == "login") {
-    $success = Frontend::setUserFromWebLogin();
-}
-// check for register command
-if(isset($_REQUEST['action']) AND $_REQUEST['action'] == "register") {
-    $result = Frontend::registerNewUser();
-    // Store result in session for potential display
-    $_SESSION['registration_result'] = $result;
-}
+// Authentication actions are now handled in index.php before HTML output
+
 // ------------------------------------------------------------
 
 $cleanUriArr = explode("?", $_SERVER['REQUEST_URI']);

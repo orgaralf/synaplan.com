@@ -17,6 +17,24 @@ if(isset($_REQUEST["lang"])) {
 $root = __DIR__ . '/';
 require_once($root . 'inc/_coreincludes.php');
 
+// ------------------------------------------------------ handle authentication actions that need redirects
+// Only handle actions that require redirects BEFORE HTML output
+if(isset($_REQUEST['action'])) {
+    switch($_REQUEST['action']) {
+        case 'oidc_login':
+            OidcAuth::initiateAuth();
+            exit; // Should redirect, but exit as backup
+            break;
+        case 'login':
+            $success = Frontend::setUserFromWebLogin();
+            break;
+        case 'register':
+            $result = Frontend::registerNewUser();
+            $_SESSION['registration_result'] = $result;
+            break;
+    }
+}
+
 ?>
 <!doctype html>
 <html lang="en">

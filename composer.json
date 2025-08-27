@@ -14,7 +14,8 @@
         "gemini-api-php/client": "^1.7",
         "erusev/parsedown": "^1.7",
         "webklex/php-imap": "^6.2",
-        "stevenmaguire/oauth2-microsoft": "^2.2"
+        "stevenmaguire/oauth2-microsoft": "^2.2",
+        "jumbojett/openid-connect-php": "^1.0"
     },
     "scripts": {
         "pre-autoload-dump": "Google\\Task\\Composer::cleanup"

@@ -80,7 +80,14 @@ class ApiKeys {
             'AWS_CREDENTIALS',
             'GOOGLE_OAUTH_CREDENTIALS',
             'GMAIL_OAUTH_TOKEN',
-            'OLLAMA_SERVER'
+            'OLLAMA_SERVER',
+            'OIDC_PROVIDER_URL',
+            'OIDC_CLIENT_ID',
+            'OIDC_CLIENT_SECRET',
+            'OIDC_REDIRECT_URI',
+            'OIDC_SCOPES',
+            'OIDC_SSL_VERIFY',
+            'APP_ENV',
         ];
 
         foreach ($keyConfig as $envKey) {
@@ -144,6 +151,41 @@ class ApiKeys {
      */
     public static function getTheHive() {
         return self::get('THEHIVE_API_KEY');
+    }
+
+    /**
+     * Get OIDC Provider URL
+     */
+    public static function getOidcProviderUrl() {
+        return self::get('OIDC_PROVIDER_URL');
+    }
+
+    /**
+     * Get OIDC Client ID
+     */
+    public static function getOidcClientId() {
+        return self::get('OIDC_CLIENT_ID');
+    }
+
+    /**
+     * Get OIDC Client Secret
+     */
+    public static function getOidcClientSecret() {
+        return self::get('OIDC_CLIENT_SECRET');
+    }
+
+    /**
+     * Get OIDC Redirect URI
+     */
+    public static function getOidcRedirectUri() {
+        return self::get('OIDC_REDIRECT_URI');
+    }
+
+    /**
+     * Get OIDC Scopes
+     */
+    public static function getOidcScopes() {
+        return self::get('OIDC_SCOPES') ?: 'openid profile email';
     }
 
     /**
