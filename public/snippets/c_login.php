@@ -1,6 +1,12 @@
 <?php // https://oauth2-client.thephpleague.com/providers/league/ ?>
 <main class="col-md-12 ms-sm-auto col-lg-12 px-md-4" id="contentMain">
     <H1><?php _s("Please login", __FILE__, $_SESSION["LANG"]); ?></H1>
+    
+    <?php if (OidcAuth::isConfigured() && OidcAuth::isAutoRedirectEnabled()): ?>
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> <?php _s("Automatic login redirect is enabled. If you weren't automatically redirected, please try the SSO login below.", __FILE__, $_SESSION["LANG"]); ?>
+    </div>
+    <?php endif; ?>
     <p>
         <?php _s("You may login with your email address and password.", __FILE__, $_SESSION["LANG"]); ?><BR>
         <?php _s("Registration is free", __FILE__, $_SESSION["LANG"]); ?>: <B><a href="index.php/register"><?php _s("Register", __FILE__, $_SESSION["LANG"]); ?></a></B>

@@ -48,6 +48,7 @@ if(!isset($_SESSION['USERPROFILE'])) {
         }
     }
 }
+
 // ------------------------------------------------------------
 if($contentInc != "login" && $contentInc != "register" && $contentInc != "confirm") {
     include("snippets/c_menu.php");

@@ -35,6 +35,18 @@ if(isset($_REQUEST['action'])) {
     }
 }
 
+// ------------------------------------------------------ handle auto-redirect to OIDC
+// Check if user needs to be auto-redirected to OIDC provider
+if (!isset($_SESSION['USERPROFILE']) && 
+    OidcAuth::isConfigured() && 
+    OidcAuth::isAutoRedirectEnabled() &&
+    !isset($_SESSION['oidc_error']) &&
+    !isset($_REQUEST['action'])) {
+    
+    OidcAuth::initiateAuth();
+    exit;
+}
+
 ?>
 <!doctype html>
 <html lang="en">

@@ -87,6 +87,7 @@ class ApiKeys {
             'OIDC_REDIRECT_URI',
             'OIDC_SCOPES',
             'OIDC_SSL_VERIFY',
+            'OIDC_AUTO_REDIRECT',
             'APP_ENV',
         ];
 

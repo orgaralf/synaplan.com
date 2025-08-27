@@ -257,6 +257,15 @@ class OidcAuth {
     }
 
     /**
+     * Check if auto-redirect to IDP is enabled
+     */
+    public static function isAutoRedirectEnabled() {
+        $autoRedirect = ApiKeys::get('OIDC_AUTO_REDIRECT');
+        // Default to true (enabled) unless explicitly set to 'false'
+        return $autoRedirect !== 'false';
+    }
+
+    /**
      * Get OIDC login URL
      */
     public static function getLoginUrl() {
