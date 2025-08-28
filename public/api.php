@@ -145,6 +145,8 @@ if ($GLOBALS["debug"]) {
 // Define which endpoints are allowed for anonymous widget users
 $anonymousAllowedEndpoints = [
     'messageNew',
+    'messageAgain',
+    'againOptions',
     'chatStream',
     'getMessageFiles',
     'userRegister'
@@ -256,6 +258,169 @@ if (in_array($apiAction, $authenticatedOnlyEndpoints)) {
 switch($apiAction) {
     case 'messageNew':
         $resArr = Frontend::saveWebMessages();
+        break;
+
+    case 'messageAgain':
+        try {
+            // Get IN message ID - either explicit or auto-resolved
+            $inId = isset($_REQUEST['in_id']) ? intval($_REQUEST['in_id']) : null;
+            
+            if (!$inId) {
+                // Auto-resolve the last IN message ID for current context
+                $inId = Frontend::getLastInMessageIdForCurrentContext();
+            }
+            
+            if ($inId <= 0) {
+                $resArr = ['success' => false, 'error' => 'No previous IN message found'];
+                break;
+            }
+            
+            // Validate the IN message exists and belongs to current user/session
+            $msgArr = Central::getMsgById($inId);
+            if (!$msgArr || $msgArr['BDIRECT'] !== 'IN') {
+                $resArr = ['success' => false, 'error' => 'Invalid IN message ID'];
+                break;
+            }
+            
+            // Get optional parameters
+            $modelIdOpt = isset($_REQUEST['model_id']) ? intval($_REQUEST['model_id']) : null;
+            $promptId = isset($_REQUEST['promptId']) ? $_REQUEST['promptId'] : null;
+            
+            // Set temporary globals if model_id is provided
+            if ($modelIdOpt) {
+                // Validate model exists and is selectable
+                $modelSQL = "SELECT * FROM BMODELS WHERE BID = " . $modelIdOpt . " AND BSELECTABLE = 1 LIMIT 1";
+                $modelRes = db::Query($modelSQL);
+                $selectedModel = db::FetchArr($modelRes);
+                
+                if (!$selectedModel || !is_array($selectedModel)) {
+                    $resArr = ['success' => false, 'error' => 'Invalid model ID or model not selectable'];
+                    break;
+                }
+                
+                // Set temporary globals for Again bypass
+                $GLOBALS["IS_AGAIN"] = true;
+                $GLOBALS["FORCE_AI_MODEL"] = true;
+                $GLOBALS["FORCED_AI_SERVICE"] = "AI" . $selectedModel['BSERVICE'];
+                // Use BNAME if BPROVID is empty
+                $GLOBALS["FORCED_AI_MODEL"] = !empty($selectedModel['BPROVID']) ? $selectedModel['BPROVID'] : $selectedModel['BNAME'];
+                $GLOBALS["FORCED_AI_MODELID"] = $selectedModel['BID'];
+                $GLOBALS["FORCED_AI_BTAG"] = $selectedModel['BTAG'];
+            }
+            
+            // Simple response - no IDs needed for frontend
+            $resArr = [
+                'success' => true,
+                'time' => date('Y-m-d H:i:s')
+            ];
+            
+            // Add again info if model was specified
+            if ($modelIdOpt && isset($selectedModel)) {
+                $resArr['again'] = [
+                    'model_id' => $selectedModel['BID']
+                ];
+            }
+            
+            // Add promptId to response if provided
+            if ($promptId !== null) {
+                $resArr['promptId'] = $promptId;
+            }
+            
+        } catch (Exception $e) {
+            $resArr = ['success' => false, 'error' => $e->getMessage()];
+        }
+        break;
+    case 'againOptions':
+        try {
+            // Get userId from session (same logic as other endpoints)
+            if (isset($_SESSION["is_widget"]) && $_SESSION["is_widget"] === true) {
+                $userId = $_SESSION["widget_owner_id"];
+            } else {
+                $userId = $_SESSION["USERPROFILE"]["BID"];
+            }
+            
+            // Validate required parameters
+            if (!isset($_REQUEST['prev_message_id'])) {
+                http_response_code(400);
+                $resArr = ['success' => false, 'error' => 'Missing required parameter: prev_message_id'];
+                break;
+            }
+            
+            $prevMessageId = intval($_REQUEST['prev_message_id']);
+            
+            // Get the IN message
+            $inMessage = AgainLogic::getPrevInMessage($prevMessageId, $userId);
+            $inId = intval($inMessage['BID']);
+            
+            // Get last OUT for this IN
+            $lastOut = AgainLogic::getLastOutForIn($inId);
+            
+            // Resolve BTAG
+            $btag = AgainLogic::resolveTagForReplay($inId, $lastOut);
+            
+            // Get eligible models
+            $eligible = AgainLogic::getEligibleModels($btag);
+            
+            // Get current model info from last OUT
+            $current = null;
+            if ($lastOut && !empty($lastOut['BPROVIDX'])) {
+                $modelId = intval($lastOut['BPROVIDX']);
+                if ($modelId > 0) {
+                    $modelSQL = "SELECT * FROM BMODELS WHERE BID = " . $modelId . " LIMIT 1";
+                    $modelRes = db::Query($modelSQL);
+                    $modelRow = db::FetchArr($modelRes);
+                    if ($modelRow && is_array($modelRow)) {
+                        $current = [
+                            'model_id' => intval($modelRow['BID']),
+                            'service' => $modelRow['BSERVICE'],
+                            // Use BPROVID if available, fallback to BNAME
+                            'model' => !empty($modelRow['BPROVID']) ? $modelRow['BPROVID'] : $modelRow['BNAME'],
+                            'btag' => $modelRow['BTAG']
+                        ];
+                    }
+                }
+            }
+            
+            // Get predicted next model
+            $predictedNext = null;
+            if (!empty($eligible)) {
+                $prevModelId = null;
+                if ($lastOut && !empty($lastOut['BPROVIDX'])) {
+                    $prevModelId = intval($lastOut['BPROVIDX']);
+                }
+                
+                $selectedModel = AgainLogic::pickModel($eligible, $prevModelId);
+                $predictedNext = [
+                    'model_id' => intval($selectedModel['BID']),
+                    'service' => $selectedModel['BSERVICE'],
+                    // Use BPROVID if available, fallback to BNAME
+                    'model' => !empty($selectedModel['BPROVID']) ? $selectedModel['BPROVID'] : $selectedModel['BNAME']
+                ];
+            }
+            
+            // Format eligible models
+            $eligibleFormatted = [];
+            foreach ($eligible as $model) {
+                $eligibleFormatted[] = [
+                    'model_id' => intval($model['BID']),
+                    'service' => $model['BSERVICE'],
+                    // Use BPROVID if available, fallback to BNAME
+                    'model' => !empty($model['BPROVID']) ? $model['BPROVID'] : $model['BNAME'],
+                    'ranking' => floatval($model['BRATING'])
+                ];
+            }
+            
+            $resArr = [
+                'success' => true,
+                'current' => $current,
+                'predictedNext' => $predictedNext,
+                'eligible' => $eligibleFormatted
+            ];
+            
+        } catch (Exception $e) {
+            // HTTP status code should already be set by AgainLogic
+            $resArr = ['success' => false, 'error' => $e->getMessage()];
+        }
         break;
     case 'ragUpload':
         $resArr = Frontend::saveRAGFiles();
