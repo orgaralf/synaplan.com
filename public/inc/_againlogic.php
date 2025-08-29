@@ -323,4 +323,62 @@ class AgainLogic {
             throw $e;
         }
     }
+
+    /**
+     * Prepare Again globals and response.
+     * Accepts raw request params, resolves IN message, and (optionally) sets forced model globals.
+     * Returns a compact success response for API.
+     */
+    public static function prepareAgain(array $params) {
+        try {
+            // Resolve IN message id
+            $inId = isset($params['in_id']) ? intval($params['in_id']) : 0;
+            if ($inId <= 0) {
+                $inId = Frontend::getLastInMessageIdForCurrentContext();
+            }
+            if ($inId <= 0) {
+                return ['success' => false, 'error' => 'No previous IN message found'];
+            }
+
+            // Validate IN exists and is an IN message
+            $msgArr = Central::getMsgById($inId);
+            if (!$msgArr || $msgArr['BDIRECT'] !== 'IN') {
+                return ['success' => false, 'error' => 'Invalid IN message ID'];
+            }
+
+            // Set base Again flag
+            $GLOBALS['IS_AGAIN'] = true;
+
+            // Optional model forcing
+            $modelIdOpt = isset($params['model_id']) ? intval($params['model_id']) : null;
+            if ($modelIdOpt) {
+                $modelSQL = "SELECT * FROM BMODELS WHERE BID = " . $modelIdOpt . " AND BSELECTABLE = 1 LIMIT 1";
+                $modelRes = db::Query($modelSQL);
+                $selectedModel = db::FetchArr($modelRes);
+                if (!$selectedModel || !is_array($selectedModel)) {
+                    return ['success' => false, 'error' => 'Invalid model ID or model not selectable'];
+                }
+                $GLOBALS['FORCE_AI_MODEL']   = true;
+                $GLOBALS['FORCED_AI_SERVICE'] = 'AI' . $selectedModel['BSERVICE'];
+                $GLOBALS['FORCED_AI_MODEL']   = !empty($selectedModel['BPROVID']) ? $selectedModel['BPROVID'] : $selectedModel['BNAME'];
+                $GLOBALS['FORCED_AI_MODELID'] = intval($selectedModel['BID']);
+                $GLOBALS['FORCED_AI_BTAG']    = $selectedModel['BTAG'];
+            }
+
+            // Optional prompt id passthrough
+            $resp = [
+                'success' => true,
+                'time'    => date('Y-m-d H:i:s')
+            ];
+            if ($modelIdOpt && isset($selectedModel)) {
+                $resp['again'] = ['model_id' => intval($selectedModel['BID'])];
+            }
+            if (isset($params['promptId'])) {
+                $resp['promptId'] = $params['promptId'];
+            }
+            return $resp;
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
 }

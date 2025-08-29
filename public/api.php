@@ -261,74 +261,7 @@ switch($apiAction) {
         break;
 
     case 'messageAgain':
-        try {
-            // Get IN message ID - either explicit or auto-resolved
-            $inId = isset($_REQUEST['in_id']) ? intval($_REQUEST['in_id']) : null;
-            
-            if (!$inId) {
-                // Auto-resolve the last IN message ID for current context
-                $inId = Frontend::getLastInMessageIdForCurrentContext();
-            }
-            
-            if ($inId <= 0) {
-                $resArr = ['success' => false, 'error' => 'No previous IN message found'];
-                break;
-            }
-            
-            // Validate the IN message exists and belongs to current user/session
-            $msgArr = Central::getMsgById($inId);
-            if (!$msgArr || $msgArr['BDIRECT'] !== 'IN') {
-                $resArr = ['success' => false, 'error' => 'Invalid IN message ID'];
-                break;
-            }
-            
-            // Get optional parameters
-            $modelIdOpt = isset($_REQUEST['model_id']) ? intval($_REQUEST['model_id']) : null;
-            $promptId = isset($_REQUEST['promptId']) ? $_REQUEST['promptId'] : null;
-            
-            // Set temporary globals if model_id is provided
-            if ($modelIdOpt) {
-                // Validate model exists and is selectable
-                $modelSQL = "SELECT * FROM BMODELS WHERE BID = " . $modelIdOpt . " AND BSELECTABLE = 1 LIMIT 1";
-                $modelRes = db::Query($modelSQL);
-                $selectedModel = db::FetchArr($modelRes);
-                
-                if (!$selectedModel || !is_array($selectedModel)) {
-                    $resArr = ['success' => false, 'error' => 'Invalid model ID or model not selectable'];
-                    break;
-                }
-                
-                // Set temporary globals for Again bypass
-                $GLOBALS["IS_AGAIN"] = true;
-                $GLOBALS["FORCE_AI_MODEL"] = true;
-                $GLOBALS["FORCED_AI_SERVICE"] = "AI" . $selectedModel['BSERVICE'];
-                // Use BNAME if BPROVID is empty
-                $GLOBALS["FORCED_AI_MODEL"] = !empty($selectedModel['BPROVID']) ? $selectedModel['BPROVID'] : $selectedModel['BNAME'];
-                $GLOBALS["FORCED_AI_MODELID"] = $selectedModel['BID'];
-                $GLOBALS["FORCED_AI_BTAG"] = $selectedModel['BTAG'];
-            }
-            
-            // Simple response - no IDs needed for frontend
-            $resArr = [
-                'success' => true,
-                'time' => date('Y-m-d H:i:s')
-            ];
-            
-            // Add again info if model was specified
-            if ($modelIdOpt && isset($selectedModel)) {
-                $resArr['again'] = [
-                    'model_id' => $selectedModel['BID']
-                ];
-            }
-            
-            // Add promptId to response if provided
-            if ($promptId !== null) {
-                $resArr['promptId'] = $promptId;
-            }
-            
-        } catch (Exception $e) {
-            $resArr = ['success' => false, 'error' => $e->getMessage()];
-        }
+        $resArr = AgainLogic::prepareAgain($_REQUEST);
         break;
     case 'againOptions':
         try {
